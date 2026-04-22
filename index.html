@@ -6,475 +6,6 @@
   <title>[2n] 公会 · 欢迎</title>
   <!-- Font Awesome 图标库 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      background: #f5f7fa;
-      font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
-      color: #1e2b3c;
-      padding: 20px 16px 30px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .page {
-      max-width: 1000px;
-      width: 100%;
-      background: rgba(255,255,255,0.7);
-      backdrop-filter: blur(2px);
-      border-radius: 36px;
-      padding: 24px 24px 20px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.05);
-    }
-
-    /* 头部：标题 + 语言切换 */
-    .header-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-    }
-
-    .main-title {
-      font-size: clamp(28px, 8vw, 52px);
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: -0.01em;
-      background: linear-gradient(135deg, #0b3b5c, #2b5e7c);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      margin-right: 16px;
-    }
-
-    /* 语言下拉组件 */
-    .lang-wrapper {
-      position: relative;
-      user-select: none;
-    }
-
-    .lang-btn {
-      background: white;
-      border: 1px solid #cfdde9;
-      border-radius: 40px;
-      padding: 10px 18px;
-      font-size: 1rem;
-      font-weight: 500;
-      color: #1e3b4f;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.02);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.15s;
-      backdrop-filter: blur(4px);
-      background: rgba(255,255,255,0.8);
-    }
-
-    .lang-btn i {
-      font-size: 1rem;
-      transition: transform 0.2s;
-    }
-
-    .lang-btn.active i {
-      transform: rotate(180deg);
-    }
-
-    .lang-dropdown {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      background: white;
-      border-radius: 24px;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-      border: 1px solid #e2eaf1;
-      overflow: hidden;
-      min-width: 140px;
-      z-index: 100;
-      display: none;
-    }
-
-    .lang-dropdown.show {
-      display: block;
-    }
-
-    .lang-option {
-      padding: 12px 20px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background 0.1s;
-      color: #1e3b4f;
-    }
-
-    .lang-option:hover {
-      background: #e6f0f9;
-    }
-
-    .lang-option.selected {
-      background: #d4e2f0;
-      color: #0a3144;
-    }
-
-    /* 领导区域 (会长/副会长) */
-    .leaders {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 36px;
-      gap: 12px;
-    }
-
-    .leader-card {
-      flex: 1;
-      text-align: center;
-      background: rgba(255,255,255,0.5);
-      border-radius: 40px;
-      padding: 16px 8px 20px;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 6px 12px rgba(46, 78, 102, 0.04);
-    }
-
-    .leader-emoji {
-      font-size: clamp(3.5rem, 18vw, 8rem);
-      line-height: 1;
-    }
-
-    .leader-label {
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-top: 6px;
-      color: #2b4e65;
-    }
-
-    .leader-name {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-top: 4px;
-      color: #0b2f44;
-      letter-spacing: 0.5px;
-    }
-
-    /* 矩形卡片通用样式 */
-    .card {
-      background: #ffffffd9;
-      backdrop-filter: blur(8px);
-      border-radius: 32px;
-      padding: 24px 22px;
-      box-shadow: 0 20px 35px -8px rgba(21, 50, 70, 0.1);
-      border: 1px solid #ffffff70;
-      margin-bottom: 24px;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 16px;
-    }
-
-    .card-header h2 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #1b4b64;
-    }
-
-    /* 桌面端双栏布局 */
-    .desktop-layout {
-      display: flex;
-      gap: 24px;
-    }
-
-    .left-column {
-      flex: 8;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .right-column {
-      flex: 2;
-    }
-
-    /* 快速上手内容 */
-    .quickstart-content {
-      font-size: 1rem;
-      line-height: 1.6;
-      color: #1f3f54;
-    }
-
-    .quickstart-content p {
-      margin-bottom: 1em;
-    }
-
-    .quickstart-content a {
-      color: #1e6f9f;
-      text-decoration: none;
-      font-weight: 500;
-      border-bottom: 1.5px dotted #7fa9c7;
-    }
-
-    .quickstart-content a:hover {
-      color: #0a4c70;
-      border-bottom-style: solid;
-    }
-
-    /* 传送门列表 */
-    .portal-list {
-      list-style: none;
-    }
-
-    .portal-item {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 24px;
-    }
-
-    .portal-label {
-      font-weight: 700;
-      color: #1e4e6b;
-      margin-bottom: 6px;
-      font-size: 0.95rem;
-    }
-
-    .portal-value-row {
-      display: flex;
-      align-items: center;
-      background: #ecf3f9;
-      border-radius: 40px;
-      padding: 6px 12px 6px 16px;
-      word-break: break-all;
-    }
-
-    .portal-value-text {
-      flex: 1;
-      color: #0d3e58;
-      font-size: 0.95rem;
-      white-space: normal;
-      word-break: break-all;
-      line-height: 1.4;
-      margin-right: 8px;
-    }
-
-    .copy-btn {
-      background: none;
-      border: none;
-      color: #3a7799;
-      font-size: 1.2rem;
-      cursor: pointer;
-      padding: 4px 6px;
-      border-radius: 30px;
-      transition: all 0.15s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .copy-btn:hover {
-      background: #cbdde9;
-      color: #0b3e5c;
-    }
-
-    /* 资讯区域（全宽卡片，但在左侧列内） */
-    .info-section {
-      width: 100%;
-    }
-
-    .info-header {
-      margin-bottom: 16px;
-    }
-
-    .info-header h2 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #1b4b64;
-    }
-
-    /* UP主信息条 */
-    .up-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
-      padding: 0 4px;
-    }
-
-    .up-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid white;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    }
-
-    .up-name a {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #1b4b64;
-      text-decoration: none;
-    }
-
-    .up-name a:hover {
-      text-decoration: underline;
-    }
-
-    /* 横向滑动视频区 */
-    .video-scroll-container {
-      position: relative;
-    }
-
-    .video-list {
-      display: flex;
-      gap: 16px;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      padding-bottom: 8px;
-      scrollbar-width: thin;
-      scrollbar-color: #b0c8da #e2ecf5;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .video-list::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    .video-list::-webkit-scrollbar-thumb {
-      background: #b0c8da;
-      border-radius: 10px;
-    }
-
-    .video-card {
-      flex: 0 0 200px;
-      scroll-snap-align: start;
-      background: rgba(255,255,255,0.6);
-      border-radius: 20px;
-      padding: 12px;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.02);
-      transition: transform 0.2s;
-    }
-
-    .video-iframe-wrapper {
-      position: relative;
-      padding-bottom: 56.25%;
-      height: 0;
-      overflow: hidden;
-      border-radius: 16px;
-      margin-bottom: 10px;
-    }
-
-    .video-iframe-wrapper iframe {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    .video-title {
-      font-weight: 600;
-      font-size: 0.95rem;
-      line-height: 1.4;
-      margin-bottom: 6px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .video-title a {
-      color: #1e3b4f;
-      text-decoration: none;
-    }
-
-    .video-title a:hover {
-      color: #0a4c70;
-      text-decoration: underline;
-    }
-
-    .video-meta {
-      font-size: 0.8rem;
-      color: #6a859c;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    /* 手机端适配 */
-    @media (max-width: 680px) {
-      .page { padding: 18px 16px 20px; }
-
-      .desktop-layout {
-        flex-direction: column;
-      }
-
-      .left-column {
-        width: 100%;
-      }
-
-      .right-column {
-        width: 100%;
-      }
-
-      /* 调整顺序：快速上手 -> 资讯 -> 传送门 */
-      .left-column .card:first-child { order: 1; }
-      .info-section { order: 2; }
-      .right-column { order: 3; }
-
-      .video-card {
-        flex: 0 0 160px;
-      }
-    }
-
-    /* 底部版权 + 版本号 */
-    .footer {
-      margin-top: 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.8rem;
-      color: #8a9eb0;
-    }
-
-    .footer .version {
-      color: #8a9eb0;
-    }
-
-    .footer .copyright {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    /* 复制成功提示 */
-    .toast-tip {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e3b4f;
-      color: white;
-      padding: 8px 18px;
-      border-radius: 60px;
-      font-size: 0.9rem;
-      opacity: 0;
-      transition: opacity 0.2s;
-      pointer-events: none;
-      z-index: 999;
-    }
-
-    .loading-placeholder {
-      color: #6a859c;
-      text-align: center;
-      padding: 20px;
-    }
-  </style>
 </head>
 <body>
 <div class="page">
@@ -522,7 +53,7 @@
       <!-- 资讯区域 -->
       <div class="info-section">
         <div class="info-header">
-          <h2>资讯</h2>
+          <h2 id="infoTitle">资讯</h2>
         </div>
         <div class="card" style="padding: 20px 16px;">
           <div id="bilibiliFeed">
@@ -545,7 +76,7 @@
 
   <!-- 底部版权 + 版本号 -->
   <div class="footer">
-    <div class="version">Version 0.2.2</div>
+    <div class="version">Version 0.2.3</div>
     <div class="copyright">
       <i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr
     </div>
@@ -555,195 +86,208 @@
 <!-- 轻提示 -->
 <div class="toast-tip" id="copyToast">📋 已复制</div>
 
-<script>
-  (function(){
-    "use strict";
+<script type="module">
+  // 动态加载样式（适配系统深色/浅色模式）
+  import { lightStyles, darkStyles } from './data/styles.js';
 
-    // ---------- 语言配置 ----------
-    const LANG_MAP = { zh: 'Chinese', en: 'English' };
-    const langCache = {};
-
-    // DOM 元素
-    const guildTitleEl = document.getElementById('guildTitle');
-    const langDisplaySpan = document.getElementById('langDisplay');
-    const leaderLabel1 = document.getElementById('leaderLabel1');
-    const leaderLabel2 = document.getElementById('leaderLabel2');
-    const quickStartTitleEl = document.getElementById('quickStartTitle');
-    const portalTitleEl = document.getElementById('portalTitle');
-    const quickstartContent = document.getElementById('quickstartContent');
-    const portalList = document.getElementById('portalList');
-    const langBtn = document.getElementById('langButton');
-    const langDropdown = document.getElementById('langDropdown');
-    const langWrapper = document.getElementById('langWrapper');
-
-    let currentLang = 'zh';
-
-    // ---------- 语言加载 ----------
-    async function loadLanguage(langCode) {
-      const fileName = LANG_MAP[langCode] + '.json';
-      const url = `./data/${fileName}`;
-      if (langCache[langCode]) return langCache[langCode];
-      try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`无法加载: ${url}`);
-        const data = await response.json();
-        langCache[langCode] = data;
-        return data;
-      } catch (e) {
-        console.error(e);
-        return null;
-      }
+  function applyTheme() {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const styleId = 'dynamic-theme';
+    let styleTag = document.getElementById(styleId);
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = styleId;
+      document.head.appendChild(styleTag);
     }
+    styleTag.textContent = isDark ? darkStyles : lightStyles;
+  }
 
-    function renderWithData(data) {
-      if (!data) return;
-      guildTitleEl.textContent = data.guildTitle;
-      langDisplaySpan.textContent = data.langDisplay;
-      leaderLabel1.textContent = data.leader1;
-      leaderLabel2.textContent = data.leader2;
-      quickStartTitleEl.textContent = data.quickStartTitle;
-      portalTitleEl.textContent = data.portalTitle;
-      quickstartContent.innerHTML = data.quickHtml;
-      renderPortalItems(data.portalItems);
-      document.querySelectorAll('.lang-option').forEach(opt => {
-        opt.classList.toggle('selected', opt.dataset.lang === currentLang);
-      });
+  applyTheme();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+
+  // ---------- 语言配置 ----------
+  const LANG_MAP = { zh: 'Chinese', en: 'English' };
+  const langCache = {};
+
+  // DOM 元素
+  const guildTitleEl = document.getElementById('guildTitle');
+  const langDisplaySpan = document.getElementById('langDisplay');
+  const leaderLabel1 = document.getElementById('leaderLabel1');
+  const leaderLabel2 = document.getElementById('leaderLabel2');
+  const quickStartTitleEl = document.getElementById('quickStartTitle');
+  const portalTitleEl = document.getElementById('portalTitle');
+  const infoTitleEl = document.getElementById('infoTitle');
+  const quickstartContent = document.getElementById('quickstartContent');
+  const portalList = document.getElementById('portalList');
+  const langBtn = document.getElementById('langButton');
+  const langDropdown = document.getElementById('langDropdown');
+  const langWrapper = document.getElementById('langWrapper');
+
+  let currentLang = 'zh';
+
+  // ---------- 语言加载 ----------
+  async function loadLanguage(langCode) {
+    const fileName = LANG_MAP[langCode] + '.json';
+    const url = `./data/${fileName}`;
+    if (langCache[langCode]) return langCache[langCode];
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`无法加载: ${url}`);
+      const data = await response.json();
+      langCache[langCode] = data;
+      return data;
+    } catch (e) {
+      console.error(e);
+      return null;
     }
+  }
 
-    function renderPortalItems(items) {
-      portalList.innerHTML = '';
-      items.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'portal-item';
-        const labelDiv = document.createElement('div');
-        labelDiv.className = 'portal-label';
-        labelDiv.textContent = item.label;
-        const valueRow = document.createElement('div');
-        valueRow.className = 'portal-value-row';
-        const valueSpan = document.createElement('span');
-        valueSpan.className = 'portal-value-text';
-        valueSpan.textContent = item.value;
-        valueSpan.title = item.value;
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'copy-btn';
-        copyBtn.innerHTML = '<i class="far fa-copy"></i>';
-        copyBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const textToCopy = item.value;
-          if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(textToCopy).then(() => showToast('已复制')).catch(() => fallbackCopy(textToCopy));
-          } else fallbackCopy(textToCopy);
-        });
-        valueRow.appendChild(valueSpan);
-        valueRow.appendChild(copyBtn);
-        li.appendChild(labelDiv);
-        li.appendChild(valueRow);
-        portalList.appendChild(li);
-      });
-    }
-
-    function fallbackCopy(text) {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      showToast('已复制');
-    }
-
-    const toast = document.getElementById('copyToast');
-    let toastTimer;
-    function showToast(msg) {
-      toast.textContent = `📋 ${msg}`;
-      toast.style.opacity = '1';
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.style.opacity = '0', 1500);
-    }
-
-    // 语言切换
-    async function switchLanguage(langCode) {
-      if (langCode === currentLang) { closeDropdown(); return; }
-      const data = await loadLanguage(langCode);
-      if (data) {
-        currentLang = langCode;
-        renderWithData(data);
-        document.documentElement.lang = langCode === 'zh' ? 'zh' : 'en';
-      }
-      closeDropdown();
-    }
-
-    function openDropdown() { langDropdown.classList.add('show'); langBtn.classList.add('active'); }
-    function closeDropdown() { langDropdown.classList.remove('show'); langBtn.classList.remove('active'); }
-    function toggleDropdown() { langDropdown.classList.contains('show') ? closeDropdown() : openDropdown(); }
-
-    langBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+  function renderWithData(data) {
+    if (!data) return;
+    guildTitleEl.textContent = data.guildTitle;
+    langDisplaySpan.textContent = data.langDisplay;
+    leaderLabel1.textContent = data.leader1;
+    leaderLabel2.textContent = data.leader2;
+    quickStartTitleEl.textContent = data.quickStartTitle;
+    portalTitleEl.textContent = data.portalTitle;
+    infoTitleEl.textContent = data.infoTitle || '资讯';
+    quickstartContent.innerHTML = data.quickHtml;
+    renderPortalItems(data.portalItems);
     document.querySelectorAll('.lang-option').forEach(opt => {
-      opt.addEventListener('click', (e) => { e.stopPropagation(); switchLanguage(opt.dataset.lang); });
+      opt.classList.toggle('selected', opt.dataset.lang === currentLang);
     });
-    document.addEventListener('click', (e) => { if (!langWrapper.contains(e.target)) closeDropdown(); });
-    langDropdown.addEventListener('click', (e) => e.stopPropagation());
+  }
 
-    // ---------- 手动加载 Bilibili JSON ----------
-    async function loadBilibiliManual() {
-      const container = document.getElementById('bilibiliFeed');
-      try {
-        const response = await fetch('./data/bilibili.json');
-        if (!response.ok) throw new Error('JSON加载失败');
-        const data = await response.json();
-        renderManualFeed(data);
-      } catch (e) {
-        container.innerHTML = '<div class="loading-placeholder">资讯加载失败，请稍后重试</div>';
-        console.error('B站资讯手动数据加载错误:', e);
-      }
-    }
-
-    function renderManualFeed(data) {
-      const container = document.getElementById('bilibiliFeed');
-      const up = data.up;
-      const videos = data.videos;
-
-      let html = `
-        <div class="up-info">
-          <img class="up-avatar" src="${up.face}" alt="avatar" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ccircle cx=\\'50\\' cy=\\'50\\' r=\\'50\\' fill=\\'%23ddd\\'/%3E%3C/svg%3E'">
-          <div class="up-name"><a href="${up.homepage}" target="_blank">${up.name}</a></div>
-        </div>
-        <div class="video-scroll-container">
-          <div class="video-list">
-      `;
-
-      videos.forEach(v => {
-        html += `
-          <div class="video-card">
-            <div class="video-iframe-wrapper">
-              ${v.iframe.replace('<iframe', '<iframe style="position:absolute; top:0; left:0; width:100%; height:100%;"')}
-            </div>
-            <div class="video-title"><a href="https://www.bilibili.com/video/${v.bvid}" target="_blank">${v.title}</a></div>
-            <div class="video-meta">
-              <span>${v.date}</span>
-              <span><i class="far fa-play-circle"></i> ${v.play || ''}</span>
-            </div>
-          </div>
-        `;
+  function renderPortalItems(items) {
+    portalList.innerHTML = '';
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'portal-item';
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'portal-label';
+      labelDiv.textContent = item.label;
+      const valueRow = document.createElement('div');
+      valueRow.className = 'portal-value-row';
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'portal-value-text';
+      valueSpan.textContent = item.value;
+      valueSpan.title = item.value;
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-btn';
+      copyBtn.innerHTML = '<i class="far fa-copy"></i>';
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const textToCopy = item.value;
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(() => showToast('已复制')).catch(() => fallbackCopy(textToCopy));
+        } else fallbackCopy(textToCopy);
       });
+      valueRow.appendChild(valueSpan);
+      valueRow.appendChild(copyBtn);
+      li.appendChild(labelDiv);
+      li.appendChild(valueRow);
+      portalList.appendChild(li);
+    });
+  }
 
-      html += `</div></div>`;
-      container.innerHTML = html;
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('已复制');
+  }
+
+  const toast = document.getElementById('copyToast');
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = `📋 ${msg}`;
+    toast.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.style.opacity = '0', 1500);
+  }
+
+  // 语言切换
+  async function switchLanguage(langCode) {
+    if (langCode === currentLang) { closeDropdown(); return; }
+    const data = await loadLanguage(langCode);
+    if (data) {
+      currentLang = langCode;
+      renderWithData(data);
+      document.documentElement.lang = langCode === 'zh' ? 'zh' : 'en';
     }
+    closeDropdown();
+  }
 
-    // ---------- 初始化 ----------
-    async function init() {
-      // 预加载英文
-      loadLanguage('en').catch(() => {});
-      const data = await loadLanguage('zh');
-      if (data) renderWithData(data);
-      
-      // 加载手动资讯
-      loadBilibiliManual();
+  function openDropdown() { langDropdown.classList.add('show'); langBtn.classList.add('active'); }
+  function closeDropdown() { langDropdown.classList.remove('show'); langBtn.classList.remove('active'); }
+  function toggleDropdown() { langDropdown.classList.contains('show') ? closeDropdown() : openDropdown(); }
+
+  langBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+  document.querySelectorAll('.lang-option').forEach(opt => {
+    opt.addEventListener('click', (e) => { e.stopPropagation(); switchLanguage(opt.dataset.lang); });
+  });
+  document.addEventListener('click', (e) => { if (!langWrapper.contains(e.target)) closeDropdown(); });
+  langDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+  // ---------- 手动加载 Bilibili JSON ----------
+  async function loadBilibiliManual() {
+    const container = document.getElementById('bilibiliFeed');
+    try {
+      const response = await fetch('./data/bilibili.json');
+      if (!response.ok) throw new Error('JSON加载失败');
+      const data = await response.json();
+      renderManualFeed(data);
+    } catch (e) {
+      container.innerHTML = '<div class="loading-placeholder">资讯加载失败，请稍后重试</div>';
+      console.error('B站资讯手动数据加载错误:', e);
     }
+  }
 
-    init();
-  })();
+  function renderManualFeed(data) {
+    const container = document.getElementById('bilibiliFeed');
+    const up = data.up;
+    const videos = data.videos;
+
+    let html = `
+      <div class="up-info">
+        <img class="up-avatar" src="${up.face}" alt="avatar" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ccircle cx=\\'50\\' cy=\\'50\\' r=\\'50\\' fill=\\'%23ddd\\'/%3E%3C/svg%3E'">
+        <div class="up-name"><a href="${up.homepage}" target="_blank">${up.name}</a></div>
+      </div>
+      <div class="video-scroll-container">
+        <div class="video-list">
+    `;
+
+    videos.forEach(v => {
+      html += `
+        <div class="video-card">
+          <div class="video-iframe-wrapper">
+            ${v.iframe.replace('<iframe', '<iframe style="position:absolute; top:0; left:0; width:100%; height:100%;"')}
+          </div>
+          <div class="video-title"><a href="https://www.bilibili.com/video/${v.bvid}" target="_blank">${v.title}</a></div>
+          <div class="video-meta">
+            <span>${v.date}</span>
+            <span><i class="far fa-play-circle"></i> ${v.play || ''}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+    container.innerHTML = html;
+  }
+
+  // ---------- 初始化 ----------
+  async function init() {
+    loadLanguage('en').catch(() => {});
+    const data = await loadLanguage('zh');
+    if (data) renderWithData(data);
+    loadBilibiliManual();
+  }
+
+  init();
 </script>
 </body>
 </html>
