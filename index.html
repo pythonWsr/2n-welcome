@@ -171,6 +171,8 @@
     }
     .right-column {
       flex: 2;
+      display: flex;
+      flex-direction: column;
     }
     .quickstart-content {
       font-size: 1rem;
@@ -379,6 +381,44 @@
       text-align: center;
       padding: 20px;
     }
+
+    /* 更新日志 */
+    .changelog-list {
+      list-style: none;
+    }
+    .changelog-version {
+      font-weight: 700;
+      color: #1b4b64;
+      margin-top: 12px;
+    }
+    .changelog-item {
+      font-size: 0.9rem;
+      color: #2b4e65;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+      margin-bottom: 4px;
+    }
+    .changelog-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      cursor: pointer;
+      background: none;
+      border: 1px solid #cfdde9;
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 0.9rem;
+      color: #1e3b4f;
+      transition: 0.15s;
+    }
+    .changelog-toggle i {
+      transition: transform 0.2s;
+    }
+    .changelog-toggle.active i {
+      transform: rotate(180deg);
+    }
+
     @media (max-width: 680px) {
       .page { padding: 18px 16px 20px; }
       .desktop-layout { flex-direction: column; }
@@ -447,7 +487,7 @@
       </div>
     </div>
 
-    <!-- 右侧列：传送门 -->
+    <!-- 右侧列：传送门 + 更新日志 -->
     <div class="right-column">
       <div class="card" style="height: fit-content;">
         <div class="card-header">
@@ -455,12 +495,22 @@
         </div>
         <ul class="portal-list" id="portalList"></ul>
       </div>
+
+      <!-- 更新日志卡片 -->
+      <div class="card" style="height: fit-content;">
+        <div class="card-header">
+          <h2 id="changelogTitle">更新日志</h2>
+        </div>
+        <div id="changelogContent">
+          <div class="loading-placeholder">加载中...</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- 底部版权 + 版本号 -->
   <div class="footer">
-    <div class="version">Version 0.3.0</div>
+    <div class="version">Version 0.3.1</div>
     <div class="copyright">
       <i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr
     </div>
@@ -501,6 +551,7 @@
   const quickStartTitleEl = document.getElementById('quickStartTitle');
   const portalTitleEl = document.getElementById('portalTitle');
   const infoTitleEl = document.getElementById('infoTitle');
+  const changelogTitleEl = document.getElementById('changelogTitle');
   const quickstartContent = document.getElementById('quickstartContent');
   const portalList = document.getElementById('portalList');
   const langBtn = document.getElementById('langButton');
@@ -522,9 +573,7 @@
         fetch(baseUrl + 'start.json'),
         fetch(baseUrl + 'links.json')
       ]);
-      if (!titlesRes.ok || !startRes.ok || !linksRes.ok) {
-        throw new Error('部分语言文件加载失败');
-      }
+      if (!titlesRes.ok || !startRes.ok || !linksRes.ok) throw new Error('部分语言文件加载失败');
       const titles = await titlesRes.json();
       const start = await startRes.json();
       const links = await linksRes.json();
@@ -542,7 +591,6 @@
     }
   }
 
-  // 渲染页面
   function renderWithData(data) {
     if (!data) return;
     guildTitleEl.textContent = data.guildTitle;
@@ -552,47 +600,36 @@
     quickStartTitleEl.textContent = data.quickStartTitle;
     portalTitleEl.textContent = data.portalTitle;
     infoTitleEl.textContent = data.infoTitle || '资讯';
-    quickstartContent.innerHTML = decodeRichText(data.quickHtml, 16); // 解析标记
+    changelogTitleEl.textContent = data.changeLogTitle || (currentLang === 'zh' ? '更新日志' : 'Change Log');
+    quickstartContent.innerHTML = decodeRichText(data.quickHtml, 16);
     renderPortalItems(data.portalItems);
     document.querySelectorAll('.lang-option').forEach(opt => {
       opt.classList.toggle('selected', opt.dataset.lang === currentLang);
     });
   }
 
-  // 渲染传送门（应用格式解码）
   function renderPortalItems(items) {
     portalList.innerHTML = '';
-    const baseSize = 14; // 传送门基准字号
+    const baseSize = 14;
     items.forEach(item => {
       const li = document.createElement('li');
       li.className = 'portal-item';
-
       const labelDiv = document.createElement('div');
       labelDiv.className = 'portal-label';
       labelDiv.innerHTML = decodeRichText(item.label, baseSize);
-
       const valueRow = document.createElement('div');
       valueRow.className = 'portal-value-row';
-
       const valueSpan = document.createElement('span');
       valueSpan.className = 'portal-value-text';
       valueSpan.innerHTML = decodeRichText(item.value, baseSize);
-
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn';
       copyBtn.innerHTML = '<i class="far fa-copy"></i>';
       copyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // 复制时取原始文本（去除HTML标签）
-        const temp = document.createElement('textarea');
-        temp.value = item.value.replace(/<[^>]*>/g, '');
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-        showToast('已复制');
+        const raw = item.value.replace(/<[^>]*>/g, '');
+        navigator.clipboard?.writeText(raw).then(() => showToast('已复制')).catch(() => fallbackCopy(raw));
       });
-
       valueRow.appendChild(valueSpan);
       valueRow.appendChild(copyBtn);
       li.appendChild(labelDiv);
@@ -601,7 +638,6 @@
     });
   }
 
-  // 复制原文字符串（用于未格式化的纯文本回退）
   function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -621,7 +657,6 @@
     toastTimer = setTimeout(() => toast.style.opacity = '0', 1500);
   }
 
-  // 语言切换
   async function switchLanguage(langCode) {
     if (langCode === currentLang) { closeDropdown(); return; }
     const data = await loadLanguage(langCode);
@@ -644,12 +679,12 @@
   document.addEventListener('click', (e) => { if (!langWrapper.contains(e.target)) closeDropdown(); });
   langDropdown.addEventListener('click', (e) => e.stopPropagation());
 
-  // ---------- 资讯加载 ----------
+  // ---------- 资讯 ----------
   async function loadBilibiliManual() {
     const container = document.getElementById('bilibiliFeed');
     try {
       const response = await fetch('./data/bilibili.json');
-      if (!response.ok) throw new Error('JSON加载失败');
+      if (!response.ok) throw new Error('fail');
       const data = await response.json();
       renderManualFeed(data);
     } catch (e) {
@@ -690,12 +725,117 @@
     container.innerHTML = html;
   }
 
+  // ---------- 更新日志 ----------
+  async function loadChangelog() {
+    const container = document.getElementById('changelogContent');
+    try {
+      const res = await fetch('./README.md');
+      if (!res.ok) throw new Error();
+      const text = await res.text();
+      const versions = parseChangelog(text);
+      renderChangelog(versions);
+    } catch(e) {
+      container.innerHTML = '<div class="loading-placeholder">更新日志不可用</div>';
+    }
+  }
+
+  function parseChangelog(md) {
+    const lines = md.split('\n');
+    const blocks = [];
+    let current = null;
+    for (const line of lines) {
+      // 匹配 Markdown 标题或纯文本版本行
+      const verMatch = line.match(/^#{0,6}\s*Version\s+([\d.]+)/);
+      if (verMatch) {
+        if (current) blocks.push(current);
+        current = { version: 'Version ' + verMatch[1], items: [] };
+      } else if (current && /^\s*·/.test(line)) {
+        current.items.push(line.replace(/^\s*·\s*/, ''));
+      }
+    }
+    if (current) blocks.push(current);
+    return blocks;
+  }
+
+  function renderChangelog(versions) {
+    const container = document.getElementById('changelogContent');
+    if (!versions.length) {
+      container.innerHTML = '<div class="loading-placeholder">暂无更新日志</div>';
+      return;
+    }
+
+    const showCount = 5;
+    const initial = versions.slice(0, showCount);
+    const rest = versions.slice(showCount);
+    let isExpanded = false;
+
+    const listDiv = document.createElement('div');
+    listDiv.className = 'changelog-list';
+
+    // 判断是否为 0.*.0 版本 (主版本号为0且修订号为0)
+    function isRedVersion(verString) {
+      const match = verString.match(/^Version\s+(\d+)\.(\d+)\.(\d+)$/);
+      if (match) {
+        const major = parseInt(match[1]);
+        const patch = parseInt(match[3]);
+        return major === 0 && patch === 0;
+      }
+      return false;
+    }
+
+    function renderList(items) {
+      listDiv.innerHTML = '';
+      items.forEach(ver => {
+        const versionEl = document.createElement('div');
+        versionEl.className = 'changelog-version';
+        versionEl.textContent = ver.version;
+        if (isRedVersion(ver.version)) {
+          versionEl.style.color = '#de1f1f';
+        }
+        listDiv.appendChild(versionEl);
+        ver.items.forEach(item => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'changelog-item';
+          itemEl.textContent = '· ' + item;
+          if (isRedVersion(ver.version)) {
+            itemEl.style.color = '#de1f1f';
+          }
+          listDiv.appendChild(itemEl);
+        });
+      });
+    }
+
+    renderList(initial);
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'changelog-toggle';
+    toggleBtn.innerHTML = `查看全部 <i class="fas fa-chevron-down"></i>`;
+
+    toggleBtn.addEventListener('click', () => {
+      isExpanded = !isExpanded;
+      if (isExpanded) {
+        renderList(versions);
+        toggleBtn.innerHTML = `折叠 <i class="fas fa-chevron-up"></i>`;
+        toggleBtn.classList.add('active');
+      } else {
+        renderList(initial);
+        toggleBtn.innerHTML = `查看全部 <i class="fas fa-chevron-down"></i>`;
+        toggleBtn.classList.remove('active');
+      }
+    });
+
+    container.innerHTML = '';
+    container.appendChild(listDiv);
+    container.appendChild(toggleBtn);
+  }
+
   // ---------- 初始化 ----------
   async function init() {
     loadLanguage('en').catch(() => {});
     const data = await loadLanguage('zh');
     if (data) renderWithData(data);
     loadBilibiliManual();
+    loadChangelog();
   }
 
   init();
