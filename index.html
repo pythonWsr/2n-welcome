@@ -58,6 +58,11 @@
     .desktop-layout { display:flex; gap:24px; }
     .left-column { flex:8; display:flex; flex-direction:column; }
     .right-column { flex:2; display:flex; flex-direction:column; }
+
+    /* 电脑端更新日志在左侧，手机端在右侧 */
+    .changelog-card { }
+    .changelog-card-mobile { display:none; } /* 电脑端隐藏手机更新日志卡片 */
+
     .quickstart-content { font-size:1rem; line-height:1.6; color:#1f3f54; }
     .quickstart-content p { margin-bottom:1em; }
     .quickstart-content a { color:#1e6f9f; text-decoration:none; font-weight:500; border-bottom:1.5px dotted #7fa9c7; }
@@ -115,6 +120,8 @@
       padding:8px 18px; border-radius:60px; font-size:0.9rem; opacity:0; transition:opacity 0.2s; pointer-events:none; z-index:999;
     }
     .loading-placeholder { color:#6a859c; text-align:center; padding:20px; }
+
+    /* 更新日志共用样式 */
     .changelog-list { list-style:none; }
     .changelog-version { font-weight:700; color:#1b4b64; margin-top:12px; }
     .changelog-item { font-size:0.9rem; color:#2b4e65; padding-left:1.2em; text-indent:-1.2em; margin-bottom:4px; }
@@ -122,16 +129,17 @@
       display:flex; align-items:center; gap:6px; margin-top:12px; cursor:pointer; background:none;
       border:1px solid #cfdde9; border-radius:30px; padding:6px 16px; font-size:0.9rem; color:#1e3b4f; transition:0.15s;
     }
+    /* 不再使用 active 旋转，仅靠图标类切换 */
     .changelog-toggle i { transition:transform 0.2s; }
-    .changelog-toggle.active i { transform:rotate(180deg); }
+
     @media (max-width:680px) {
       .page { padding:18px 16px 20px; }
       .desktop-layout { flex-direction:column; }
       .left-column { width:100%; }
       .right-column { width:100%; }
-      .left-column .card:first-child { order:1; }
-      .info-section { order:2; }
-      .right-column { order:3; }
+      /* 手机端显示右侧的更新日志卡片，隐藏左侧 */
+      .changelog-card { display:none; }
+      .changelog-card-mobile { display:block; }
       .video-card { flex:0 0 160px; }
     }
   </style>
@@ -178,6 +186,12 @@
           <div id="bilibiliFeed"><div class="loading-placeholder">加载资讯中...</div></div>
         </div>
       </div>
+
+      <!-- 电脑端更新日志（左侧） -->
+      <div class="card changelog-card">
+        <div class="card-header"><h2 id="changelogTitleDesktop">更新日志</h2></div>
+        <div id="changelogContentDesktop"><div class="loading-placeholder">加载中...</div></div>
+      </div>
     </div>
 
     <div class="right-column">
@@ -185,9 +199,10 @@
         <div class="card-header"><h2 id="portalTitle">传送门</h2></div>
         <ul class="portal-list" id="portalList"></ul>
       </div>
-      <div class="card" style="height:fit-content;">
-        <div class="card-header"><h2 id="changelogTitle">更新日志</h2></div>
-        <div id="changelogContent"><div class="loading-placeholder">加载中...</div></div>
+      <!-- 手机端更新日志（右侧） -->
+      <div class="card changelog-card-mobile">
+        <div class="card-header"><h2 id="changelogTitleMobile">更新日志</h2></div>
+        <div id="changelogContentMobile"><div class="loading-placeholder">加载中...</div></div>
       </div>
     </div>
   </div>
@@ -229,7 +244,8 @@
   const quickStartTitleEl = document.getElementById('quickStartTitle');
   const portalTitleEl = document.getElementById('portalTitle');
   const infoTitleEl = document.getElementById('infoTitle');
-  const changelogTitleEl = document.getElementById('changelogTitle');
+  const changelogTitleDesktop = document.getElementById('changelogTitleDesktop');
+  const changelogTitleMobile = document.getElementById('changelogTitleMobile');
   const quickstartContent = document.getElementById('quickstartContent');
   const portalList = document.getElementById('portalList');
   const langBtn = document.getElementById('langButton');
@@ -268,7 +284,9 @@
     quickStartTitleEl.textContent = data.quickStartTitle;
     portalTitleEl.textContent = data.portalTitle;
     infoTitleEl.textContent = data.infoTitle || '资讯';
-    changelogTitleEl.textContent = data.changeLogTitle || (currentLang === 'zh' ? '更新日志' : 'Change Log');
+    const changelogTitle = data.changeLogTitle || (currentLang === 'zh' ? '更新日志' : 'Change Log');
+    changelogTitleDesktop.textContent = changelogTitle;
+    changelogTitleMobile.textContent = changelogTitle;
     quickstartContent.innerHTML = decodeRichText(data.quickHtml, 16);
     renderPortalItems(data.portalItems);
     document.querySelectorAll('.lang-option').forEach(opt => {
@@ -331,6 +349,8 @@
       currentLang = langCode;
       renderWithData(data);
       document.documentElement.lang = langCode === 'zh' ? 'zh' : 'en';
+      // 重新渲染更新日志以刷新按钮文字
+      loadChangelog();
     }
     closeDropdown();
   }
@@ -367,14 +387,23 @@
   }
 
   async function loadChangelog() {
-    const container = document.getElementById('changelogContent');
+    const containerDesktop = document.getElementById('changelogContentDesktop');
+    const containerMobile = document.getElementById('changelogContentMobile');
     try {
       const res = await fetch('./README.md');
       if (!res.ok) throw new Error();
       const text = await res.text();
       const versions = parseChangelog(text);
-      renderChangelog(versions);
-    } catch(e) { container.innerHTML = '<div class="loading-placeholder">更新日志不可用</div>'; }
+      // 获取当前语言的按钮文字
+      const lang = langCache[currentLang] || {};
+      const expandText = lang.changelogExpand || (currentLang === 'zh' ? '查看全部' : 'Show All');
+      const collapseText = lang.changelogCollapse || (currentLang === 'zh' ? '折叠' : 'Collapse');
+      renderChangelog(versions, containerDesktop, expandText, collapseText);
+      renderChangelog(versions, containerMobile, expandText, collapseText);
+    } catch(e) {
+      containerDesktop.innerHTML = '<div class="loading-placeholder">更新日志不可用</div>';
+      containerMobile.innerHTML = '<div class="loading-placeholder">更新日志不可用</div>';
+    }
   }
 
   function parseChangelog(md) {
@@ -394,12 +423,15 @@
     return blocks;
   }
 
-  function renderChangelog(versions) {
-    const container = document.getElementById('changelogContent');
-    if (!versions.length) { container.innerHTML = '<div class="loading-placeholder">暂无更新日志</div>'; return; }
+  function renderChangelog(versions, container, expandText, collapseText) {
+    if (!versions.length) {
+      container.innerHTML = '<div class="loading-placeholder">暂无更新日志</div>';
+      return;
+    }
     const showCount = 5;
     const initial = versions.slice(0, showCount);
     let isExpanded = false;
+
     const listDiv = document.createElement('div');
     listDiv.className = 'changelog-list';
 
@@ -430,21 +462,21 @@
     }
 
     renderList(initial);
+
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'changelog-toggle';
-    toggleBtn.innerHTML = `查看全部 <i class="fas fa-chevron-down"></i>`;
+    toggleBtn.innerHTML = `${expandText} <i class="fas fa-chevron-down"></i>`;
     toggleBtn.addEventListener('click', () => {
       isExpanded = !isExpanded;
       if (isExpanded) {
         renderList(versions);
-        toggleBtn.innerHTML = `折叠 <i class="fas fa-chevron-up"></i>`;
-        toggleBtn.classList.add('active');
+        toggleBtn.innerHTML = `${collapseText} <i class="fas fa-chevron-up"></i>`;
       } else {
         renderList(initial);
-        toggleBtn.innerHTML = `查看全部 <i class="fas fa-chevron-down"></i>`;
-        toggleBtn.classList.remove('active');
+        toggleBtn.innerHTML = `${expandText} <i class="fas fa-chevron-down"></i>`;
       }
     });
+
     container.innerHTML = '';
     container.appendChild(listDiv);
     container.appendChild(toggleBtn);
