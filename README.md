@@ -1,3 +1,6 @@
+## Version 0.3.2
+· add update function
+
 ## Version 0.3.1
 · add the Change Log
 
