@@ -460,7 +460,7 @@
 
   <!-- 底部版权 + 版本号 -->
   <div class="footer">
-    <div class="version">Version 0.2.5</div>
+    <div class="version">Version 0.3.0</div>
     <div class="copyright">
       <i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr
     </div>
@@ -471,9 +471,10 @@
 <div class="toast-tip" id="copyToast">📋 已复制</div>
 
 <script type="module">
-  // 动态加载样式（适配系统深色/浅色模式）
   import { lightStyles, darkStyles } from './data/styles.js';
+  import { decodeRichText } from './decode.js';
 
+  // 主题切换
   function applyTheme() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const styleId = 'dynamic-theme';
@@ -485,12 +486,11 @@
     }
     styleTag.textContent = isDark ? darkStyles : lightStyles;
   }
-
   applyTheme();
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
   // ---------- 语言配置 ----------
-  const LANG_MAP = { zh: 'Chinese', en: 'English' };
+  const LANG_FOLDER = { zh: 'zh-CN', en: 'en-US' };
   const langCache = {};
 
   // DOM 元素
@@ -509,23 +509,40 @@
 
   let currentLang = 'zh';
 
-  // ---------- 语言加载 ----------
+  // ---------- 加载拆分后的语言包 ----------
   async function loadLanguage(langCode) {
-    const fileName = LANG_MAP[langCode] + '.json';
-    const url = `./data/${fileName}`;
+    const folder = LANG_FOLDER[langCode];
+    if (!folder) return null;
     if (langCache[langCode]) return langCache[langCode];
+
+    const baseUrl = `./data/${folder}/`;
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`无法加载: ${url}`);
-      const data = await response.json();
-      langCache[langCode] = data;
-      return data;
+      const [titlesRes, startRes, linksRes] = await Promise.all([
+        fetch(baseUrl + 'titles.json'),
+        fetch(baseUrl + 'start.json'),
+        fetch(baseUrl + 'links.json')
+      ]);
+      if (!titlesRes.ok || !startRes.ok || !linksRes.ok) {
+        throw new Error('部分语言文件加载失败');
+      }
+      const titles = await titlesRes.json();
+      const start = await startRes.json();
+      const links = await linksRes.json();
+
+      const merged = {
+        ...titles,
+        quickHtml: start.quickHtml,
+        portalItems: links.portalItems
+      };
+      langCache[langCode] = merged;
+      return merged;
     } catch (e) {
-      console.error(e);
+      console.error('语言文件加载错误:', e);
       return null;
     }
   }
 
+  // 渲染页面
   function renderWithData(data) {
     if (!data) return;
     guildTitleEl.textContent = data.guildTitle;
@@ -535,37 +552,47 @@
     quickStartTitleEl.textContent = data.quickStartTitle;
     portalTitleEl.textContent = data.portalTitle;
     infoTitleEl.textContent = data.infoTitle || '资讯';
-    quickstartContent.innerHTML = data.quickHtml;
+    quickstartContent.innerHTML = decodeRichText(data.quickHtml, 16); // 解析标记
     renderPortalItems(data.portalItems);
     document.querySelectorAll('.lang-option').forEach(opt => {
       opt.classList.toggle('selected', opt.dataset.lang === currentLang);
     });
   }
 
+  // 渲染传送门（应用格式解码）
   function renderPortalItems(items) {
     portalList.innerHTML = '';
+    const baseSize = 14; // 传送门基准字号
     items.forEach(item => {
       const li = document.createElement('li');
       li.className = 'portal-item';
+
       const labelDiv = document.createElement('div');
       labelDiv.className = 'portal-label';
-      labelDiv.textContent = item.label;
+      labelDiv.innerHTML = decodeRichText(item.label, baseSize);
+
       const valueRow = document.createElement('div');
       valueRow.className = 'portal-value-row';
+
       const valueSpan = document.createElement('span');
       valueSpan.className = 'portal-value-text';
-      valueSpan.textContent = item.value;
-      valueSpan.title = item.value;
+      valueSpan.innerHTML = decodeRichText(item.value, baseSize);
+
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn';
       copyBtn.innerHTML = '<i class="far fa-copy"></i>';
       copyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const textToCopy = item.value;
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(textToCopy).then(() => showToast('已复制')).catch(() => fallbackCopy(textToCopy));
-        } else fallbackCopy(textToCopy);
+        // 复制时取原始文本（去除HTML标签）
+        const temp = document.createElement('textarea');
+        temp.value = item.value.replace(/<[^>]*>/g, '');
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        showToast('已复制');
       });
+
       valueRow.appendChild(valueSpan);
       valueRow.appendChild(copyBtn);
       li.appendChild(labelDiv);
@@ -574,6 +601,7 @@
     });
   }
 
+  // 复制原文字符串（用于未格式化的纯文本回退）
   function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -616,7 +644,7 @@
   document.addEventListener('click', (e) => { if (!langWrapper.contains(e.target)) closeDropdown(); });
   langDropdown.addEventListener('click', (e) => e.stopPropagation());
 
-  // ---------- 手动加载 Bilibili JSON ----------
+  // ---------- 资讯加载 ----------
   async function loadBilibiliManual() {
     const container = document.getElementById('bilibiliFeed');
     try {
@@ -626,7 +654,6 @@
       renderManualFeed(data);
     } catch (e) {
       container.innerHTML = '<div class="loading-placeholder">资讯加载失败，请稍后重试</div>';
-      console.error('B站资讯手动数据加载错误:', e);
     }
   }
 
