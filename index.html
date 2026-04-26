@@ -218,6 +218,9 @@
 
 <div class="toast-tip" id="copyToast">📋 已复制</div>
 
+<!-- 调试工具（必须在其他脚本之前加载以便捕获 fetch 错误） -->
+<script src="./debug.js"></script>
+
 <script type="module">
   import { lightStyles, darkStyles } from './data/styles.js';
   import { decodeRichText } from './decode.js';
