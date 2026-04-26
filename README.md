@@ -1,3 +1,6 @@
+## Version 0.3.3
+· ready for the Announcement function
+
 ## Version 0.3.2
 · add update function
 
