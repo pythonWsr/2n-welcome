@@ -1,3 +1,6 @@
+## Version 0.3.4
+· add debug type
+
 ## Version 0.3.3
 · ready for the Announcement function
 
