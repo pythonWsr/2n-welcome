@@ -1,4 +1,4 @@
-// main/settings.js – 用户区域与设置菜单（修复子菜单弹出）
+// main/settings.js – 用户区域与设置菜单（智能防溢出）
 import * as pipe from './pipe.js';
 
 let currentLang = pipe.getLanguage();
@@ -63,7 +63,6 @@ export async function renderUserArea(container) {
 
   container.innerHTML = html;
 
-  // 获取元素
   const settingsIcon = document.getElementById('settingsIcon');
   const dropdown = document.getElementById('settingsDropdown');
   const langOption = document.getElementById('langOption');
@@ -71,50 +70,78 @@ export async function renderUserArea(container) {
   const langSubmenu = document.getElementById('langSubmenu');
   const themeSubmenu = document.getElementById('themeSubmenu');
 
-  // 所有菜单初始隐藏
-  dropdown.style.display = 'none';
-  langSubmenu.style.display = 'none';
-  themeSubmenu.style.display = 'none';
-
-  // 关闭所有菜单
-  function closeAll() {
+  // 隐藏所有菜单
+  function hideAll() {
     dropdown.style.display = 'none';
     langSubmenu.style.display = 'none';
     themeSubmenu.style.display = 'none';
   }
 
-  // 关闭子菜单
-  function closeSubMenus() {
-    langSubmenu.style.display = 'none';
-    themeSubmenu.style.display = 'none';
+  // 智能定位下拉菜单（主菜单）
+  function positionDropdown(menu) {
+    const rect = container.getBoundingClientRect();
+    menu.style.top = '40px';
+    // 默认右对齐
+    menu.style.right = '0';
+    menu.style.left = 'auto';
+    // 如果超出左侧，改为左对齐
+    const menuWidth = menu.offsetWidth;
+    if (rect.width - menuWidth < 0) {
+      menu.style.right = 'auto';
+      menu.style.left = '0';
+    }
   }
 
-  // 设置图标点击 → 切换主菜单
+  // 智能定位子菜单（相对于触发选项）
+  function positionSubmenu(submenu, anchor) {
+    const anchorRect = anchor.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const submenuWidth = submenu.offsetWidth || 160;
+
+    // 先尝试向左弹出
+    let left = anchorRect.left - containerRect.left - submenuWidth - 4;
+    if (left >= 0) {
+      submenu.style.left = left + 'px';
+      submenu.style.right = 'auto';
+    } else {
+      // 向左空间不足，改为向右弹出
+      const right = anchorRect.left - containerRect.left + anchorRect.width + 4;
+      submenu.style.left = right + 'px';
+      submenu.style.right = 'auto';
+      // 如果向右也超出容器，则紧贴右侧
+      if (right + submenuWidth > containerRect.width) {
+        submenu.style.left = 'auto';
+        submenu.style.right = '0';
+      }
+    }
+    submenu.style.top = (anchorRect.top - containerRect.top) + 'px';
+  }
+
   settingsIcon.addEventListener('click', (e) => {
     e.stopPropagation();
     if (dropdown.style.display === 'block') {
-      closeAll();
+      hideAll();
     } else {
-      closeAll();
+      hideAll();
       dropdown.style.display = 'block';
+      positionDropdown(dropdown);
     }
   });
 
-  // 语言选项点击 → 切换语言子菜单
   langOption.addEventListener('click', (e) => {
     e.stopPropagation();
-    closeSubMenus(); // 关闭另一个子菜单
-    langSubmenu.style.display = langSubmenu.style.display === 'block' ? 'none' : 'block';
+    hideAll(); // 先关闭其他
+    langSubmenu.style.display = 'block';
+    positionSubmenu(langSubmenu, langOption);
   });
 
-  // 主题选项点击 → 切换主题子菜单
   themeOption.addEventListener('click', (e) => {
     e.stopPropagation();
-    closeSubMenus();
-    themeSubmenu.style.display = themeSubmenu.style.display === 'block' ? 'none' : 'block';
+    hideAll();
+    themeSubmenu.style.display = 'block';
+    positionSubmenu(themeSubmenu, themeOption);
   });
 
-  // 语言选择
   document.querySelectorAll('.lang-choice').forEach(item => {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -124,11 +151,10 @@ export async function renderUserArea(container) {
         pipe.setLanguage(lang);
         window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
       }
-      closeAll();
+      hideAll();
     });
   });
 
-  // 主题选择
   document.querySelectorAll('.theme-choice').forEach(item => {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -138,14 +164,13 @@ export async function renderUserArea(container) {
         pipe.setColorMode(mode);
         applyThemeManually(mode);
       }
-      closeAll();
+      hideAll();
     });
   });
 
-  // 点击外部关闭
   document.addEventListener('click', (e) => {
     if (!container.contains(e.target)) {
-      closeAll();
+      hideAll();
     }
   });
 }

@@ -1,3 +1,6 @@
+## Version 0.4.4
+· force right alignment
+
 ## Version 0.4.3
 · fix settings-related issues
 
