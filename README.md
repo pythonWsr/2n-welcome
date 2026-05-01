@@ -1,3 +1,6 @@
+## Version 0.4.1
+· fixed title centering
+
 ## Version 0.4.0
 · extract styles to CSS file
 
