@@ -1,3 +1,6 @@
+## Version 0.3.5
+· add pipe
+
 ## Version 0.3.4
 · add debug type
 
