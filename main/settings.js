@@ -1,4 +1,4 @@
-// main/settings.js – 用户区域与设置菜单（强化防溢出定位）
+// main/settings.js – 用户区域与设置菜单（智能防溢出）
 import * as pipe from './pipe.js';
 
 let currentLang = pipe.getLanguage();
@@ -70,66 +70,48 @@ export async function renderUserArea(container) {
   const langSubmenu = document.getElementById('langSubmenu');
   const themeSubmenu = document.getElementById('themeSubmenu');
 
+  // 隐藏所有菜单
   function hideAll() {
     dropdown.style.display = 'none';
     langSubmenu.style.display = 'none';
     themeSubmenu.style.display = 'none';
   }
 
-  // 确保下拉菜单（主菜单）不超出容器边界
+  // 智能定位下拉菜单（主菜单）
   function positionDropdown(menu) {
-    const containerRect = container.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
     menu.style.top = '40px';
     // 默认右对齐
     menu.style.right = '0';
     menu.style.left = 'auto';
-    // 如果菜单宽度超过容器左侧剩余空间，改为左对齐
+    // 如果超出左侧，改为左对齐
     const menuWidth = menu.offsetWidth;
-    if (menuWidth > containerRect.width) {
-      // 菜单比容器还宽，则左对齐并允许稍微超出（或设置 max-width）
-      menu.style.right = 'auto';
-      menu.style.left = '0';
-      menu.style.maxWidth = containerRect.width + 'px';
-    } else if (containerRect.width - menuWidth < 0) {
+    if (rect.width - menuWidth < 0) {
       menu.style.right = 'auto';
       menu.style.left = '0';
     }
   }
 
-  // 子菜单智能定位：优先向左弹出，若空间不够则向右，若仍不够则贴边并设置 max-width
+  // 智能定位子菜单（相对于触发选项）
   function positionSubmenu(submenu, anchor) {
     const anchorRect = anchor.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
     const submenuWidth = submenu.offsetWidth || 160;
 
-    // 清除旧样式
-    submenu.style.left = 'auto';
-    submenu.style.right = 'auto';
-    submenu.style.maxWidth = 'none';
-
     // 先尝试向左弹出
-    const spaceOnLeft = anchorRect.left - containerRect.left;
-    if (spaceOnLeft >= submenuWidth + 4) {
-      submenu.style.right = (containerRect.width - anchorRect.left + containerRect.left) + 'px';
-      submenu.style.marginRight = '4px';
-      submenu.style.left = 'auto';
+    let left = anchorRect.left - containerRect.left - submenuWidth - 4;
+    if (left >= 0) {
+      submenu.style.left = left + 'px';
+      submenu.style.right = 'auto';
     } else {
-      // 向左空间不足，尝试向右弹出
-      const spaceOnRight = containerRect.width - (anchorRect.left + anchorRect.width) - containerRect.left;
-      if (spaceOnRight >= submenuWidth + 4) {
-        submenu.style.left = (anchorRect.left + anchorRect.width - containerRect.left + 4) + 'px';
-        submenu.style.right = 'auto';
-        submenu.style.marginRight = '0';
-      } else {
-        // 两侧都不够，则强制定位在容器内，必要时缩小宽度
-        const maxAvail = containerRect.width - 8;
-        if (submenuWidth > maxAvail) {
-          submenu.style.maxWidth = maxAvail + 'px';
-          submenu.style.whiteSpace = 'normal';
-        }
-        // 紧贴容器右侧
-        submenu.style.right = '0';
+      // 向左空间不足，改为向右弹出
+      const right = anchorRect.left - containerRect.left + anchorRect.width + 4;
+      submenu.style.left = right + 'px';
+      submenu.style.right = 'auto';
+      // 如果向右也超出容器，则紧贴右侧
+      if (right + submenuWidth > containerRect.width) {
         submenu.style.left = 'auto';
+        submenu.style.right = '0';
       }
     }
     submenu.style.top = (anchorRect.top - containerRect.top) + 'px';
@@ -148,7 +130,7 @@ export async function renderUserArea(container) {
 
   langOption.addEventListener('click', (e) => {
     e.stopPropagation();
-    hideAll();
+    hideAll(); // 先关闭其他
     langSubmenu.style.display = 'block';
     positionSubmenu(langSubmenu, langOption);
   });
