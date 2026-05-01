@@ -1,3 +1,6 @@
+## Version 0.4.0
+· extract styles to CSS file
+
 ## Version 0.3.5
 · add pipe
 
