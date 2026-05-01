@@ -1,3 +1,6 @@
+## Version 0.4.3
+· fix settings-related issues
+
 ## Version 0.4.2
 · add settings
 
