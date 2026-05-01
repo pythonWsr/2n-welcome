@@ -1,3 +1,6 @@
+## Version 0.4.2
+· add settings
+
 ## Version 0.4.1
 · fixed title centering
 

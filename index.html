@@ -13,16 +13,8 @@
 <div class="page">
   <div class="header-row">
     <div class="main-title" id="guildTitle">加载中...</div>
-    <div class="lang-wrapper" id="langWrapper">
-      <div class="lang-btn" id="langButton">
-        <span id="langDisplay">中文</span>
-        <i class="fas fa-chevron-down" id="langArrow"></i>
-      </div>
-      <div class="lang-dropdown" id="langDropdown">
-        <div class="lang-option" data-lang="zh">中文</div>
-        <div class="lang-option" data-lang="en">English</div>
-      </div>
-    </div>
+    <!-- 用户区域与设置 -->
+    <div id="userAreaContainer"></div>
   </div>
 
   <div class="leaders">
@@ -82,13 +74,18 @@
   </div>
 
   <div class="footer">
-    <div class="version">Version 0.4.0</div>
+    <div class="version">Version 0.4.2</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </div>
 </div>
 
 <div class="toast-tip" id="copyToast">📋 已复制</div>
 <script src="./main/debug.js"></script>
+<script type="module">
+  import { renderUserArea } from './main/settings.js';
+  const userContainer = document.getElementById('userAreaContainer');
+  renderUserArea(userContainer);
+</script>
 <script type="module" src="./main/core.js"></script>
 </body>
 </html>
