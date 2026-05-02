@@ -43,16 +43,12 @@
         </div>
       </div>
 
-      <!-- 电脑端通知卡片（含问卷） -->
+      <!-- 电脑端通知卡片 -->
       <div class="card card-desktop" id="announceCardDesktop">
         <div class="card-header"><h2 id="announceTitleDesktop">通知</h2></div>
         <div id="announceDesktop"><div class="loading-placeholder">加载中...</div></div>
-        <!-- 嵌入问卷 -->
-        <div class="survey-wrapper" style="margin-top:16px;">
-          <iframe src='https://v.wjx.cn/vm/mvfSmAf.aspx?width=760&source=iframe&s=t' 
-                  style='width:100%; height:600px; border:none; border-radius:12px; overflow:auto;' 
-                  frameborder='0'></iframe>
-        </div>
+        <!-- 问卷容器（动态插入，仅 user 存在时显示） -->
+        <div id="surveyContainerDesktop"></div>
       </div>
 
       <div class="card card-desktop" id="changelogCardDesktop">
@@ -67,15 +63,11 @@
         <ul class="portal-list" id="portalList"></ul>
       </div>
 
-      <!-- 手机端通知卡片（含问卷，高度略小） -->
+      <!-- 手机端通知卡片 -->
       <div class="card card-mobile" id="announceCardMobile">
         <div class="card-header"><h2 id="announceTitleMobile">通知</h2></div>
         <div id="announceMobile"><div class="loading-placeholder">加载中...</div></div>
-        <div class="survey-wrapper" style="margin-top:16px;">
-          <iframe src='https://v.wjx.cn/vm/mvfSmAf.aspx?width=760&source=iframe&s=t' 
-                  style='width:100%; height:500px; border:none; border-radius:12px; overflow:auto;' 
-                  frameborder='0'></iframe>
-        </div>
+        <div id="surveyContainerMobile"></div>
       </div>
 
       <div class="card card-mobile" id="changelogCardMobile">
@@ -86,7 +78,7 @@
   </div>
 
   <div class="footer">
-    <div class="version">Version 0.4.7</div>
+    <div class="version">Version 0.4.8</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </div>
 </div>
@@ -96,6 +88,19 @@
 <script type="module">
   import { renderUserArea } from './main/settings.js';
   renderUserArea(document.getElementById('userAreaContainer'));
+</script>
+<!-- 新增：问卷加载模块 -->
+<script type="module">
+  import * as pipe from './main/pipe.js';
+  import { renderSurvey } from './data/survey.js';
+
+  const user = pipe.getUrlParam('user');
+  if (user) {
+    const containerDesktop = document.getElementById('surveyContainerDesktop');
+    const containerMobile = document.getElementById('surveyContainerMobile');
+    renderSurvey(containerDesktop, user, false);   // 电脑端
+    renderSurvey(containerMobile, user, true);     // 手机端（高度略小）
+  }
 </script>
 <script type="module" src="./main/core.js"></script>
 </body>
