@@ -1,3 +1,6 @@
+## Version 0.4.7
+· fixed a small bug
+
 ## Version 0.4.6
 · add a questionnaire survey
 
