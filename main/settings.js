@@ -1,4 +1,4 @@
-// main/settings.js – 用户区域与设置菜单（智能防溢出）
+// main/settings.js – 用户区域与设置菜单（修复预展开与溢出）
 import * as pipe from './pipe.js';
 
 let currentLang = pipe.getLanguage();
@@ -70,53 +70,72 @@ export async function renderUserArea(container) {
   const langSubmenu = document.getElementById('langSubmenu');
   const themeSubmenu = document.getElementById('themeSubmenu');
 
-  // 隐藏所有菜单
+  // 强制隐藏所有菜单（初始状态）
+  dropdown.style.display = 'none';
+  langSubmenu.style.display = 'none';
+  themeSubmenu.style.display = 'none';
+
+  // 关闭所有菜单
   function hideAll() {
     dropdown.style.display = 'none';
     langSubmenu.style.display = 'none';
     themeSubmenu.style.display = 'none';
   }
 
-  // 智能定位下拉菜单（主菜单）
-  function positionDropdown(menu) {
-    const rect = container.getBoundingClientRect();
-    menu.style.top = '40px';
-    // 默认右对齐
-    menu.style.right = '0';
-    menu.style.left = 'auto';
-    // 如果超出左侧，改为左对齐
-    const menuWidth = menu.offsetWidth;
-    if (rect.width - menuWidth < 0) {
+  // 智能定位：确保菜单不超出窗口
+  function keepInViewport(menu, anchorRect = null) {
+    if (!menu) return;
+    const menuRect = menu.getBoundingClientRect();
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    // 水平修正
+    if (menuRect.right > winW) {
+      menu.style.left = 'auto';
+      menu.style.right = '0px';
+    }
+    if (menuRect.left < 0) {
+      menu.style.left = '0px';
       menu.style.right = 'auto';
-      menu.style.left = '0';
+    }
+    // 垂直修正
+    if (menuRect.bottom > winH) {
+      menu.style.top = Math.max(0, winH - menuRect.height - 10) + 'px';
+    }
+    if (menuRect.top < 0) {
+      menu.style.top = '10px';
     }
   }
 
-  // 智能定位子菜单（相对于触发选项）
+  // 定位主菜单（相对于容器）
+  function positionDropdown(menu) {
+    menu.style.top = '40px';
+    menu.style.right = '0';
+    menu.style.left = 'auto';
+    // 强制重排后检查溢出
+    requestAnimationFrame(() => keepInViewport(menu));
+  }
+
+  // 定位子菜单（相对于触发选项）
   function positionSubmenu(submenu, anchor) {
     const anchorRect = anchor.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
-    const submenuWidth = submenu.offsetWidth || 160;
-
-    // 先尝试向左弹出
-    let left = anchorRect.left - containerRect.left - submenuWidth - 4;
-    if (left >= 0) {
-      submenu.style.left = left + 'px';
-      submenu.style.right = 'auto';
-    } else {
-      // 向左空间不足，改为向右弹出
-      const right = anchorRect.left - containerRect.left + anchorRect.width + 4;
-      submenu.style.left = right + 'px';
-      submenu.style.right = 'auto';
-      // 如果向右也超出容器，则紧贴右侧
-      if (right + submenuWidth > containerRect.width) {
-        submenu.style.left = 'auto';
-        submenu.style.right = '0';
-      }
-    }
+    // 先放置到默认左侧
     submenu.style.top = (anchorRect.top - containerRect.top) + 'px';
+    submenu.style.left = (anchorRect.left - containerRect.left - 170) + 'px'; // 假设宽度170
+    submenu.style.right = 'auto';
+    requestAnimationFrame(() => {
+      // 如果超出左边界，改为右侧弹出
+      const subRect = submenu.getBoundingClientRect();
+      if (subRect.left < 0) {
+        submenu.style.left = 'auto';
+        submenu.style.right = (containerRect.width - anchorRect.right + containerRect.left) + 'px';
+      }
+      keepInViewport(submenu);
+    });
   }
 
+  // 设置图标点击
   settingsIcon.addEventListener('click', (e) => {
     e.stopPropagation();
     if (dropdown.style.display === 'block') {
@@ -128,13 +147,15 @@ export async function renderUserArea(container) {
     }
   });
 
+  // 语言选项点击
   langOption.addEventListener('click', (e) => {
     e.stopPropagation();
-    hideAll(); // 先关闭其他
+    hideAll(); // 关闭其他，但保留本身需要打开的
     langSubmenu.style.display = 'block';
     positionSubmenu(langSubmenu, langOption);
   });
 
+  // 主题选项点击
   themeOption.addEventListener('click', (e) => {
     e.stopPropagation();
     hideAll();
@@ -142,6 +163,7 @@ export async function renderUserArea(container) {
     positionSubmenu(themeSubmenu, themeOption);
   });
 
+  // 语言选择
   document.querySelectorAll('.lang-choice').forEach(item => {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -149,12 +171,12 @@ export async function renderUserArea(container) {
       if (lang !== currentLang) {
         currentLang = lang;
         pipe.setLanguage(lang);
-        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
       }
       hideAll();
     });
   });
 
+  // 主题选择
   document.querySelectorAll('.theme-choice').forEach(item => {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -162,28 +184,17 @@ export async function renderUserArea(container) {
       if (mode !== currentMode) {
         currentMode = mode;
         pipe.setColorMode(mode);
-        applyThemeManually(mode);
       }
       hideAll();
     });
   });
 
+  // 点击外部关闭
   document.addEventListener('click', (e) => {
     if (!container.contains(e.target)) {
       hideAll();
     }
   });
-}
-
-function applyThemeManually(mode) {
-  let theme = mode;
-  if (mode === 'auto') {
-    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  const themeLink = document.getElementById('theme-link');
-  if (themeLink) {
-    themeLink.href = `./main/theme-${theme}.css`;
-  }
 }
 
 function escapeHTML(str) {
