@@ -43,9 +43,16 @@
         </div>
       </div>
 
+      <!-- 电脑端通知卡片（含问卷） -->
       <div class="card card-desktop" id="announceCardDesktop">
         <div class="card-header"><h2 id="announceTitleDesktop">通知</h2></div>
         <div id="announceDesktop"><div class="loading-placeholder">加载中...</div></div>
+        <!-- 嵌入问卷 -->
+        <div class="survey-wrapper" style="margin-top:16px;">
+          <iframe src='https://yuyue.wjx.com/vm/hrL30ZL.aspx?width=760&source=iframe&s=t' 
+                  style='width:100%; height:600px; border:none; border-radius:12px; overflow:auto;' 
+                  frameborder='0'></iframe>
+        </div>
       </div>
 
       <div class="card card-desktop" id="changelogCardDesktop">
@@ -60,9 +67,15 @@
         <ul class="portal-list" id="portalList"></ul>
       </div>
 
+      <!-- 手机端通知卡片（含问卷，高度略小） -->
       <div class="card card-mobile" id="announceCardMobile">
         <div class="card-header"><h2 id="announceTitleMobile">通知</h2></div>
         <div id="announceMobile"><div class="loading-placeholder">加载中...</div></div>
+        <div class="survey-wrapper" style="margin-top:16px;">
+          <iframe src='https://yuyue.wjx.com/vm/hrL30ZL.aspx?width=760&source=iframe&s=t' 
+                  style='width:100%; height:500px; border:none; border-radius:12px; overflow:auto;' 
+                  frameborder='0'></iframe>
+        </div>
       </div>
 
       <div class="card card-mobile" id="changelogCardMobile">
@@ -73,7 +86,7 @@
   </div>
 
   <div class="footer">
-    <div class="version">Version 0.4.5</div>
+    <div class="version">Version 0.4.6</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </div>
 </div>
