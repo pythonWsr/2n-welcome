@@ -1,6 +1,6 @@
 ## Version 0.4.9
 · we are about to have a major update
-· and which could last a month or more
+· and which could last a week or more
 
 ## Version 0.4.8
 · require login to display questionnaire
