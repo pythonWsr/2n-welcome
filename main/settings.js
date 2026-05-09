@@ -116,13 +116,23 @@ export async function renderUserArea(container) {
     requestAnimationFrame(() => keepInViewport(menu));
   }
 
-  // 定位子菜单（显示在触发选项右侧）
+  // 定位子菜单（相对于触发选项）
   function positionSubmenu(submenu, anchor) {
     const anchorRect = anchor.getBoundingClientRect();
-    // 显示在触发选项右侧
-    submenu.style.top = (anchorRect.top) + 'px';
-    submenu.style.left = (anchorRect.right) + 'px';
+    const containerRect = container.getBoundingClientRect();
+    // 先放置到默认左侧
+    submenu.style.top = (anchorRect.top - containerRect.top) + 'px';
+    submenu.style.left = (anchorRect.left - containerRect.left - 170) + 'px'; // 假设宽度170
     submenu.style.right = 'auto';
+    requestAnimationFrame(() => {
+      // 如果超出左边界，改为右侧弹出
+      const subRect = submenu.getBoundingClientRect();
+      if (subRect.left < 0) {
+        submenu.style.left = 'auto';
+        submenu.style.right = (containerRect.width - anchorRect.right + containerRect.left) + 'px';
+      }
+      keepInViewport(submenu);
+    });
   }
 
   // 设置图标点击
