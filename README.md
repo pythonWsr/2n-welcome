@@ -1,3 +1,6 @@
+## Version 0.5.1
+· adapt the path
+
 ## Version 0.5.0
 · a major update
 · add 3 developer username
