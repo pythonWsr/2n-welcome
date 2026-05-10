@@ -1,4 +1,4 @@
-// main/settings.js – 用户区域与设置菜单（修复预展开与溢出）
+// settings.js – 用户区域与设置菜单（智能防溢出，修正图片路径）
 import * as pipe from './pipe.js';
 
 let currentLang = pipe.getLanguage();
@@ -11,6 +11,7 @@ export async function renderUserArea(container) {
   const rawUser = pipe.getUrlParam('user') || '';
   const username = rawUser ? decodeURIComponent(rawUser) : '';
 
+  // 修正头像路径：dev/index.html -> ./data/faces -> ../data/faces
   let avatarUrl = '';
   if (username) {
     const formats = ['png', 'jpg', 'jpeg', 'webp', 'gif'];

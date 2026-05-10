@@ -43,11 +43,9 @@
         </div>
       </div>
 
-      <!-- 电脑端通知卡片 -->
       <div class="card card-desktop" id="announceCardDesktop">
         <div class="card-header"><h2 id="announceTitleDesktop">通知</h2></div>
         <div id="announceDesktop"><div class="loading-placeholder">加载中...</div></div>
-        <!-- 问卷容器（动态插入，仅 user 存在时显示） -->
         <div id="surveyContainerDesktop"></div>
       </div>
 
@@ -58,12 +56,21 @@
     </div>
 
     <div class="right-column">
+      <div class="card" id="contributionCard">
+        <div class="card-header"><h2 id="contributionTitle">贡献榜</h2></div>
+        <div id="contributionContent" class="contribution-list"><div class="loading-placeholder">加载中...</div></div>
+      </div>
+
       <div class="card card-fit">
         <div class="card-header"><h2 id="portalTitle">传送门</h2></div>
         <ul class="portal-list" id="portalList"></ul>
       </div>
 
-      <!-- 手机端通知卡片 -->
+      <div class="card" id="markCard">
+        <div class="card-header"><h2 id="markTitle">Mark List</h2></div>
+        <div id="markContent" class="mark-list"><div class="loading-placeholder">加载中...</div></div>
+      </div>
+
       <div class="card card-mobile" id="announceCardMobile">
         <div class="card-header"><h2 id="announceTitleMobile">通知</h2></div>
         <div id="announceMobile"><div class="loading-placeholder">加载中...</div></div>
@@ -78,18 +85,41 @@
   </div>
 
   <div class="footer">
-    <div class="version">Version 0.4.9</div>
+    <div class="version">Version 0.5.0</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </div>
 </div>
 
 <div class="toast-tip" id="copyToast">📋 已复制</div>
-<script src="./main/debug.js"></script>
+
+<!-- 动态加载调试工具脚本（根据 user 参数） -->
+<script>
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const user = urlParams.get('user');
+    if (!user) return;
+
+    function loadScript(src) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    if (user === 'debug') {
+      loadScript('./main/developers/debug.js');
+    } else if (user === 'dev') {
+      loadScript('./main/developers/dev.js');
+    } else if (user === 'admin') {
+      loadScript('./main/developers/admin.js');
+    }
+  })();
+</script>
+
 <script type="module">
   import { renderUserArea } from './main/settings.js';
   renderUserArea(document.getElementById('userAreaContainer'));
 </script>
-<!-- 新增：问卷加载模块 -->
 <script type="module">
   import * as pipe from './main/pipe.js';
   import { renderSurvey } from './data/survey.js';
@@ -98,8 +128,8 @@
   if (user) {
     const containerDesktop = document.getElementById('surveyContainerDesktop');
     const containerMobile = document.getElementById('surveyContainerMobile');
-    renderSurvey(containerDesktop, user, false);   // 电脑端
-    renderSurvey(containerMobile, user, true);     // 手机端（高度略小）
+    renderSurvey(containerDesktop, user, false);
+    renderSurvey(containerMobile, user, true);
   }
 </script>
 <script type="module" src="./main/core.js"></script>

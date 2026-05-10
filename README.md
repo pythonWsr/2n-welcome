@@ -1,3 +1,9 @@
+## Version 0.5.0
+· a major update
+· add 3 developer username
+· add contibution list
+· move mark list to the website
+
 ## Version 0.4.9
 · we are about to have a major update
 · and which could last a week or more
