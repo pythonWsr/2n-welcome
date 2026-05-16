@@ -1,0 +1,147 @@
+/* 浅色主题颜色定义 */
+body {
+  background: #f5f7fa;
+  color: #1e2b3c;
+}
+.page {
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+}
+.main-title {
+  background: linear-gradient(135deg, #0b3b5c, #2b5e7c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 设置菜单 */
+.settings-dropdown, .settings-submenu {
+  background: #ffffff;
+}
+.settings-option {
+  color: #1e3b4f;
+}
+.settings-option:hover {
+  background: #f0f4f8;
+}
+
+/* 旧版语言按钮 */
+.lang-btn {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid #cfdde9;
+  color: #1e3b4f;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.02);
+}
+.lang-dropdown {
+  background: white;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  border: 1px solid #e2eaf1;
+}
+.lang-option { color: #1e3b4f; }
+.lang-option:hover { background: #e6f0f9; }
+.lang-option.selected { background: #d4e2f0; color: #0a3144; }
+
+/* 会长/副会长 */
+.leader-card {
+  background: rgba(255,255,255,0.5);
+  box-shadow: 0 6px 12px rgba(46,78,102,0.04);
+}
+.leader-label { color: #2b4e65; }
+.leader-name { color: #0b2f44; }
+
+/* 卡片 */
+.card {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.44);
+  box-shadow: 0 20px 35px -8px rgba(21,50,70,0.1);
+}
+.card-header h2 { color: #1b4b64; }
+
+.quickstart-content { color: #1f3f54; }
+.quickstart-content a {
+  color: #1e6f9f;
+  border-bottom: 1.5px dotted #7fa9c7;
+}
+.quickstart-content a:hover { color: #0a4c70; border-bottom-style: solid; }
+
+.portal-label { color: #1e4e6b; }
+.portal-value-row { background: #ecf3f9; }
+.portal-value-text { color: #0d3e58; }
+.copy-btn { color: #3a7799; }
+.copy-btn:hover { background: #cbdde9; color: #0b3e5c; }
+
+.info-header h2 { color: #1b4b64; }
+
+.up-name a { color: #1b4b64; }
+.up-name a:hover { text-decoration: underline; }
+
+.video-list {
+  scrollbar-color: #b0c8da #e2ecf5;
+}
+.video-list::-webkit-scrollbar-thumb { background: #b0c8da; }
+.video-card {
+  background: rgba(255,255,255,0.6);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.02);
+}
+.video-title a { color: #1e3b4f; }
+.video-title a:hover { color: #0a4c70; }
+.video-meta { color: #6a859c; }
+
+.footer, .footer .version { color: #8a9eb0; }
+.toast-tip { background: #1e3b4f; color: white; }
+.loading-placeholder { color: #6a859c; }
+
+/* 更新日志 */
+.changelog-version { color: #1b4b64; }
+.changelog-item { color: #2b4e65; }
+.changelog-toggle {
+  border: 1px solid #cfdde9;
+  color: #1e3b4f;
+}
+.changelog-toggle:hover { background: #e6f0f9; }
+
+/* 通知 */
+.notice-item { border-bottom: 1px dashed #cbd5e1; }
+.notice-title-normal { color: #1e2b3c; }
+.notice-title-important { color: #dc2626; }
+.notice-title-joke { color: #eab308; }
+.notice-tag.notice-title-important { color: #dc2626; }
+.notice-tag.notice-title-joke { color: #eab308; }
+.notice-time { color: #6a859c; }
+.announce-more .changelog-toggle {
+  border-color: #cfdde9;
+  color: #1e3b4f;
+}
+
+/* 更新弹窗 */
+.update-dialog {
+  background: #fff;
+  color: #1e2b3c;
+}
+.update-btn.cancel {
+  background: #f5f5f5;
+  color: #1e3b4f;
+}
+.update-btn.confirm {
+  background: #2563eb;
+  color: white;
+}
+
+/* 贡献榜 */
+.contrib-row {
+  border-bottom-color: #cbd5e1;
+}
+.contrib-name { color: #1e2b3c; }
+.contrib-score { color: #2563eb; }
+
+/* Mark List */
+.mark-name {
+  color: #de1f1f;
+  background: rgba(222,31,31,0.1);
+}
+
+/* 问卷容器 */
+.survey-wrapper {
+  background: #fff;
+  border: 1px solid #e2eaf1;
+}

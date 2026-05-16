@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>历史通知</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./main/components.css">
+  <link rel="stylesheet" id="theme-link" href="./main/theme-light.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui;
+      min-height: 100vh;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1px solid #cfdde9;
+      border-radius: 30px;
+      padding: 8px 22px;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #1e3b4f;
+      margin-bottom: 24px;
+      transition: 0.15s;
+      text-decoration: none;
+    }
+    .back-btn:hover { background: #e6f0f9; }
+    .notice-item {
+      border-bottom: 1px dashed #cbd5e1;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+    }
+    .notice-item:last-child {
+      border-bottom: none;
+    }
+    .notice-image {
+      max-width: 100%;
+      border-radius: 12px;
+      margin: 10px 0;
+    }
+    .image-caption {
+      font-size: 0.85rem;
+      color: #6a859c;
+      text-align: center;
+      margin-top: 4px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .back-btn { color: #cbd5e1; border-color: #475569; }
+      .back-btn:hover { background: #334155; }
+      .notice-item { border-bottom-color: #475569; }
+    }
+  </style>
+</head>
+<body>
+  <a id="backButton" class="back-btn" href="index.html">
+    <i class="fas fa-arrow-left"></i> <span id="backText">返回</span>
+  </a>
+  <div id="allNoticeContainer"><div class="loading-placeholder">加载中...</div></div>
+
+  <script type="module">
+    import { initChallenge } from './main/challenge.js';
+    await initChallenge();
+
+    import * as pipe from './main/pipe.js';
+    import { decodeRichText } from './main/decode.js';
+    import { decryptText } from './main/decrypt.js';
+
+    const lang = pipe.getUrlParam('lang') || pipe.getLanguage();
+    document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+    const pwd = pipe.getUrlParam('pwd');
+    const user = pipe.getUrlParam('user');
+
+    const backBtn = document.getElementById('backButton');
+    const backText = document.getElementById('backText');
+    if (backBtn && backText) {
+      const params = pipe.getPipeParams();
+      const query = pipe.buildQueryString(params);
+      backBtn.href = 'index.html' + (query ? '?' + query : '');
+      backText.textContent = lang === 'zh' ? '返回' : 'Back';
+    }
+
+    function escapeHTML(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function getLocalizedString(raw, lang) {
+      if (!raw || !raw.includes('|')) return (raw || '').trim();
+      const parts = raw.split('|');
+      return lang === 'zh' ? (parts[0] || parts[1] || '').trim() : (parts[1] || parts[0] || '').trim();
+    }
+    function formatTime(filename, lang) {
+      if (!filename) return '';
+      const match = filename.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
+      if (!match) return filename;
+      const [, y, m, d, h, min] = match;
+      if (lang === 'zh') return `${y}.${m}.${d} ${h}:${min}`;
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${months[+m-1]} ${+d}, ${y} ${h}:${min}`;
+    }
+
+    function canViewNotice(vis, user) {
+      if (!vis || vis === 'public') return true;
+      if (vis === 'guest') return !user;
+      if (vis === 'private') return !!user;
+      if (vis === 'test') return ['debug','dev','admin','pythonWsr','awdc-jskysdzl'].includes(user);
+      if (vis === 'secret') return true;
+      if (Array.isArray(vis)) return user && vis.includes(user);
+      return true;
+    }
+
+    function extractImages(info) {
+      const images = [];
+      const keys = Object.keys(info).filter(k => k.startsWith('image') && /\d+$/.test(k));
+      keys.sort((a, b) => {
+        const numA = parseInt(a.replace('image', ''), 10) || 0;
+        const numB = parseInt(b.replace('image', ''), 10) || 0;
+        return numA - numB;
+      });
+      for (const key of keys) {
+        if (info[key]) images.push({ file: info[key] });
+      }
+      return images;
+    }
+
+    async function loadAllNotices() {
+      const container = document.getElementById('allNoticeContainer');
+      try {
+        const indexRes = await fetch('./data/Announcement/index.json');
+        if (!indexRes.ok) throw new Error('索引加载失败');
+        const indexData = await indexRes.json();
+        const fileEntries = Object.entries(indexData);
+        if (!fileEntries.length) {
+          container.innerHTML = '<div class="loading-placeholder">暂无通知</div>';
+          return;
+        }
+        let html = '';
+        for (const [file, info] of fileEntries) {
+          if (!canViewNotice(info.visibility, user)) continue;
+          const res = await fetch(`./data/Announcement/${file}`);
+          if (!res.ok) continue;
+          const notice = await res.json();
+          notice._file = file;
+          notice._visibility = info.visibility || 'public';
+          notice._images = extractImages(info);
+          html += await renderNoticeFull(notice, file);
+        }
+        container.innerHTML = html || '<div class="loading-placeholder">暂无通知</div>';
+      } catch (e) {
+        container.innerHTML = '<div class="loading-placeholder">通知加载失败</div>';
+      }
+    }
+
+    async function renderNoticeFull(notice, filename) {
+      const tag = (notice.tag || '').toLowerCase();
+      const isSecret = notice._visibility === 'secret';
+      let titleColor = '#1e3b4f';
+      if (tag === 'important') titleColor = '#dc2626';
+      else if (tag === 'joke') titleColor = '#facc15';
+
+      const titleText = getLocalizedString(notice.title, lang);
+      const tagDisplay = tag ? `[${tag}]` : '';
+      const writer = escapeHTML(notice.writer || '');
+      const timeStr = formatTime(filename, lang);
+
+      let bodyContent = '';
+      if (isSecret && pwd) {
+        const zhDecrypted = notice.zh ? await decryptText(notice.zh, pwd) : '';
+        const enDecrypted = notice.en ? await decryptText(notice.en, pwd) : '';
+        const content = lang === 'zh' ? (zhDecrypted || enDecrypted) : (enDecrypted || zhDecrypted);
+        if (content) {
+          const paragraphs = content.split('\n').filter(p => p.trim() !== '');
+          const decodedParagraphs = paragraphs.map(p => decodeRichText(p, 14));
+          bodyContent = decodedParagraphs.map(p => `<p class="notice-body">${p}</p>`).join('');
+        }
+      } else if (isSecret && !pwd) {
+        bodyContent = `<p class="notice-body">${lang === 'zh' ? '需要提供密钥才能查看内容' : 'Key required to view content'}</p>`;
+      } else {
+        const content = lang === 'zh' ? (notice.zh || '') : (notice.en || notice.zh || '');
+        const paragraphs = content.split('\n').filter(p => p.trim() !== '');
+        const decodedParagraphs = paragraphs.map(p => decodeRichText(p, 14));
+        bodyContent = decodedParagraphs.map(p => `<p class="notice-body">${p}</p>`).join('');
+      }
+
+      let imagesHTML = '';
+      if (notice._images && notice._images.length > 0) {
+        for (let i = 0; i < notice._images.length; i++) {
+          const imgFile = notice._images[i].file;
+          const caption = `${lang === 'zh' ? '图' : 'Fig.'}${i+1}`;
+          if (imgFile.endsWith('.txt') && pwd) {
+            try {
+              const txtRes = await fetch(imgFile);
+              const encryptedB64 = await txtRes.text();
+              const decryptedB64 = await decryptText(encryptedB64, pwd);
+              imagesHTML += `
+                <div class="image-wrapper">
+                  <img class="notice-image" src="data:image/png;base64,${decryptedB64}" alt="${caption}" onerror="this.style.display='none'">
+                  <div class="image-caption">${caption}</div>
+                </div>`;
+            } catch (e) {
+              imagesHTML += `<div class="image-wrapper"><div class="notice-image-placeholder">${caption} (解密失败)</div></div>`;
+            }
+          } else if (!imgFile.endsWith('.txt')) {
+            imagesHTML += `
+              <div class="image-wrapper">
+                <img class="notice-image" src="${imgFile}" alt="${caption}" onerror="this.style.display='none'">
+                <div class="image-caption">${caption}</div>
+              </div>`;
+          } else {
+            imagesHTML += `<div class="image-wrapper"><div class="notice-image-placeholder">${caption} (需要密钥)</div></div>`;
+          }
+        }
+      }
+
+      return `
+        <div class="notice-item">
+          <div class="notice-title notice-title-center" style="color:${titleColor}">${escapeHTML(titleText)}</div>
+          <div class="notice-tag notice-title-center" style="color:${titleColor}">${escapeHTML(tagDisplay)}</div>
+          ${bodyContent}
+          ${imagesHTML}
+          <div class="notice-writer">${writer}</div>
+          <div class="notice-time">${timeStr}</div>
+        </div>
+      `;
+    }
+
+    function applyTheme() {
+      const mode = pipe.getColorMode();
+      let isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (mode === 'light') isDark = false;
+      else if (mode === 'dark') isDark = true;
+      const themeLink = document.getElementById('theme-link');
+      if (themeLink) themeLink.href = isDark ? './main/theme-dark.css' : './main/theme-light.css';
+    }
+    applyTheme();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+
+    loadAllNotices();
+  </script>
+</body>
+</html>
