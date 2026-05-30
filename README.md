@@ -1,3 +1,7 @@
+## Version 0.5.3
+· update authentication logic to one-time token <br>
+· add DIY survey logic
+
 ## Version 0.5.2
 · separate pipe
 
@@ -5,13 +9,13 @@
 · adapt the path
 
 ## Version 0.5.0
-· a major update
-· add 3 developer username
-· add contibution list
+· a major update <br>
+· add 3 developer username <br>
+· add contibution list <br>
 · move mark list to the website
 
 ## Version 0.4.9
-· we are about to have a major update
+· we are about to have a major update <br>
 · and which could last a week or more
 
 ## Version 0.4.8
@@ -84,7 +88,7 @@
 · add the Quick Start 
 
 ## Version 0.1.0
-· add titles 
+· add titles <br>
 · add Leaders
 
 ## Version 0.0.1
