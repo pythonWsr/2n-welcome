@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>迷宫｜距离分段着色（无网格线版）</title>
+<style>
+*{box-sizing:border-box;}
+body{font-family:system-ui; padding:12px; max-width:980px; margin:0 auto;}
+#fileInput{margin:8px 0;}
+#canvasWrap{overflow:auto; border:1px solid #aaa; margin-top:10px;}
+#debugCanvas{border:1px solid #888;margin:8px 0;max-width:100%;}
+canvas{image-rendering:pixelated;}
+.info{margin:8px 0; font-size:14px; color:#333;}
+#progressWrap{margin:10px 0;}
+#progressBar{width:100%; height:18px; background:#eee; border-radius:4px; overflow:hidden;}
+#progressFill{height:100%; width:0%; background:#4285f4; transition:0.1s;}
+#statusText{font-size:13px;margin-top:4px;color:#444;}
+button{padding:6px 12px;margin:4px 0;}
+.manual-input{margin:6px 0;}
+.crop-config{margin:6px 0;}
+.legend{font-size:13px;margin:8px 0;line-height:1.8;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;}
+.legend-item{display:inline-flex;align-items:center;gap:4px;}
+.color-swatch{display:inline-block;width:18px;height:18px;border:1px solid #999;border-radius:3px;flex-shrink:0;}
+#logBox{border:1px solid #ccc;padding:6px;font-size:11px;height:160px;overflow:auto;margin:8px 0;}
+</style>
+</head>
+<body>
+<h3>迷宫｜距离分段着色（无网格线）</h3>
+<div class="info">
+规则：<br>
+0‑12 黄 U｜13‑28 蓝 R｜29‑44 紫 E｜45‑66 红 L｜67‑96 青 M｜≥97 粉 U<br>
+默认：cellSize留空手动填写，起点R=28 C=14，底部裁剪=0<br>
+✅修复：多采样投票 + 自动补全边缘残缺单元格 + 隐去单元格黑框
+</div>
+<input type="file" id="fileInput" accept="image/*"/>
+
+<div class="crop-config">
+图像裁剪：
+顶部裁剪:<input id="cropTop" type="number" value="0" size="3">
+底部裁剪:<input id="cropBottom" type="number" value="0" size="3">
+</div>
+
+<div class="info">
+cellSize:<input id="cellSize" type="number" value="" size="4"/>
+<button id="drawGridBtn">绘制/清除调试网格</button>
+</div>
+
+<div class="manual-input">
+手动起点 R:<input id="manR" type="number" value="28" size="3"> C:<input id="manC" type="number" value="14" size="3">
+</div>
+
+<button id="runBtn">开始计算渲染</button>
+<button id="downloadBtn">下载结果图片</button>
+
+<div id="progressWrap">
+    <div id="progressBar"><div id="progressFill"></div></div>
+    <div id="statusText">等待上传图片</div>
+</div>
+
+<div class="legend">
+    <span class="legend-item"><span class="color-swatch" style="background:#ffe65d;"></span>0‑12 黄 U</span>
+    <span class="legend-item"><span class="color-swatch" style="background:#4d52e3;"></span>13‑28 蓝 R</span>
+    <span class="legend-item"><span class="color-swatch" style="background:#861fde;"></span>29‑44 紫 E</span>
+    <span class="legend-item"><span class="color-swatch" style="background:#de1f1f;"></span>45‑66 红 L</span>
+    <span class="legend-item"><span class="color-swatch" style="background:#1fdbde;"></span>67‑96 青 M</span>
+    <span class="legend-item"><span class="color-swatch" style="background:#ff2b75;"></span>≥97 粉 U</span>
+    <span style="color:#d00;font-weight:600;">🔴红框=起点</span>
+</div>
+<div id="logBox"></div>
+
+<div>调试识别预览：<br/>
+<canvas id="debugCanvas"></canvas>
+</div>
+<div id="canvasWrap"><canvas id="outCanvas"></canvas></div>
+
+<script>
+// ========== 新配色 ==========
+function getColorByDist(dist){
+    if(dist <= 12) return [255, 230, 93];   // #ffe65d
+    if(dist <= 28) return [77, 82, 227];    // #4d52e3
+    if(dist <= 44) return [134, 31, 222];   // #861fde
+    if(dist <= 66) return [222, 31, 31];    // #de1f1f
+    if(dist <= 96) return [31, 219, 222];   // #1fdbde
+    return [255, 43, 117];                  // #ff2b75
+}
+function getLetterByDist(dist){
+    if(dist <= 12) return "U";
+    if(dist <= 28) return "R";
+    if(dist <= 44) return "E";
+    if(dist <= 66) return "L";
+    if(dist <= 96) return "M";
+    return "U";
+}
+
+let img = null;
+let grid = [];
+let rows = 0, cols = 0;
+let cellSize = 16;
+let birthPoint = null;
+let distMap = [];
+let drawGridFlag = false;
+
+const fileInput = document.getElementById('fileInput');
+const runBtn = document.getElementById('runBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const drawGridBtn = document.getElementById('drawGridBtn');
+const debugCanvas = document.getElementById('debugCanvas');
+const debugCtx = debugCanvas.getContext('2d');
+const outCanvas = document.getElementById('outCanvas');
+const outCtx = outCanvas.getContext('2d');
+const progressFill = document.getElementById('progressFill');
+const statusText = document.getElementById('statusText');
+const logBox = document.getElementById('logBox');
+
+function logMsg(s){
+    logBox.innerText += s+"\n";
+    logBox.scrollTop = logBox.scrollHeight;
+}
+function setProgress(pct,txt){
+    progressFill.style.width = pct+"%";
+    statusText.innerText = txt;
+}
+
+fileInput.onchange = async e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    logBox.innerText="";
+    setProgress(0,"加载图片");
+    const reader = new FileReader();
+    reader.onload=ev=>{
+        const i = new Image();
+        i.onload=()=>{
+            img = i;
+            debugCanvas.width = i.width;
+            debugCanvas.height = i.height;
+            debugCtx.drawImage(i,0,0);
+            setProgress(0,"图片加载完成");
+            logMsg(`原图尺寸 w=${i.width}, h=${i.height}`);
+        };
+        i.src = ev.target.result;
+    };
+    reader.readAsDataURL(f);
+};
+
+function safeGetPixel(ctx,x,y,wLim,hLim){
+    if(x<0||y<0||x>=wLim||y>=hLim) return null;
+    const d = ctx.getImageData(Math.floor(x),Math.floor(y),1,1).data;
+    return {r:d[0],g:d[1],b:d[2]};
+}
+
+function judgeCellIsPath(ctx, cellX, cellY, cellW, cellH, imgW, imgH){
+    const offsets = [
+        [0.2,0.2],
+        [0.8,0.2],
+        [0.2,0.8],
+        [0.8,0.8],
+        [0.5,0.5]
+    ];
+    let pathCount = 0;
+    for(const [ox,oy] of offsets){
+        const px = cellX + ox*cellW;
+        const py = cellY + oy*cellH;
+        const p = safeGetPixel(ctx, px, py, imgW, imgH);
+        if(!p) continue;
+        const br = (p.r+p.g+p.b)/3;
+        if(br>80) pathCount++;
+    }
+    return pathCount >=3;
+}
+
+function padImageToCellMultiple(ctx, srcW, srcH, cellSz){
+    const newW = Math.ceil(srcW / cellSz) * cellSz;
+    const newH = Math.ceil(srcH / cellSz) * cellSz;
+    const newCanvas = document.createElement('canvas');
+    newCanvas.width = newW;
+    newCanvas.height = newH;
+    const nCtx = newCanvas.getContext('2d');
+    nCtx.fillStyle="#000000";
+    nCtx.fillRect(0,0,newW,newH);
+    nCtx.drawImage(ctx.canvas,0,0);
+    logMsg(`图像补全：原w=${srcW},h=${srcH} → 对齐cellSize后 w=${newW},h=${newH}`);
+    return {canvas:newCanvas, ctx:nCtx, w:newW, h:newH};
+}
+
+drawGridBtn.onclick = function(){
+    if(!img) return;
+    drawGridFlag = !drawGridFlag;
+    debugCtx.drawImage(img,0,0);
+    if(drawGridFlag){
+        const cs = Number(document.getElementById('cellSize').value);
+        if(isNaN(cs)||cs<=0){
+            alert("请先填写有效的cellSize数值");
+            return;
+        }
+        debugCtx.strokeStyle="#888";
+        debugCtx.lineWidth=1;
+        for(let x=0;x<img.width;x+=cs){
+            debugCtx.beginPath();debugCtx.moveTo(x,0);debugCtx.lineTo(x,img.height);debugCtx.stroke();
+        }
+        for(let y=0;y<img.height;y+=cs){
+            debugCtx.beginPath();debugCtx.moveTo(0,y);debugCtx.lineTo(img.width,y);debugCtx.stroke();
+        }
+        logMsg("✅已绘制调试网格线");
+    }else{
+        logMsg("已清除调试网格");
+    }
+};
+
+function parseGrid(){
+    const cropTop = Number(document.getElementById('cropTop').value);
+    const cropBottom = Number(document.getElementById('cropBottom').value);
+    const cellSizeInput = document.getElementById('cellSize').value.trim();
+    if(cellSizeInput === ""){
+        throw new Error("请填写cellSize单元格大小");
+    }
+    cellSize = Number(cellSizeInput);
+    if(isNaN(cellSize) || cellSize <= 0){
+        throw new Error("cellSize必须为大于0的数字");
+    }
+
+    const manR = document.getElementById('manR').value;
+    const manC = document.getElementById('manC').value;
+
+    let startRc = null;
+    if(manR!=="" && manC!==""){
+        startRc = {r:Number(manR),c:Number(manC)};
+        logMsg(`使用手动输入起点 r=${manR},c=${manC}`);
+    }
+    if(!startRc) throw new Error("请填写起点R、C");
+
+    const origW = img.width;
+    const origH = img.height;
+    const usableH = Math.max(60, origH - cropTop - cropBottom);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = origW;
+    tempCanvas.height = usableH;
+    const tctx = tempCanvas.getContext('2d');
+    tctx.drawImage(img, 0, cropTop, origW, usableH, 0,0, origW, usableH);
+
+    const padResult = padImageToCellMultiple(tctx, origW, usableH, cellSize);
+    const padW = padResult.w;
+    const padH = padResult.h;
+    const padCtx = padResult.ctx;
+
+    rows = Math.floor(padH / cellSize);
+    cols = Math.floor(padW / cellSize);
+    logMsg(`迷宫网格尺寸 rows=${rows}, cols=${cols}`);
+    grid = Array.from({length:rows},()=>Array(cols).fill(0));
+
+    for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+            const cellX = c * cellSize;
+            const cellY = r * cellSize;
+            const isPath = judgeCellIsPath(padCtx, cellX, cellY, cellSize, cellSize, padW, padH);
+            grid[r][c] = isPath ? 1 : 0;
+        }
+    }
+    birthPoint = startRc;
+    if(grid[birthPoint.r][birthPoint.c]!==1){
+        logMsg("⚠警告：起点网格格子判定为墙体，cellSize可能偏移！");
+    }
+    return {rows,cols,grid,birthPoint};
+}
+
+function bfsCalcDistance(){
+    distMap = Array.from({length:rows},()=>Array(cols).fill(-1));
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    const q = [];
+    const sr = birthPoint.r;
+    const sc = birthPoint.c;
+    distMap[sr][sc] = 0;
+    q.push([sr,sc]);
+
+    while(q.length>0){
+        const [r,c] = q.shift();
+        const curDist = distMap[r][c];
+        for(const [dr,dc] of dirs){
+            const nr = r+dr;
+            const nc = c+dc;
+            if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
+            if(grid[nr][nc]!==1) continue;
+            if(distMap[nr][nc]!==-1) continue;
+            distMap[nr][nc] = curDist + 1;
+            q.push([nr,nc]);
+        }
+    }
+    logMsg("✅BFS距离计算完成");
+}
+
+// ✅【核心修改】renderOutput - 隐去黑框，单元格完全铺满
+function renderOutput(){
+    outCanvas.width = cols*cellSize;
+    outCanvas.height = rows*cellSize;
+    // 黑色背景作为墙壁底色
+    outCtx.fillStyle="#000";
+    outCtx.fillRect(0,0,outCanvas.width,outCanvas.height);
+    for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+            const x = c*cellSize;
+            const y = r*cellSize;
+            if(grid[r][c]===0) continue; // 墙壁不绘制
+            const d = distMap[r][c];
+            if(d === -1) continue;
+
+            const color = getColorByDist(d);
+            outCtx.fillStyle=`rgb(${color[0]},${color[1]},${color[2]})`;
+            // 修改：完全覆盖单元格，不留黑色间隙
+            outCtx.fillRect(x, y, cellSize, cellSize);
+
+            const letter = getLetterByDist(d);
+            outCtx.fillStyle="#000";
+            outCtx.font=`bold ${Math.max(8,cellSize*0.30)}px sans-serif`;
+            outCtx.fillText(`${letter}`, x+2, y+cellSize-3);
+        }
+    }
+}
+
+function drawDebugMark(){
+    debugCtx.drawImage(img,0,0);
+    if(drawGridFlag){
+        const cs = Number(document.getElementById('cellSize').value);
+        debugCtx.strokeStyle="#ff2222";
+        debugCtx.lineWidth=3;
+        const sx = birthPoint.c*cs;
+        const sy = birthPoint.r*cs + Number(document.getElementById('cropTop').value);
+        debugCtx.strokeRect(sx+1,sy+1,cs-2,cs-2);
+        debugCtx.fillStyle="#ff2222";
+        debugCtx.font="bold 12px sans-serif";
+        debugCtx.fillText("S",sx+2,sy+12);
+    }
+}
+
+runBtn.onclick = async ()=>{
+    if(!img){alert("先上传图片");return;}
+    runBtn.disabled=true;
+    try{
+        setProgress(5,"解析网格+定位起点");
+        parseGrid();
+        setProgress(20,"BFS计算距离");
+        bfsCalcDistance();
+        setProgress(70,"绘制输出图");
+        renderOutput();
+        drawDebugMark();
+        setProgress(100,"✅全部完成");
+    }catch(e){
+        logMsg("异常："+e.message);
+        setProgress(0,"失败："+e.message);
+    }finally{
+        runBtn.disabled=false;
+    }
+};
+
+downloadBtn.onclick = function(){
+    if(outCanvas.width === 0 || outCanvas.height === 0){
+        alert("还没有生成结果图片，请先点击开始计算渲染");
+        return;
+    }
+    const a = document.createElement('a');
+    a.href = outCanvas.toDataURL("image/png");
+    a.download="maze_result.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+</script>
+</body>
+</html>
