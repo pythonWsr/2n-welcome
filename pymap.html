@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>迷宫｜距离分段着色（无网格线版）</title>
+<title>迷宫｜距离分段着色（无网格线+问卷）</title>
 <style>
 *{box-sizing:border-box;}
 body{font-family:system-ui; padding:12px; max-width:980px; margin:0 auto;}
@@ -23,10 +23,12 @@ button{padding:6px 12px;margin:4px 0;}
 .legend-item{display:inline-flex;align-items:center;gap:4px;}
 .color-swatch{display:inline-block;width:18px;height:18px;border:1px solid #999;border-radius:3px;flex-shrink:0;}
 #logBox{border:1px solid #ccc;padding:6px;font-size:11px;height:160px;overflow:auto;margin:8px 0;}
+.iframe-container{margin-top:20px;border-top:1px solid #ccc;padding-top:12px;}
+.iframe-container iframe{width:100%;max-width:789px;height:750px;border:0;overflow:auto;display:block;margin:0 auto;}
 </style>
 </head>
 <body>
-<h3>迷宫｜距离分段着色（无网格线）</h3>
+<h3>迷宫｜距离分段着色（无网格线+问卷）</h3>
 <div class="info">
 规则：<br>
 0‑12 黄 U｜13‑28 蓝 R｜29‑44 紫 E｜45‑66 红 L｜67‑96 青 M｜≥97 粉 U<br>
@@ -73,6 +75,12 @@ cellSize:<input id="cellSize" type="number" value="" size="4"/>
 <canvas id="debugCanvas"></canvas>
 </div>
 <div id="canvasWrap"><canvas id="outCanvas"></canvas></div>
+
+<!-- ========== 新增：问卷 iframe ========== -->
+<div class="iframe-container">
+    <h4 style="margin:0 0 8px 0;">📝 反馈问卷（可选）</h4>
+    <iframe src='https://v.wjx.cn/vm/mB1KVos.aspx?width=750&source=iframe&s=t' width='789' height='750' frameborder='0' style='overflow:auto;'></iframe>
+</div>
 
 <script>
 // ========== 新配色 ==========
@@ -288,24 +296,22 @@ function bfsCalcDistance(){
     logMsg("✅BFS距离计算完成");
 }
 
-// ✅【核心修改】renderOutput - 隐去黑框，单元格完全铺满
+// ✅ 隐去黑框：单元格完全铺满
 function renderOutput(){
     outCanvas.width = cols*cellSize;
     outCanvas.height = rows*cellSize;
-    // 黑色背景作为墙壁底色
     outCtx.fillStyle="#000";
     outCtx.fillRect(0,0,outCanvas.width,outCanvas.height);
     for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
             const x = c*cellSize;
             const y = r*cellSize;
-            if(grid[r][c]===0) continue; // 墙壁不绘制
+            if(grid[r][c]===0) continue;
             const d = distMap[r][c];
             if(d === -1) continue;
 
             const color = getColorByDist(d);
             outCtx.fillStyle=`rgb(${color[0]},${color[1]},${color[2]})`;
-            // 修改：完全覆盖单元格，不留黑色间隙
             outCtx.fillRect(x, y, cellSize, cellSize);
 
             const letter = getLetterByDist(d);
