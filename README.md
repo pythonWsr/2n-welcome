@@ -1,3 +1,8 @@
+## Version 0.6.0
+· add py map stainer<br>
+· add the QR of guild group chat<br>
+· store wiki image data before 2026-8-4
+
 ## Version 0.5.3
 · update authentication logic to one-time token <br>
 · add DIY survey logic
