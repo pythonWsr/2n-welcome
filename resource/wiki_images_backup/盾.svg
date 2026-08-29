@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with Vectornator (http://vectornator.io/) -->
+<svg height="100%" stroke-miterlimit="10" style="fill-rule:nonzero;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;" version="1.1" viewBox="0 0 4000 4000" width="100%" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:vectornator="http://vectornator.io" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs/>
+<g id="图层-1-复制" vectornator:layerName="图层 1 复制">
+<path d="M2101.85 637.309L3072.01 1335.99C3128.26 1376.5 3179.99 1465.2 3187.54 1534.11L3224.93 1875.23C3232.49 1944.14 3232.49 2055.86 3224.93 2124.77L3187.54 2465.89C3179.99 2534.8 3128.26 2623.5 3072.01 2664.01L2101.85 3362.69C2045.6 3403.2 1954.4 3403.2 1898.15 3362.69L927.989 2664.01C871.737 2623.5 820.012 2534.8 812.458 2465.89L775.066 2124.77C767.513 2055.86 767.513 1944.14 775.066 1875.23L812.458 1534.11C820.012 1465.2 871.737 1376.5 927.989 1335.99L1898.15 637.309C1954.4 596.798 2045.6 596.798 2101.85 637.309Z" fill="#b2b2b2" fill-rule="nonzero" opacity="1" stroke="#828282" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="300" vectornator:layerName="长方形 1"/>
+</g>
+<g id="图层-1" vectornator:layerName="图层 1">
+<path d="M2060.16 1535.07L2436.55 2186.99C2469.78 2244.54 2442.84 2291.19 2376.39 2291.19L1623.61 2291.19C1557.16 2291.19 1530.22 2244.54 1563.45 2186.99L1939.84 1535.07C1973.06 1477.52 2026.94 1477.52 2060.16 1535.07Z" fill="#ff6400" fill-rule="nonzero" opacity="1" stroke="#cc3e08" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="114.631" vectornator:layerName="多边形 1"/>
+</g>
+<g id="图层-1-复制_2" vectornator:layerName="图层 1 复制">
+<path d="M2060.16 2464.93L2436.55 1813.01C2469.78 1755.46 2442.84 1708.81 2376.39 1708.81L1623.61 1708.81C1557.16 1708.81 1530.22 1755.46 1563.45 1813.01L1939.84 2464.93C1973.06 2522.48 2026.94 2522.48 2060.16 2464.93Z" fill="#ff0000" fill-rule="nonzero" opacity="1" stroke="#b10000" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="114.631" vectornator:layerName="多边形 1"/>
+</g>
+</svg>

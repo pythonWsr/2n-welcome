@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with Vectornator (http://vectornator.io/) -->
+<svg height="100%" stroke-miterlimit="10" style="fill-rule:nonzero;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;" version="1.1" viewBox="0 0 4000 4000" width="100%" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:vectornator="http://vectornator.io" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<path d="M1319.31 2000C1319.31 1624.06 1624.06 1319.31 2000 1319.31C2375.94 1319.31 2680.69 1624.06 2680.69 2000C2680.69 2375.94 2375.94 2680.69 2000 2680.69C1624.06 2680.69 1319.31 2375.94 1319.31 2000Z" id="Fill"/>
+</defs>
+<g id="图层-3-复制" vectornator:layerName="图层 3 复制">
+<g opacity="1" vectornator:layerName="成组 1">
+<path d="M1675 675C1675 495.507 1820.51 350 2000 350C2179.49 350 2325 495.507 2325 675C2325 854.493 2179.49 1000 2000 1000C1820.51 1000 1675 854.493 1675 675Z" fill="#ab6000" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 1"/>
+<path d="M1675 3325C1675 3145.51 1820.51 3000 2000 3000C2179.49 3000 2325 3145.51 2325 3325C2325 3504.49 2179.49 3650 2000 3650C1820.51 3650 1675 3504.49 1675 3325Z" fill="#ab6000" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 1"/>
+</g>
+</g>
+<g id="图层-3-复制-复制" vectornator:layerName="图层 3 复制 复制">
+<g opacity="1" vectornator:layerName="成组 1">
+<path d="M3325 1675C3504.49 1675 3650 1820.51 3650 2000C3650 2179.49 3504.49 2325 3325 2325C3145.51 2325 3000 2179.49 3000 2000C3000 1820.51 3145.51 1675 3325 1675Z" fill="#ab6000" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 1"/>
+<path d="M675 1675C854.493 1675 1000 1820.51 1000 2000C1000 2179.49 854.493 2325 675 2325C495.507 2325 350 2179.49 350 2000C350 1820.51 495.507 1675 675 1675Z" fill="#ab6000" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 1"/>
+</g>
+</g>
+<g id="图层-1" vectornator:layerName="图层 1">
+<path d="M1421.95 3097.89L902.106 2578.05C853.957 2529.91 814.926 2435.67 814.926 2367.58L814.926 1632.42C814.926 1564.33 853.957 1470.09 902.106 1421.95L1421.95 902.106C1470.09 853.957 1564.33 814.926 1632.42 814.926L2367.58 814.926C2435.67 814.926 2529.91 853.957 2578.05 902.106L3097.89 1421.95C3146.04 1470.09 3185.07 1564.33 3185.07 1632.42L3185.07 2367.58C3185.07 2435.67 3146.04 2529.91 3097.89 2578.05L2578.05 3097.89C2529.91 3146.04 2435.67 3185.07 2367.58 3185.07L1632.42 3185.07C1564.33 3185.07 1470.09 3146.04 1421.95 3097.89Z" fill="#787878" fill-rule="nonzero" opacity="1" stroke="#545454" stroke-linecap="round" stroke-linejoin="round" stroke-width="298.839" vectornator:layerName="多边形 1"/>
+<path d="M2885.57 1723.51C2885.57 1619.16 2970.16 1534.56 3074.52 1534.56C3178.87 1534.56 3263.47 1619.16 3263.47 1723.51C3263.47 1827.87 3178.87 1912.46 3074.52 1912.46C2970.16 1912.46 2885.57 1827.87 2885.57 1723.51Z" fill="#524300" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 1"/>
+<path d="M1675 3122.65C1675 3013.74 1763.29 2925.45 1872.2 2925.45C1981.11 2925.45 2069.4 3013.74 2069.4 3122.65C2069.4 3231.56 1981.11 3319.85 1872.2 3319.85C1763.29 3319.85 1675 3231.56 1675 3122.65Z" fill="#524300" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 2"/>
+</g>
+<g id="图层-2" vectornator:layerName="图层 2">
+<g opacity="1" vectornator:layerName="椭圆 1">
+<use fill="#787878" fill-rule="nonzero" stroke="none" xlink:href="#Fill"/>
+<mask height="1655.31" id="StrokeMask" maskUnits="userSpaceOnUse" width="1655.31" x="1172.34" y="1172.34">
+<rect fill="#ffffff" height="1655.31" stroke="none" width="1655.31" x="1172.34" y="1172.34"/>
+<use fill="#000000" fill-rule="evenodd" stroke="none" xlink:href="#Fill"/>
+</mask>
+<use fill="none" mask="url(#StrokeMask)" stroke="#545454" stroke-linecap="butt" stroke-linejoin="round" stroke-width="293.93" xlink:href="#Fill"/>
+</g>
+</g>
+<g id="图层-4" vectornator:layerName="图层 4">
+<path d="M2000 2381.81L1730.02 2269.98L1618.19 2000L1730.02 1730.02L2000 1618.19L2269.98 1730.02L2381.81 2000L2269.98 2269.98L2000 2381.81Z" fill="#524300" fill-rule="nonzero" opacity="1" stroke="#413500" stroke-linecap="butt" stroke-linejoin="round" stroke-width="138.818" vectornator:layerName="多边形 1"/>
+</g>
+<g id="图层-3" vectornator:layerName="图层 3">
+<path d="M1137.47 1134.34C1137.47 1032.18 1218.88 949.37 1319.31 949.37C1419.74 949.37 1501.15 1032.18 1501.15 1134.34C1501.15 1236.49 1419.74 1319.31 1319.31 1319.31C1218.88 1319.31 1137.47 1236.49 1137.47 1134.34Z" fill="#524300" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="椭圆 1"/>
+</g>
+</svg>

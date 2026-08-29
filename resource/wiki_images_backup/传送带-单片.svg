@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with Vectornator (http://vectornator.io/) -->
+<svg height="100%" stroke-miterlimit="10" style="fill-rule:nonzero;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;" version="1.1" viewBox="0 0 4000 4000" width="100%" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:vectornator="http://vectornator.io" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<path d="M1144.88 837.037L2855.12 837.037L2855.12 3162.96L1144.88 3162.96L1144.88 837.037Z" id="Fill"/>
+<path d="M1928.67 1273.76L1697.07 1674.89C1657.68 1743.13 1689.61 1798.45 1768.41 1798.45L2231.59 1798.45C2310.39 1798.45 2342.32 1743.13 2302.93 1674.89L2071.33 1273.76C2031.94 1205.53 1968.06 1205.53 1928.67 1273.76Z" id="Fill_2"/>
+<path d="M1928.67 2142.81L1697.07 2543.93C1657.68 2612.17 1689.61 2667.49 1768.41 2667.49L2231.59 2667.49C2310.39 2667.49 2342.32 2612.17 2302.93 2543.93L2071.33 2142.81C2031.94 2074.57 1968.06 2074.57 1928.67 2142.81Z" id="Fill_3"/>
+</defs>
+<g id="图层-1-复制" vectornator:layerName="图层 1 复制">
+<g opacity="1" vectornator:layerName="成组 1">
+<g opacity="1" vectornator:layerName="长方形 1">
+<use fill="#b9b9b9" fill-rule="nonzero" stroke="none" xlink:href="#Fill"/>
+<mask height="2325.93" id="StrokeMask" maskUnits="userSpaceOnUse" width="1710.25" x="1144.88" y="837.037">
+<rect fill="#000000" height="2325.93" stroke="none" width="1710.25" x="1144.88" y="837.037"/>
+<use fill="#ffffff" fill-rule="evenodd" stroke="none" xlink:href="#Fill"/>
+</mask>
+<use fill="none" mask="url(#StrokeMask)" stroke="#969696" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="307.233" xlink:href="#Fill"/>
+</g>
+<path d="M1290.6 837.037L2709.4 837.037L2709.4 3162.96L1290.6 3162.96L1290.6 837.037Z" fill="#b9b9b9" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="长方形 1"/>
+</g>
+</g>
+<g id="图层-2" vectornator:layerName="图层 2">
+<g opacity="1" vectornator:layerName="多边形 1">
+<use fill="#666666" fill-rule="nonzero" stroke="none" xlink:href="#Fill_2"/>
+<mask height="575.861" id="StrokeMask_2" maskUnits="userSpaceOnUse" width="639.601" x="1680.2" y="1222.59">
+<rect fill="#000000" height="575.861" stroke="none" width="639.601" x="1680.2" y="1222.59"/>
+<use fill="#ffffff" fill-rule="evenodd" stroke="none" xlink:href="#Fill_2"/>
+</mask>
+<use fill="none" mask="url(#StrokeMask_2)" stroke="#535353" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="213.624" xlink:href="#Fill_2"/>
+</g>
+</g>
+<g id="图层-2-复制" vectornator:layerName="图层 2 复制">
+<g opacity="1" vectornator:layerName="多边形 1">
+<use fill="#666666" fill-rule="nonzero" stroke="none" xlink:href="#Fill_3"/>
+<mask height="575.861" id="StrokeMask_3" maskUnits="userSpaceOnUse" width="639.601" x="1680.2" y="2091.63">
+<rect fill="#000000" height="575.861" stroke="none" width="639.601" x="1680.2" y="2091.63"/>
+<use fill="#ffffff" fill-rule="evenodd" stroke="none" xlink:href="#Fill_3"/>
+</mask>
+<use fill="none" mask="url(#StrokeMask_3)" stroke="#535353" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="213.624" xlink:href="#Fill_3"/>
+</g>
+</g>
+</svg>

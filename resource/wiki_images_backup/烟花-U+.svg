@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with Vectornator (http://vectornator.io/) -->
+<svg height="100%" stroke-miterlimit="10" style="fill-rule:nonzero;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;" version="1.1" viewBox="0 0 4000 4000" width="100%" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:vectornator="http://vectornator.io" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs/>
+<g id="图层-2" vectornator:layerName="图层 2">
+<path d="M2375.75 1989.04C2151.71 1944.79 2234.84 1525.98 2301.1 1387.17C2402.07 1175.65 2894.67 714.596 3312.72 1167.62" fill="none" opacity="1" stroke="#333333" stroke-linecap="round" stroke-linejoin="round" stroke-width="216.141" vectornator:layerName="曲线 1"/>
+</g>
+<g id="图层-1" vectornator:layerName="图层 1">
+<path d="M1963.41 1035.12C2050.57 947.683 2192.1 947.46 2279.54 1034.62L2680.2 1434.03C2767.64 1521.19 2767.86 1662.72 2680.7 1750.16L1469.8 2964.88C1382.64 3052.32 1241.1 3052.54 1153.67 2965.38L753 2565.97C665.565 2478.81 665.342 2337.28 752.502 2249.84L1963.41 1035.12Z" fill="#ff4200" fill-rule="nonzero" opacity="1" stroke="#b52f00" stroke-linecap="butt" stroke-linejoin="round" stroke-width="216.141" vectornator:layerName="长方形 1"/>
+<path d="M1568.67 2089L1678.26 1679.99C1692.82 1625.67 1736.85 1613.87 1776.61 1653.63L2076.02 1953.05C2115.78 1992.81 2103.99 2036.84 2049.67 2051.39L1640.66 2160.99C1586.35 2175.54 1554.12 2143.31 1568.67 2089Z" fill="#ffeb00" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="多边形 1"/>
+</g>
+</svg>

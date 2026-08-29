@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with Vectornator (http://vectornator.io/) -->
+<svg height="100%" stroke-miterlimit="10" style="fill-rule:nonzero;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;" version="1.1" viewBox="0 0 4000 4000" width="100%" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:vectornator="http://vectornator.io" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<path d="M2339.09 927.656C2285.94 928.256 2234.21 947.948 2195.03 987.125L990.969 2191.19C907.391 2274.76 912.534 2415.41 1002.44 2505.31L1002.45 2505.32C1003.39 2506.27 1003.88 2508.08 1003.53 2509.36L935.723 2762.4C933.391 2771.1 936.665 2783.32 943.035 2789.69L1181.75 3028.4C1188.12 3034.77 1200.34 3038.05 1209.04 3035.71L1448.65 2971.5C1457.35 2969.17 1469.57 2972.45 1475.94 2978.82L1490.84 2993.72C1580.75 3083.62 1721.39 3088.77 1804.97 3005.19L3009.03 1801.09C3092.61 1717.52 3087.47 1576.9 2997.56 1487L2970.07 1459.5C2963.7 1453.13 2960.42 1440.91 2962.75 1432.21L3014.06 1240.82C3016.39 1232.12 3013.12 1219.9 3006.75 1213.53L2768 974.816C2761.63 968.446 2749.41 965.172 2740.71 967.503L2549.35 1018.78C2540.65 1021.11 2528.43 1017.84 2522.06 1011.46L2509.16 998.562C2461.39 950.801 2399.33 926.977 2339.09 927.656Z" id="Fill"/>
+</defs>
+<g id="图层-1-复制" vectornator:layerName="图层 1 复制">
+<g opacity="1" vectornator:layerName="曲线 1">
+<use fill="#b3b3b3" fill-rule="nonzero" stroke="none" xlink:href="#Fill"/>
+<mask height="2137.02" id="StrokeMask" maskUnits="userSpaceOnUse" width="2137" x="931.499" y="927.642">
+<rect fill="#000000" height="2137.02" stroke="none" width="2137" x="931.499" y="927.642"/>
+<use fill="#ffffff" fill-rule="evenodd" stroke="none" xlink:href="#Fill"/>
+</mask>
+<use fill="none" mask="url(#StrokeMask)" stroke="#969696" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="307.233" xlink:href="#Fill"/>
+</g>
+</g>
+<g id="图层-1-复制-复制" opacity="0.3" vectornator:layerName="图层 1 复制 复制">
+<path d="M2223.91 963.281C2213.73 970.225 2204.02 978.132 2195.03 987.125L1917.66 1264.5L2170.97 2639.16L2476.47 2333.69L2223.91 963.281ZM1812.16 1370L1506.69 1675.47L1758.12 3039.94C1775.01 3030.86 1790.83 3019.33 1804.97 3005.19L2065.5 2744.66L1812.16 1370Z" fill="#ffffff" fill-rule="nonzero" opacity="1" stroke="none" vectornator:layerName="曲线 1"/>
+</g>
+</svg>

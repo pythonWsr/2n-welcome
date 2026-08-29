@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   sodipodi:docname="多功能制导导弹.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:zoom="1.6523437"
+     inkscape:cx="259.32861"
+     inkscape:cy="259.93381"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="图层 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#00ff89;fill-opacity:1;stroke:#00e57b;stroke-width:46.8977;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect349-6"
+       width="463.7319"
+       height="463.7319"
+       x="24.899057"
+       y="24.043169"
+       ry="0.83317143" />
+    <g
+       id="g9627"
+       transform="rotate(10.152773,1164.4002,-2203.121)">
+      <circle
+         style="fill:#faff00;fill-opacity:1;fill-rule:evenodd;stroke:#bbbf00;stroke-width:5.93469;stroke-dasharray:none;stroke-opacity:1"
+         id="path7250"
+         cx="805.81427"
+         cy="204.98409"
+         r="35.920799" />
+      <path
+         sodipodi:type="star"
+         style="fill:#faff00;fill-opacity:1;fill-rule:evenodd;stroke:#bbbf00;stroke-width:6;stroke-dasharray:none;stroke-opacity:1"
+         id="path7356"
+         inkscape:flatsided="true"
+         sodipodi:sides="3"
+         sodipodi:cx="692.40967"
+         sodipodi:cy="18.829433"
+         sodipodi:r1="69.497894"
+         sodipodi:r2="53.261124"
+         sodipodi:arg1="1.5755742"
+         sodipodi:arg2="2.6227718"
+         inkscape:rounded="0"
+         inkscape:randomized="0"
+         d="m 692.07762,88.326534 -59.68818,-104.533216 120.37251,0.575129 z"
+         transform="matrix(1.0269762,-0.27575381,0.27575381,1.0269762,29.862427,437.60515)" />
+      <rect
+         style="fill:#20df33;fill-opacity:1;fill-rule:evenodd;stroke:#13bb24;stroke-width:6;stroke-dasharray:none;stroke-opacity:1"
+         id="rect5842"
+         width="71.894203"
+         height="261.90033"
+         x="682.55011"
+         y="-420.66119"
+         ry="0.50359589"
+         transform="rotate(44.50214)" />
+      <rect
+         style="fill:#faff00;fill-opacity:1;fill-rule:evenodd;stroke:#bbbf00;stroke-width:6.34539;stroke-dasharray:none;stroke-opacity:1"
+         id="rect7410"
+         width="65.158531"
+         height="143.34935"
+         x="691.04761"
+         y="54.83989"
+         ry="0"
+         transform="matrix(0.95084207,0.3096762,-0.70273267,0.711454,0,0)" />
+      <rect
+         style="fill:#faff00;fill-opacity:1;fill-rule:evenodd;stroke:#bbbf00;stroke-width:6.34539;stroke-dasharray:none;stroke-opacity:1"
+         id="rect7410-1"
+         width="65.158531"
+         height="143.34935"
+         x="-915.0871"
+         y="-664.37524"
+         ry="0"
+         transform="matrix(-0.32227183,-0.94664717,-0.70206217,0.71211566,0,0)" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:101.258px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:2.5;stroke-dasharray:none;stroke-opacity:1"
+       x="86.478935"
+       y="443.28183"
+       id="text10409"><tspan
+         sodipodi:role="line"
+         id="tspan10407"
+         x="86.478935"
+         y="443.28183"
+         style="stroke-width:2.5;stroke-dasharray:none">Missile</tspan></text>
+  </g>
+</svg>
