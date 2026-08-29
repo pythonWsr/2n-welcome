@@ -1,6 +1,3 @@
-## Version 0.7.0
-· ready to rewrite the project
-
 ## Version 0.6.0
 · add py map stainer<br>
 · add the QR of guild group chat<br>

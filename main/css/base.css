@@ -1,0 +1,100 @@
+/* 基础重置与全局变量 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 30px;
+  background: #f5f7fa; /* 默认浅色，主题样式会覆盖 */
+  color: #1e2b3c;
+  transition: background 0.3s, color 0.3s;
+}
+
+.page {
+  max-width: 1000px;
+  width: 100%;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(2px);
+  border-radius: 36px;
+  padding: 24px 24px 20px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+}
+
+/* 顶部标题区 */
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.main-title {
+  font-size: clamp(28px, 8vw, 52px);
+  font-weight: 700;
+  background: linear-gradient(135deg, #0b3b5c, #2b5e7c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-right: 16px;
+}
+
+.user-area-container {
+  flex-shrink: 0;
+}
+
+/* 底部 */
+.footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #8a9eb0;
+}
+
+.footer .copyright {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Toast 提示 */
+.toast-tip {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 60px;
+  font-size: 0.9rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 999;
+  background: #1e3b4f;
+  color: white;
+}
+
+/* 响应式基础调整 */
+@media (max-width: 680px) {
+  .page {
+    padding: 18px 16px 20px;
+  }
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .main-title {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+}

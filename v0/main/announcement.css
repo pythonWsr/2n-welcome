@@ -1,0 +1,117 @@
+/* 历史通知页面专属样式 */
+body {
+  padding: 20px;
+  font-family: system-ui;
+  min-height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid #cfdde9;
+  border-radius: 30px;
+  padding: 8px 22px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #1e3b4f;
+  margin-bottom: 24px;
+  transition: 0.15s;
+  text-decoration: none;
+}
+.back-btn:hover {
+  background: #e6f0f9;
+}
+
+.notice-item {
+  border-bottom: 1px dashed #cbd5e1;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+.notice-item:last-child {
+  border-bottom: none;
+}
+
+.notice-image {
+  max-width: 100%;
+  border-radius: 12px;
+  margin: 10px 0;
+}
+
+.image-caption {
+  font-size: 0.85rem;
+  color: #6a859c;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.loading-placeholder {
+  text-align: center;
+  padding: 20px;
+  color: #6a859c;
+}
+
+.notice-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.notice-title-center {
+  text-align: center;
+}
+.notice-tag {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.notice-body {
+  text-indent: 2em;
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+.notice-writer {
+  text-align: right;
+  font-size: 0.85rem;
+}
+.notice-time {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #6a859c;
+}
+.notice-image-placeholder {
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  text-align: center;
+  color: #666;
+}
+
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+  .back-btn {
+    color: #cbd5e1;
+    border-color: #475569;
+  }
+  .back-btn:hover {
+    background: #334155;
+  }
+  .notice-item {
+    border-bottom-color: #475569;
+  }
+  .loading-placeholder {
+    color: #94a3b8;
+  }
+  .notice-time {
+    color: #94a3b8;
+  }
+  .notice-image-placeholder {
+    background: #1e293b;
+    color: #aaa;
+  }
+}

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>[2n] 公会 · 欢迎</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./main/base.css">
+  <link rel="stylesheet" href="./main/components.css">
+  <link rel="stylesheet" id="theme-link" href="./main/theme-light.css">
+</head>
+<body>
+<div class="page">
+  <div class="header-row">
+    <div class="main-title" id="guildTitle">加载中...</div>
+    <div id="userAreaContainer"></div>
+  </div>
+
+  <div class="leaders">
+    <div class="leader-card">
+      <div class="leader-emoji">🥇</div>
+      <div class="leader-label" id="leaderLabel1">会长</div>
+      <div class="leader-name">awdc</div>
+    </div>
+    <div class="leader-card">
+      <div class="leader-emoji">🥈</div>
+      <div class="leader-label" id="leaderLabel2">副会长</div>
+      <div class="leader-name">flowerwsr</div>
+    </div>
+  </div>
+
+  <div class="desktop-layout">
+    <div class="left-column">
+      <div class="card">
+        <div class="card-header"><h2 id="quickStartTitle">快速上手</h2></div>
+        <div class="quickstart-content" id="quickstartContent"></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-header"><h2 id="infoTitle">资讯</h2></div>
+        <div class="card card-compact">
+          <div id="bilibiliFeed"><div class="loading-placeholder">加载资讯中...</div></div>
+        </div>
+      </div>
+
+      <div class="card card-desktop" id="announceCardDesktop">
+        <div class="card-header"><h2 id="announceTitleDesktop">通知</h2></div>
+        <div id="announceDesktop"><div class="loading-placeholder">加载中...</div></div>
+        <div id="surveyContainerDesktop"></div>
+      </div>
+
+      <div class="card card-desktop" id="changelogCardDesktop">
+        <div class="card-header"><h2 id="changelogTitleDesktop">更新日志</h2></div>
+        <div id="changelogContentDesktop"><div class="loading-placeholder">加载中...</div></div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="card" id="contributionCard">
+        <div class="card-header"><h2 id="contributionTitle">贡献榜</h2></div>
+        <div id="contributionContent" class="contribution-list"><div class="loading-placeholder">加载中...</div></div>
+      </div>
+
+      <div class="card card-fit">
+        <div class="card-header"><h2 id="portalTitle">传送门</h2></div>
+        <ul class="portal-list" id="portalList"></ul>
+      </div>
+
+      <div class="card" id="markCard">
+        <div class="card-header"><h2 id="markTitle">Mark List</h2></div>
+        <div id="markContent" class="mark-list"><div class="loading-placeholder">加载中...</div></div>
+      </div>
+
+      <div class="card card-mobile" id="announceCardMobile">
+        <div class="card-header"><h2 id="announceTitleMobile">通知</h2></div>
+        <div id="announceMobile"><div class="loading-placeholder">加载中...</div></div>
+        <div id="surveyContainerMobile"></div>
+      </div>
+
+      <div class="card card-mobile" id="changelogCardMobile">
+        <div class="card-header"><h2 id="changelogTitleMobile">更新日志</h2></div>
+        <div id="changelogContentMobile"><div class="loading-placeholder">加载中...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="version">Version 0.6.0</div>
+    <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
+  </div>
+</div>
+
+<div class="toast-tip" id="copyToast">📋 已复制</div>
+
+<!-- 动态加载调试工具脚本（根据 user 参数） -->
+<script>
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const user = urlParams.get('user');
+    if (!user) return;
+
+    function loadScript(src) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    if (user === 'debug') {
+      loadScript('./main/developers/debug.js');
+    } else if (user === 'dev') {
+      loadScript('./main/developers/dev.js');
+    } else if (user === 'admin') {
+      loadScript('./main/developers/admin.js');
+    }
+  })();
+</script>
+
+<script type="module">
+  import { renderUserArea } from './main/settings.js';
+  renderUserArea(document.getElementById('userAreaContainer'));
+</script>
+<script type="module">
+  import * as pipe from './main/pipe.js';
+  import { renderSurvey } from './data/survey.js';
+
+  const user = pipe.getUrlParam('user');
+  if (user) {
+    const containerDesktop = document.getElementById('surveyContainerDesktop');
+    const containerMobile = document.getElementById('surveyContainerMobile');
+    renderSurvey(containerDesktop, user, false);
+    renderSurvey(containerMobile, user, true);
+  }
+</script>
+<script type="module" src="./main/core.js"></script>
+</body>
+</html>

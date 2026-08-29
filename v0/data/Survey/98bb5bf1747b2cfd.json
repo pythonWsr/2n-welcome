@@ -1,0 +1,78 @@
+{
+  "type": "html",
+  "zh": {
+    "title": "问卷测试",
+    "question1": {
+      "text": "您是否能看到这个问卷？(_see_)",
+      "selects": {
+        "see": {
+          "options": ["是", "否"],
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    "question2": {
+      "text": "该问卷是否被正常显示？(_normal_)",
+      "selects": {
+        "normal": {
+          "options": ["是", "否"],
+          "min": 1,
+          "max": 1
+        }
+      },
+      "condition": [["see==see[0]"]]
+    },
+    "question3": {
+      "text": "您对问卷是否还有其他建议？___suggestion___",
+      "blanks": {
+        "suggestion": {
+          "required": false,
+          "type": "str",
+          "max": 200
+        }
+      },
+      "condition": [["see==see[0]"]]
+    }
+  },
+  "en": {
+    "title": "Survey Test",
+    "question1": {
+      "text": "Can you see this survey? (_see_)",
+      "selects": {
+        "see": {
+          "options": ["Yes", "No"],
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    "question2": {
+      "text": "Is the survey displayed correctly? (_normal_)",
+      "selects": {
+        "normal": {
+          "options": ["Yes", "No"],
+          "min": 1,
+          "max": 1
+        }
+      },
+      "condition": [["see==see[0]"]]
+    },
+    "question3": {
+      "text": "Do you have any other suggestions? ___suggestion___",
+      "blanks": {
+        "suggestion": {
+          "required": false,
+          "type": "str",
+          "max": 200
+        }
+      },
+      "condition": [["see==see[0]"]]
+    }
+  },
+  "weights": {
+    "control": "main",
+    "awdc": 3,
+    "flowerwsr": 2
+  }
+}

@@ -1,0 +1,60 @@
+/* 浅色主题颜色定义 */
+body {
+  background: #f5f7fa;
+  color: #1e2b3c;
+}
+
+.page {
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+}
+
+.main-title {
+  background: linear-gradient(135deg, #0b3b5c, #2b5e7c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 设置菜单（浅色） */
+.settings-dropdown {
+  background: #ffffff;
+}
+
+.settings-option {
+  color: #1e3b4f;
+}
+
+.settings-option:hover {
+  background: #f0f4f8;
+}
+
+.tab-btn {
+  background: rgba(255,255,255,0.7);
+  border-color: #cfdde9;
+  color: #1e3b4f;
+}
+
+.tab-btn:hover {
+  background: #e6f0f9;
+}
+
+.tab-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.carousel-container {
+  background: #000;
+}
+
+.footer,
+.footer .version {
+  color: #8a9eb0;
+}
+
+.toast-tip {
+  background: #1e3b4f;
+  color: white;
+}

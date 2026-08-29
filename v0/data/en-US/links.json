@@ -1,0 +1,11 @@
+{
+  "portalItems": [
+    { "label": "Leader WeChat:", "value": "Zjk-1332" },
+    { "label": "Guild Sheet:", "value": "https://www.kdocs.cn/l/cvM5Vz8Fd3dC" },
+    { "label": "Add WPS Contact:", "value": "https://kdocs.cn/i/MfxUDULv" },
+    { "label": "Mark List Report:", "value": "https://v.wjx.cn/vm/tJTix5n.aspx#" },
+    { "label": "Official wiki:", "value": "https://official-florrio.fandom.com/wiki/Florr.io_Community_Wiki" },
+    { "label": "DPS Calc:", "value": "https://storm-let.github.io/florr-dps/" },
+    { "label": "Super Mobs:", "value": "https://mobs.ashish.top" }
+  ]
+}

@@ -1,0 +1,60 @@
+/* 深色主题颜色定义 */
+body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.page {
+  background: rgba(30,41,59,0.7);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+}
+
+.main-title {
+  background: linear-gradient(135deg, #60a5fa, #93c5fd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 设置菜单（深色） */
+.settings-dropdown {
+  background: #1e293b;
+}
+
+.settings-option {
+  color: #cbd5e1;
+}
+
+.settings-option:hover {
+  background: #334155;
+}
+
+.tab-btn {
+  background: rgba(30,41,59,0.8);
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.tab-btn:hover {
+  background: #334155;
+}
+
+.tab-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.carousel-container {
+  background: #000;
+}
+
+.footer,
+.footer .version {
+  color: #64748b;
+}
+
+.toast-tip {
+  background: #2563eb;
+  color: white;
+}

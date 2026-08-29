@@ -1,0 +1,131 @@
+/* joinus.css – 加入公会页面样式 */
+
+:root {
+  --bg: #f5f7fa;
+  --text: #1e2b3c;
+  --card-bg: #ffffff;
+  --card-border: #e2eaf1;
+  --shadow: rgba(0,0,0,0.05);
+  --accent: #2b5e7c;
+  --error: #de1f1f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --text: #e2e8f0;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --shadow: rgba(0,0,0,0.3);
+    --accent: #60a5fa;
+    --error: #ef4444;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 40px;
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 24px;
+  transition: opacity 0.2s;
+}
+
+.back-btn:hover {
+  opacity: 0.8;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 32px;
+  font-size: clamp(24px, 4vw, 36px);
+  color: var(--accent);
+}
+
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+}
+
+.group-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  padding: 24px;
+  width: 280px;
+  max-width: 100%;
+  box-shadow: 0 8px 20px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.group-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.qr-wrapper {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.qr-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.expired-message {
+  color: var(--error);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 20px;
+}
+
+/* 手机端纵向排列 */
+@media (max-width: 768px) {
+  .groups {
+    flex-direction: column;
+    align-items: center;
+  }
+  .group-card {
+    width: 90%;
+    max-width: 400px;
+  }
+}

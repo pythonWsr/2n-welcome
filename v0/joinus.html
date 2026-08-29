@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>加入公会</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./main/joinus.css">
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-btn">
+      <i class="fas fa-arrow-left"></i> <span id="backText">返回</span>
+    </a>
+
+    <h1 id="pageTitle">加入我们的公会</h1>
+
+    <div class="groups" id="groupsContainer">
+      <div class="loading-placeholder">加载中...</div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // 语言检测（与 implicitPipe 存储键一致）
+      function getLanguage() {
+        try {
+          const stored = localStorage.getItem('2n_lang');
+          if (stored === 'zh' || stored === 'en') return stored;
+        } catch (e) {}
+        const navLang = navigator.language || navigator.userLanguage || 'zh';
+        return navLang.startsWith('zh') ? 'zh' : 'en';
+      }
+
+      const lang = getLanguage();
+      document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+
+      const texts = {
+        zh: { back: '返回', title: '加入我们的公会', expired: '二维码已过期，请联系管理员更新二维码！' },
+        en: { back: 'Back', title: 'Join Our Guild', expired: 'QR code has expired. Please contact an admin to update it!' }
+      };
+      const t = texts[lang];
+      document.getElementById('backText').textContent = t.back;
+      document.getElementById('pageTitle').textContent = t.title;
+
+      // 从文件名 "1-0903.png" 中解析过期日期（编号-月日）
+      function parseExpireDate(filename) {
+        const match = filename.match(/(\d+)-(\d{2})(\d{2})\./);
+        if (!match) return null;
+        const month = parseInt(match[2], 10);  // 月份
+        const day = parseInt(match[3], 10);    // 日期
+        if (isNaN(month) || isNaN(day)) return null;
+        const now = new Date();
+        return new Date(now.getFullYear(), month - 1, day);
+      }
+
+      async function loadInv() {
+        const container = document.getElementById('groupsContainer');
+        try {
+          const res = await fetch('./data/inv/index.json');
+          if (!res.ok) throw new Error('index.json not found');
+          const data = await res.json();
+          const groups = data.groups || [];
+          if (!groups.length) {
+            container.innerHTML = `<div class="expired-message">${t.expired}</div>`;
+            return;
+          }
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          let html = '';
+          for (const group of groups) {
+            const name = lang === 'zh' ? group.name_zh : group.name_en;
+            const imageFile = group.image || '';
+            const imagePath = imageFile ? `./data/inv/${imageFile}` : '';
+            const expireDate = imageFile ? parseExpireDate(imageFile) : null;
+            const isValid = imageFile && expireDate && expireDate >= today;
+
+            html += `
+              <div class="group-card">
+                <div class="group-name">${escapeHTML(name)}</div>
+                ${isValid
+                  ? `<div class="qr-wrapper"><img src="${imagePath}" alt="${escapeHTML(name)}"></div>`
+                  : `<div class="expired-message">${t.expired}</div>`
+                }
+              </div>
+            `;
+          }
+          container.innerHTML = html;
+        } catch (e) {
+          console.error(e);
+          container.innerHTML = `<div class="expired-message">${t.expired}</div>`;
+        }
+      }
+
+      function escapeHTML(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+
+      loadInv();
+    })();
+  </script>
+</body>
+</html>
