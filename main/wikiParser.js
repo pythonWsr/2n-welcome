@@ -61,7 +61,7 @@ export function parseWiki(text) {
       continue;
     }
 
-    // 模块调用（单独一行且为块级模块）
+    // 块级模块调用（单独一行，形如 {{module|param1|param2}}）
     const moduleMatch = line.match(/^\s*\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}\s*$/);
     if (moduleMatch) {
       const moduleName = moduleMatch[1];
@@ -142,7 +142,15 @@ function renderList(block) {
 function renderInline(text) {
   let escaped = escapeHTML(text);
 
-  // 模块调用（内联模块）
+  // 先处理粗斜体、粗体、斜体（使模块参数中的标记生效）
+  // 粗斜体 '''''text'''''
+  escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
+  // 粗体 '''text'''
+  escaped = escaped.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
+  // 斜体 ''text''
+  escaped = escaped.replace(/''(.*?)''/g, '<em>$1</em>');
+
+  // 然后处理模块调用（内联模块）
   escaped = escaped.replace(/\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}/g, (match, moduleName, paramStr) => {
     const moduleDef = moduleMap[moduleName];
     if (!moduleDef || moduleDef.isBlock) return match; // 块级模块不在此处理
@@ -166,13 +174,6 @@ function renderInline(text) {
   escaped = escaped.replace(/(?<!["'>])(https?:\/\/[^\s<]+)/g, (match) => {
     return `<a href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`;
   });
-
-  // 粗斜体 '''''text'''''
-  escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
-  // 粗体 '''text'''
-  escaped = escaped.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
-  // 斜体 ''text''
-  escaped = escaped.replace(/''(.*?)''/g, '<em>$1</em>');
 
   return escaped;
 }

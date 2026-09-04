@@ -8,6 +8,31 @@
   <link rel="stylesheet" href="./main/css/base.css">
   <link rel="stylesheet" href="./main/css/components.css">
   <link rel="stylesheet" id="theme-link" href="./main/css/theme-light.css">
+  <style>
+    /* 临时修复：确保头部右侧区域靠右，设置下拉菜单完全可见 */
+    .main-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .settings-wrapper {
+      position: relative;
+    }
+    .settings-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      min-width: 160px;
+      max-width: calc(100vw - 40px);
+      z-index: 1000;
+    }
+  </style>
 </head>
 <body>
 <div class="page">
@@ -50,9 +75,9 @@
     </div>
   </section>
 
-  <!-- 介绍文字 -->
+  <!-- 介绍文字（由 Wiki 解析器动态渲染） -->
   <section class="intro-text" id="introText">
-    <p>欢迎来到 2n 公会！这里可以放置一段介绍文字。</p>
+    <div class="loading-placeholder">加载中...</div>
   </section>
 
   <!-- 栏目标题横向滑动导航 -->
@@ -68,7 +93,7 @@
 
   <!-- 栏目内容容器 -->
   <main class="tab-content" id="tabContent">
-    <div class="placeholder-content">加载中...</div>
+    <div class="placeholder-content" id="tabPlaceholder">首页内容加载中...</div>
   </main>
 
   <!-- 底部 -->
@@ -108,9 +133,10 @@
 <!-- 重构提示弹窗（启用） -->
 <script src="./main/refactorNotice.js"></script>
 
-<!-- 设置菜单交互（临时） -->
+<!-- 设置菜单交互 + 栏目切换 -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    // ---------- 设置菜单 ----------
     const settingsIcon = document.getElementById('settingsIcon');
     const settingsDropdown = document.getElementById('settingsDropdown');
     const backBtn = document.getElementById('backToOldVersion');
@@ -129,7 +155,50 @@
     backBtn.addEventListener('click', () => {
       window.location.href = './v0/index.html';
     });
+
+    // ---------- 栏目切换 ----------
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPlaceholder = document.getElementById('tabPlaceholder');
+
+    const tabTexts = {
+      home: '首页内容加载中...',
+      announcements: '通知内容加载中...',
+      surveys: '问卷内容加载中...',
+      join: '加入内容加载中...',
+      about: '关于内容加载中...'
+    };
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.getAttribute('data-tab');
+        if (tabPlaceholder && tabTexts[tab]) {
+          tabPlaceholder.textContent = tabTexts[tab];
+        }
+      });
+    });
   });
+</script>
+
+<!-- 加载 Wiki 介绍内容 -->
+<script type="module">
+  import { parseWiki } from './main/wikiParser.js';
+
+  async function loadHomeWiki() {
+    const container = document.getElementById('introText');
+    try {
+      const res = await fetch('./data/home/home.wiki');
+      if (!res.ok) throw new Error('加载失败');
+      const text = await res.text();
+      const html = parseWiki(text);
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = '<div class="loading-placeholder">介绍文字不可用</div>';
+    }
+  }
+
+  loadHomeWiki();
 </script>
 
 <!-- 主逻辑占位，后续接入 -->
