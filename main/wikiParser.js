@@ -142,6 +142,9 @@ function renderList(block) {
 function renderInline(text) {
   let escaped = escapeHTML(text);
 
+  // 处理行内换行标签：先转义，再还原 <br>
+  escaped = escaped.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
   // 先处理粗斜体、粗体、斜体（使模块参数中的标记生效）
   // 粗斜体 '''''text'''''
   escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
