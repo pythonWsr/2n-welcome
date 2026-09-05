@@ -1,0 +1,11 @@
+[
+  {
+    "type": "image",
+    "src": "./data/home/Awdc-petal.png",
+    "alt": "花瓣图片"
+  },
+  {
+    "type": "video",
+    "src": "./data/home/[florr]2n公会半周年纪念！.mp4"
+  }
+]
