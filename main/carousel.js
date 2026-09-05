@@ -1,4 +1,4 @@
-// main/carousel.js – 首页轮播（图片/视频混合，自动播放）
+// main/carousel.js – 首页轮播（图片/视频混合，自动播放，视频可调节进度）
 (function() {
   const carouselData = [
     {
@@ -40,6 +40,8 @@
       video.playsInline = true;
       video.setAttribute('playsinline', '');
       video.setAttribute('muted', '');
+      // 添加控制条，允许用户调节进度、暂停/播放
+      video.controls = true;
       video.addEventListener('ended', onVideoEnded);
       video.addEventListener('play', () => { isVideoPlaying = true; });
       video.addEventListener('pause', () => { isVideoPlaying = false; });
@@ -87,7 +89,6 @@
     const video = currentSlide.querySelector('video');
     if (video) {
       video.play().catch(e => {
-        // 如果自动播放被阻止，可以静默处理或显示提示
         console.warn('视频自动播放失败:', e);
       });
       // 暂停自动计时器，等待视频结束

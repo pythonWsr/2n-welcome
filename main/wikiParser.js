@@ -1,5 +1,5 @@
 // main/wikiParser.js – 支持自定义模块的 MediaWiki 风格解析器
-// 支持：标题、段落、列表、粗体、斜体、内部链接、外部链接、代码块、模块调用
+// 支持：标题、段落、列表、粗体、斜体、内部链接、外部链接、代码块、模块调用、安全 span/table 标签
 import { moduleMap } from '../module/index.js';
 
 export function parseWiki(text) {
@@ -145,6 +145,43 @@ function renderInline(text) {
   // 处理行内换行标签：先转义，再还原 <br>
   escaped = escaped.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
+  // 还原 <span> 标签（允许 class 和 style 属性，且做基本过滤）
+  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'span');
+  });
+  escaped = escaped.replace(/&lt;\/span&gt;/gi, '</span>');
+
+  // 还原表格相关标签（允许 class 和 style 属性）
+  escaped = escaped.replace(/&lt;table(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'table');
+  });
+  escaped = escaped.replace(/&lt;\/table&gt;/gi, '</table>');
+
+  escaped = escaped.replace(/&lt;thead(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'thead');
+  });
+  escaped = escaped.replace(/&lt;\/thead&gt;/gi, '</thead>');
+
+  escaped = escaped.replace(/&lt;tbody(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'tbody');
+  });
+  escaped = escaped.replace(/&lt;\/tbody&gt;/gi, '</tbody>');
+
+  escaped = escaped.replace(/&lt;tr(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'tr');
+  });
+  escaped = escaped.replace(/&lt;\/tr&gt;/gi, '</tr>');
+
+  escaped = escaped.replace(/&lt;th(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'th');
+  });
+  escaped = escaped.replace(/&lt;\/th&gt;/gi, '</th>');
+
+  escaped = escaped.replace(/&lt;td(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
+    return safeTagReplacement(attrs, 'td');
+  });
+  escaped = escaped.replace(/&lt;\/td&gt;/gi, '</td>');
+
   // 先处理粗斜体、粗体、斜体（使模块参数中的标记生效）
   // 粗斜体 '''''text'''''
   escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
@@ -179,6 +216,21 @@ function renderInline(text) {
   });
 
   return escaped;
+}
+
+// 安全的标签属性处理：仅允许 class 和 style 属性，且值中不能包含 < 或 >
+function safeTagReplacement(attrs, tagName) {
+  if (!attrs) return `<${tagName}>`;
+  const safeAttrs = [];
+  const classMatch = attrs.match(/class\s*=\s*"([^"]*)"/i);
+  const styleMatch = attrs.match(/style\s*=\s*"([^"]*)"/i);
+  if (classMatch && !/[<>]/.test(classMatch[1])) {
+    safeAttrs.push(`class="${classMatch[1]}"`);
+  }
+  if (styleMatch && !/[<>]/.test(styleMatch[1])) {
+    safeAttrs.push(`style="${styleMatch[1]}"`);
+  }
+  return safeAttrs.length ? `<${tagName} ${safeAttrs.join(' ')}>` : `<${tagName}>`;
 }
 
 function parseParams(paramStr) {
