@@ -242,6 +242,6 @@ function escapeHTML(str) {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/>/g, '&gt;');
+  // 注意：不再转义双引号，避免影响标签属性还原
 }
