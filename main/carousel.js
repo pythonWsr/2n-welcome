@@ -1,17 +1,5 @@
-// main/carousel.js – 首页轮播（图片/视频混合，自动播放，视频可调节进度）
+// main/carousel.js – 首页轮播（从 data/home/medialist.json 动态加载媒体列表）
 (function() {
-  const carouselData = [
-    {
-      type: 'image',
-      src: './data/home/Awdc-petal.png',
-      alt: '花瓣图片'
-    },
-    {
-      type: 'video',
-      src: './data/home/[florr]2n公会半周年纪念！.mp4'
-    }
-  ];
-
   const track = document.getElementById('carouselTrack');
   const dotsContainer = document.getElementById('carouselDots');
   const prevBtn = document.getElementById('carouselPrev');
@@ -23,124 +11,141 @@
   let autoTimer = null;
   let isVideoPlaying = false;
 
-  // 创建轮播项
-  carouselData.forEach((item, index) => {
-    const slide = document.createElement('div');
-    slide.className = 'carousel-slide';
-
-    if (item.type === 'image') {
-      const img = document.createElement('img');
-      img.src = item.src;
-      img.alt = item.alt || '';
-      slide.appendChild(img);
-    } else if (item.type === 'video') {
-      const video = document.createElement('video');
-      video.src = item.src;
-      video.muted = true;
-      video.playsInline = true;
-      video.setAttribute('playsinline', '');
-      video.setAttribute('muted', '');
-      // 添加控制条，允许用户调节进度、暂停/播放
-      video.controls = true;
-      video.addEventListener('ended', onVideoEnded);
-      video.addEventListener('play', () => { isVideoPlaying = true; });
-      video.addEventListener('pause', () => { isVideoPlaying = false; });
-      slide.appendChild(video);
+  // 加载媒体列表并初始化轮播
+  async function initCarousel() {
+    try {
+      const res = await fetch('./data/home/medialist.json');
+      if (!res.ok) throw new Error('媒体列表加载失败');
+      const carouselData = await res.json();
+      buildCarousel(carouselData);
+    } catch (e) {
+      console.error('轮播初始化失败:', e);
+      track.innerHTML = '<div class="loading-placeholder">媒体加载失败</div>';
     }
-
-    track.appendChild(slide);
-  });
-
-  const slides = track.querySelectorAll('.carousel-slide');
-
-  // 创建指示点
-  carouselData.forEach((_, index) => {
-    const dot = document.createElement('span');
-    dot.className = 'carousel-dot';
-    dot.addEventListener('click', () => goTo(index));
-    dotsContainer.appendChild(dot);
-  });
-  const dots = dotsContainer.querySelectorAll('.carousel-dot');
-
-  function updateDots() {
-    dots.forEach((dot, index) => {
-      dot.classList.toggle('active', index === currentIndex);
-    });
   }
 
-  function goTo(index) {
-    if (index < 0) index = slides.length - 1;
-    if (index >= slides.length) index = 0;
-    currentIndex = index;
-    track.style.transform = `translateX(-${currentIndex * 100}%)`;
-    updateDots();
+  function buildCarousel(carouselData) {
+    // 清空 track
+    track.innerHTML = '';
 
-    // 停止所有视频
-    slides.forEach((slide, i) => {
-      const video = slide.querySelector('video');
-      if (video) {
-        video.pause();
-        video.currentTime = 0;
+    // 创建轮播项
+    carouselData.forEach((item, index) => {
+      const slide = document.createElement('div');
+      slide.className = 'carousel-slide';
+
+      if (item.type === 'image') {
+        const img = document.createElement('img');
+        img.src = item.src;
+        img.alt = item.alt || '';
+        slide.appendChild(img);
+      } else if (item.type === 'video') {
+        const video = document.createElement('video');
+        video.src = item.src;
+        video.muted = true;
+        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('muted', '');
+        video.controls = true;
+        video.addEventListener('ended', onVideoEnded);
+        video.addEventListener('play', () => { isVideoPlaying = true; });
+        video.addEventListener('pause', () => { isVideoPlaying = false; });
+        slide.appendChild(video);
       }
+
+      track.appendChild(slide);
     });
 
-    // 如果当前是视频，自动播放
-    const currentSlide = slides[currentIndex];
-    const video = currentSlide.querySelector('video');
-    if (video) {
-      video.play().catch(e => {
-        console.warn('视频自动播放失败:', e);
+    const slides = track.querySelectorAll('.carousel-slide');
+
+    // 创建指示点
+    carouselData.forEach((_, index) => {
+      const dot = document.createElement('span');
+      dot.className = 'carousel-dot';
+      dot.addEventListener('click', () => goTo(index));
+      dotsContainer.appendChild(dot);
+    });
+    const dots = dotsContainer.querySelectorAll('.carousel-dot');
+
+    function updateDots() {
+      dots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentIndex);
       });
-      // 暂停自动计时器，等待视频结束
-      stopAuto();
-      isVideoPlaying = true;
-    } else {
-      // 当前是图片，重置自动计时器
+    }
+
+    function goTo(index) {
+      if (index < 0) index = slides.length - 1;
+      if (index >= slides.length) index = 0;
+      currentIndex = index;
+      track.style.transform = `translateX(-${currentIndex * 100}%)`;
+      updateDots();
+
+      // 停止所有视频
+      slides.forEach((slide, i) => {
+        const video = slide.querySelector('video');
+        if (video) {
+          video.pause();
+          video.currentTime = 0;
+        }
+      });
+
+      // 如果当前是视频，自动播放
+      const currentSlide = slides[currentIndex];
+      const video = currentSlide.querySelector('video');
+      if (video) {
+        video.play().catch(e => {
+          console.warn('视频自动播放失败:', e);
+        });
+        stopAuto();
+        isVideoPlaying = true;
+      } else {
+        isVideoPlaying = false;
+        startAuto();
+      }
+    }
+
+    function next() {
+      goTo(currentIndex + 1);
+    }
+
+    function prev() {
+      goTo(currentIndex - 1);
+    }
+
+    function onVideoEnded() {
       isVideoPlaying = false;
-      startAuto();
-    }
-  }
-
-  function next() {
-    goTo(currentIndex + 1);
-  }
-
-  function prev() {
-    goTo(currentIndex - 1);
-  }
-
-  function onVideoEnded() {
-    // 视频播放完毕，切换到下一张
-    isVideoPlaying = false;
-    next();
-  }
-
-  function startAuto() {
-    stopAuto();
-    if (isVideoPlaying) return; // 视频播放中不启动计时器
-    autoTimer = setInterval(() => {
       next();
-    }, 6000); // 6秒自动翻页
-  }
-
-  function stopAuto() {
-    if (autoTimer) {
-      clearInterval(autoTimer);
-      autoTimer = null;
     }
+
+    function startAuto() {
+      stopAuto();
+      if (isVideoPlaying) return;
+      autoTimer = setInterval(() => {
+        next();
+      }, 6000); // 6秒自动翻页
+    }
+
+    function stopAuto() {
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+    }
+
+    // 事件绑定
+    nextBtn.addEventListener('click', () => {
+      stopAuto();
+      next();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      stopAuto();
+      prev();
+    });
+
+    // 初始化
+    goTo(0);
   }
 
-  // 事件绑定
-  nextBtn.addEventListener('click', () => {
-    stopAuto();
-    next();
-  });
-
-  prevBtn.addEventListener('click', () => {
-    stopAuto();
-    prev();
-  });
-
-  // 初始化
-  goTo(0);
+  // 启动
+  initCarousel();
 })();

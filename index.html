@@ -49,6 +49,9 @@
           <div class="settings-option" id="backToOldVersion">
             <i class="fas fa-arrow-left"></i> 回到旧版本
           </div>
+          <div class="settings-option" id="clearCache">
+            <i class="fas fa-trash-alt"></i> 清除缓存
+          </div>
         </div>
       </div>
     </div>
@@ -127,30 +130,12 @@
 <!-- 轮播控制脚本 -->
 <script src="./main/carousel.js"></script>
 
-<!-- 设置菜单交互 + 栏目切换 -->
+<!-- 设置菜单交互（外部脚本） -->
+<script src="./main/settings.js"></script>
+
+<!-- 栏目切换 -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // ---------- 设置菜单 ----------
-    const settingsIcon = document.getElementById('settingsIcon');
-    const settingsDropdown = document.getElementById('settingsDropdown');
-    const backBtn = document.getElementById('backToOldVersion');
-
-    settingsIcon.addEventListener('click', (e) => {
-      e.stopPropagation();
-      settingsDropdown.style.display = settingsDropdown.style.display === 'none' ? 'block' : 'none';
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!settingsIcon.contains(e.target) && !settingsDropdown.contains(e.target)) {
-        settingsDropdown.style.display = 'none';
-      }
-    });
-
-    backBtn.addEventListener('click', () => {
-      window.location.href = './v0/index.html';
-    });
-
-    // ---------- 栏目切换 ----------
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabPlaceholder = document.getElementById('tabPlaceholder');
 
