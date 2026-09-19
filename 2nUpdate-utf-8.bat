@@ -126,8 +126,8 @@ echo 用法: %~nx0 [-f] [-m "提交信息"] [--allow-empty] [-r ^| --revert [sha
 echo   -f                  强制模式，跳过远程差异检查
 echo   -m "提交信息"        提交信息
 echo   --allow-empty       允许空提交
-echo   -r, --revert ^<sha^  回退到指定提交并强制推送
-echo                       不带 ^<sha^ 时仅 fetch 并显示 git log --oneline
+echo   -r, --revert [sha]  回退到指定提交并强制推送
+echo                       不带 sha 时仅 fetch 并显示 git log --oneline
 echo   -h, --help          显示本帮助
 exit /b 0
 
@@ -145,7 +145,7 @@ if not defined MSG (
 
 if /i "%FORCE%"=="true" goto :push
 
-echo ==^> 获取远程最新状态...
+echo [LOG] 获取远程最新状态...
 git fetch origin
 if %errorlevel% neq 0 (
     echo 获取失败，请检查网络或SSH配置
@@ -158,13 +158,13 @@ if "%BRANCH%"=="" (
     exit /b 1
 )
 
-git diff --name-only HEAD "origin/%BRANCH%" > %temp%\diff_files.txt 2>&1
+git diff --name-only HEAD "origin/%BRANCH%" > "%temp%\diff_files.txt" 2>&1
 set HAS_DIFF=false
-for %%F in (%temp%\diff_files.txt) do if %%~zF gtr 0 set HAS_DIFF=true
+for %%F in ("%temp%\diff_files.txt") do if %%~zF gtr 0 set HAS_DIFF=true
 if "%HAS_DIFF%"=="true" (
     echo.
     echo [WARN] 本地与远程 %BRANCH% 存在差异的文件:
-    type %temp%\diff_files.txt
+    type "%temp%\diff_files.txt"
     echo.
 
     echo [BACKUP] 备份本地版本到 .local\ ...
@@ -195,7 +195,7 @@ if "%HAS_DIFF%"=="true" (
                 echo   已覆盖: !GFILE!
             ) else (
                 del /f /q "!FILE!" 2>nul
-                echo   已删除: !GFILE! ^(远程已不存在^)
+                echo   已删除: !GFILE! [远程已不存在]
             )
         )
     )
@@ -203,54 +203,54 @@ if "%HAS_DIFF%"=="true" (
     echo.
     echo [OK] 已用远程文件覆盖本地文件，本地版本已备份到 .local\
     echo 请手动合并 .local\ 中的内容到项目文件后再推送。
-    del %temp%\diff_files.txt 2>nul
+    del "%temp%\diff_files.txt" 2>nul
     exit /b 0
 ) else (
     echo [OK] 本地与远程无差异，继续推送流程...
 )
-del %temp%\diff_files.txt 2>nul
+del "%temp%\diff_files.txt" 2>nul
 
 :push
-echo ==^> git add .
+echo [LOG] git add .
 git add .
 if /i "!ALLOW_EMPTY!"=="true" (
-    echo ==^> git commit --allow-empty -m "!MSG!"
+    echo [LOG] git commit --allow-empty -m "!MSG!"
     git commit --allow-empty -m "!MSG!"
 ) else (
-    echo ==^> git commit -m "!MSG!"
+    echo [LOG] git commit -m "!MSG!"
     git commit -m "!MSG!"
 )
-echo ==^> git branch -M main
+echo [LOG] git branch -M main
 git branch -M main
-echo ==^> git push -u origin main -v
+echo [LOG] git push -u origin main -v
 git push -u origin main -v
 echo [OK] 推送完成！
 exit /b 0
 
 :revert
-echo ==^> git fetch origin
+echo [LOG] git fetch origin
 git fetch origin
 
 if "%REVERT_SHA%"=="" (
-    echo ==^> git log --oneline
+    echo [LOG] git log --oneline
     git log --oneline
     echo.
     echo [INFO] 未提供 SHA，未执行回退。
     echo 请重新运行并指定要回退到的 SHA，例如:
-    echo   %~nx0 -r ^<sha^>
+    echo   %~nx0 -r [sha]
     exit /b 0
 )
 
-echo ==^> git reset --hard %REVERT_SHA%
+echo [LOG] git reset --hard %REVERT_SHA%
 git reset --hard %REVERT_SHA%
 if %errorlevel% neq 0 (
     echo 回退失败，请检查 SHA 是否有效。
     exit /b 1
 )
 
-echo ==^> git branch -M main
+echo [LOG] git branch -M main
 git branch -M main
-echo ==^> git push -u origin main --force-with-lease -v
+echo [LOG] git push -u origin main --force-with-lease -v
 git push -u origin main --force-with-lease -v
 echo [OK] 回退并推送完成！
 exit /b 0

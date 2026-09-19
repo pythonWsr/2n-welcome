@@ -118,12 +118,12 @@ if "%BRANCH%"=="" (
     exit /b 1
 )
 
-git diff --name-only HEAD "origin/%BRANCH%" > %temp%\diff_files.txt 2>&1
+git diff --name-only HEAD "origin/%BRANCH%" > "%temp%\diff_files.txt" 2>&1
 set HAS_DIFF=false
-for %%F in (%temp%\diff_files.txt) do if %%~zF gtr 0 set HAS_DIFF=true
+for %%F in ("%temp%\diff_files.txt") do if %%~zF gtr 0 set HAS_DIFF=true
 if "%HAS_DIFF%"=="true" (
     echo.
-    type %temp%\diff_files.txt
+    type "%temp%\diff_files.txt"
     echo.
 
     if not exist ".local" mkdir ".local"
@@ -155,48 +155,48 @@ if "%HAS_DIFF%"=="true" (
     )
 
     echo.
-    del %temp%\diff_files.txt 2>nul
+    del "%temp%\diff_files.txt" 2>nul
     exit /b 0
 ) else (
 )
-del %temp%\diff_files.txt 2>nul
+del "%temp%\diff_files.txt" 2>nul
 
 :push
-echo ==^> git add .
+echo [LOG] git add .
 git add .
 if /i "!ALLOW_EMPTY!"=="true" (
-    echo ==^> git commit --allow-empty -m "!MSG!"
+    echo [LOG] git commit --allow-empty -m "!MSG!"
     git commit --allow-empty -m "!MSG!"
 ) else (
-    echo ==^> git commit -m "!MSG!"
+    echo [LOG] git commit -m "!MSG!"
     git commit -m "!MSG!"
 )
-echo ==^> git branch -M main
+echo [LOG] git branch -M main
 git branch -M main
-echo ==^> git push -u origin main -v
+echo [LOG] git push -u origin main -v
 git push -u origin main -v
 exit /b 0
 
 :revert
-echo ==^> git fetch origin
+echo [LOG] git fetch origin
 git fetch origin
 
 if "%REVERT_SHA%"=="" (
-    echo ==^> git log --oneline
+    echo [LOG] git log --oneline
     git log --oneline
     echo.
-    echo   %~nx0 -r ^<sha^>
+    echo   %~nx0 -r [sha]
     exit /b 0
 )
 
-echo ==^> git reset --hard %REVERT_SHA%
+echo [LOG] git reset --hard %REVERT_SHA%
 git reset --hard %REVERT_SHA%
 if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo ==^> git branch -M main
+echo [LOG] git branch -M main
 git branch -M main
-echo ==^> git push -u origin main --force-with-lease -v
+echo [LOG] git push -u origin main --force-with-lease -v
 git push -u origin main --force-with-lease -v
 exit /b 0

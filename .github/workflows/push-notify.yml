@@ -17,40 +17,173 @@ jobs:
           fetch-depth: 0
 
       - name: Generate diff summary and full diff
+        id: diff
         run: |
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
-            SUMMARY=$(git diff --stat HEAD~1 HEAD)
-            FULL=$(git diff HEAD~1 HEAD)
+            RANGE="HEAD~1 HEAD"
           else
-            SUMMARY=$(git diff --cached --stat)
-            FULL=$(git diff --cached)
+            RANGE="--cached"
           fi
 
-          # 摘要（短）
+          SUMMARY=$(git diff --stat $RANGE)
+          if [ -z "$SUMMARY" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "本次推送无实际文件变更，跳过 Issue 创建。"
+            exit 0
+          fi
+
+          echo "skip=false" >> $GITHUB_OUTPUT
+          FULL=$(git diff $RANGE)
+
           echo "DIFF_SUMMARY<<EOF" >> $GITHUB_ENV
           echo "$SUMMARY" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          # 完整 diff（可能很长）
           echo "DIFF_FULL<<EOF" >> $GITHUB_ENV
           echo "$FULL" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Create issue to notify pythonWsr
+      - name: Close issues older than 6 months
+        if: steps.diff.outputs.skip != 'true'
+        id: stale
         uses: actions/github-script@v7
+        with:
+          script: |
+            const cutoff = new Date();
+            cutoff.setMonth(cutoff.getMonth() - 6);
+
+            const issues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100
+              }
+            );
+
+            const closed = [];
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+              if (!issue.title.startsWith('[Push]')) continue;
+              if (new Date(issue.created_at) < cutoff) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed'
+                });
+                closed.push(`#${issue.number} ${issue.title}（创建于 ${issue.created_at}）`);
+              }
+            }
+
+            core.setOutput('closed_count', closed.length);
+            core.setOutput('closed_issues', closed.join('\n'));
+
+      - name: Close issues whose commit was reverted
+        if: steps.diff.outputs.skip != 'true'
+        id: revert
+        uses: actions/github-script@v7
+        env:
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        with:
+          script: |
+            const commits = JSON.parse(process.env.COMMITS || '[]');
+
+            const revertedShas = new Set();
+            for (const c of commits) {
+              const msg = c.message || '';
+              for (const m of msg.matchAll(/This reverts commit ([0-9a-f]{7,40})\./g)) {
+                revertedShas.add(m[1]);
+              }
+            }
+
+            if (revertedShas.size === 0) {
+              core.setOutput('reverted_count', 0);
+              core.setOutput('reverted_issues', '');
+              return;
+            }
+
+            const issues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100
+              }
+            );
+
+            function bodyHasSha(body, sha) {
+              if (!body) return false;
+              const re = new RegExp(`Commit: ${sha}[0-9a-f]*`, 'i');
+              return re.test(body);
+            }
+
+            const closed = [];
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+              if (!issue.title.startsWith('[Push]')) continue;
+              for (const sha of revertedShas) {
+                if (bodyHasSha(issue.body, sha)) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed'
+                  });
+                  closed.push(`#${issue.number} ${issue.title}（对应提交 ${sha} 被回退）`);
+                  break;
+                }
+              }
+            }
+
+            core.setOutput('reverted_count', closed.length);
+            core.setOutput('reverted_issues', closed.join('\n'));
+
+      - name: Create issue to notify pythonWsr
+        if: steps.diff.outputs.skip != 'true'
+        uses: actions/github-script@v7
+        env:
+          CLOSED_COUNT: ${{ steps.stale.outputs.closed_count }}
+          CLOSED_LIST: ${{ steps.stale.outputs.closed_issues }}
+          REVERTED_COUNT: ${{ steps.revert.outputs.reverted_count }}
+          REVERTED_LIST: ${{ steps.revert.outputs.reverted_issues }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
         with:
           script: |
             const summary = process.env.DIFF_SUMMARY || '(无变更)';
             const full = process.env.DIFF_FULL || '';
-            const MAX_BODY = 65536; // GitHub Issue 正文上限
+            const closedCount = parseInt(process.env.CLOSED_COUNT || '0', 10);
+            const closedList = process.env.CLOSED_LIST || '';
+            const revertedCount = parseInt(process.env.REVERTED_COUNT || '0', 10);
+            const revertedList = process.env.REVERTED_LIST || '';
+            const MAX_BODY = 65536;
 
-            // 先拼好头部 + 摘要部分
+            const commits = JSON.parse(process.env.COMMITS || '[]');
+            const headSha = '${{ github.sha }}';
+            const commitLines = commits.length > 0
+              ? commits.map(c => `${c.id}  ${(c.message || '').split('\n')[0]}`).join('\n')
+              : `${headSha}  (force push 或无 commit 列表)`;
+
+            const staleSection = closedCount > 0
+              ? `\n\n--- 已关闭的过期 Issue（超过 6 个月，共 ${closedCount} 个）---\n${closedList}\n`
+              : '';
+
+            const revertedSection = revertedCount > 0
+              ? `\n\n--- 因回退而关闭的 Issue（共 ${revertedCount} 个）---\n${revertedList}\n`
+              : '';
+
             const header = `@pythonWsr 有新推送
 
             推送者: ${{ github.actor }}
             推送时间: ${{ github.event.head_commit.timestamp }}
             仓库: ${{ github.repository }}
             分支: ${{ github.ref_name }}
+            Commit: ${headSha}
+
+            --- 本次提交 ---
+            ${commitLines}${staleSection}${revertedSection}
 
             --- Diff 摘要 ---
             \`\`\`
@@ -58,7 +191,6 @@ jobs:
             \`\`\`
             `;
 
-            // 完整 diff 段落
             const fullSection = `
 
             --- 完整 Diff ---
@@ -67,7 +199,6 @@ jobs:
             \`\`\`
             `;
 
-            // 判断是否放得下
             let body;
             if (header.length + fullSection.length <= MAX_BODY) {
               body = header + fullSection;
