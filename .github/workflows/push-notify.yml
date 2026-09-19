@@ -1,0 +1,83 @@
+name: Push Notification via Issue
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate diff summary and full diff
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            SUMMARY=$(git diff --stat HEAD~1 HEAD)
+            FULL=$(git diff HEAD~1 HEAD)
+          else
+            SUMMARY=$(git diff --cached --stat)
+            FULL=$(git diff --cached)
+          fi
+
+          # 摘要（短）
+          echo "DIFF_SUMMARY<<EOF" >> $GITHUB_ENV
+          echo "$SUMMARY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          # 完整 diff（可能很长）
+          echo "DIFF_FULL<<EOF" >> $GITHUB_ENV
+          echo "$FULL" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create issue to notify pythonWsr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = process.env.DIFF_SUMMARY || '(无变更)';
+            const full = process.env.DIFF_FULL || '';
+            const MAX_BODY = 65536; // GitHub Issue 正文上限
+
+            // 先拼好头部 + 摘要部分
+            const header = `@pythonWsr 有新推送
+
+            推送者: ${{ github.actor }}
+            推送时间: ${{ github.event.head_commit.timestamp }}
+            仓库: ${{ github.repository }}
+            分支: ${{ github.ref_name }}
+
+            --- Diff 摘要 ---
+            \`\`\`
+            ${summary}
+            \`\`\`
+            `;
+
+            // 完整 diff 段落
+            const fullSection = `
+
+            --- 完整 Diff ---
+            \`\`\`diff
+            ${full}
+            \`\`\`
+            `;
+
+            // 判断是否放得下
+            let body;
+            if (header.length + fullSection.length <= MAX_BODY) {
+              body = header + fullSection;
+            } else {
+              body = header + `\n\n> ⚠️ 完整 diff 超过 ${MAX_BODY} 字符限制，已省略。`;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Push] ${{ github.repository }} - ${{ github.actor }}`,
+              body: body
+            });
