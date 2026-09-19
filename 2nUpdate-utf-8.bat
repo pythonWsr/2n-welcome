@@ -12,10 +12,10 @@
 :;     DIR="$(cd "$(dirname "$0")" && pwd)"
 :;     OUT="$DIR/2nUpdate-gbk.bat"
 :;     if iconv -f UTF-8 -t GBK//TRANSLIT "$0" | grep -v '^:;' > "$OUT"; then
-:;         echo "✅ 已生成: $OUT"
+:;         echo "[OK] 已生成: $OUT"
 :;         exit 0
 :;     else
-:;         echo "❌ 转换失败，请确认 iconv 已安装（pkg install iconv）" >&2
+:;         echo "[ERROR] 转换失败，请确认 iconv 已安装（pkg install iconv）" >&2
 :;         exit 1
 :;     fi
 :; fi
@@ -64,7 +64,7 @@ if /i "%~1"=="-m" (
     )
     set HAS_MSG_ARG=true
     if "%~2"=="" (
-        echo 警告: -m 后未提供信息，将进入交互提示
+        echo [WARN] -m 后未提供信息，将进入交互提示
         shift
         goto :parse
     ) else (
@@ -116,7 +116,7 @@ if /i "!REVERT_MODE!"=="true" (
 goto :checkForce
 
 :conflict
-echo 参数冲突: !CONFLICT_MSG!
+echo [ERROR] 参数冲突: !CONFLICT_MSG!
 echo.
 call :usage
 exit /b 1
@@ -163,11 +163,11 @@ set HAS_DIFF=false
 for %%F in (%temp%\diff_files.txt) do if %%~zF gtr 0 set HAS_DIFF=true
 if "%HAS_DIFF%"=="true" (
     echo.
-    echo 警告: 本地与远程 %BRANCH% 存在差异的文件:
+    echo [WARN] 本地与远程 %BRANCH% 存在差异的文件:
     type %temp%\diff_files.txt
     echo.
 
-    echo 备份本地版本到 .local\ ...
+    echo [BACKUP] 备份本地版本到 .local\ ...
     if not exist ".local" mkdir ".local"
     for /f "usebackq delims=" %%F in ("%temp%\diff_files.txt") do (
         set "GFILE=%%F"
@@ -201,12 +201,12 @@ if "%HAS_DIFF%"=="true" (
     )
 
     echo.
-    echo 已用远程文件覆盖本地文件，本地版本已备份到 .local\
+    echo [OK] 已用远程文件覆盖本地文件，本地版本已备份到 .local\
     echo 请手动合并 .local\ 中的内容到项目文件后再推送。
     del %temp%\diff_files.txt 2>nul
     exit /b 0
 ) else (
-    echo 本地与远程无差异，继续推送流程...
+    echo [OK] 本地与远程无差异，继续推送流程...
 )
 del %temp%\diff_files.txt 2>nul
 
@@ -224,7 +224,7 @@ echo ==^> git branch -M main
 git branch -M main
 echo ==^> git push -u origin main -v
 git push -u origin main -v
-echo 推送完成！
+echo [OK] 推送完成！
 exit /b 0
 
 :revert
@@ -235,7 +235,7 @@ if "%REVERT_SHA%"=="" (
     echo ==^> git log --oneline
     git log --oneline
     echo.
-    echo 未提供 SHA，未执行回退。
+    echo [INFO] 未提供 SHA，未执行回退。
     echo 请重新运行并指定要回退到的 SHA，例如:
     echo   %~nx0 -r ^<sha^>
     exit /b 0
@@ -252,5 +252,5 @@ echo ==^> git branch -M main
 git branch -M main
 echo ==^> git push -u origin main --force-with-lease -v
 git push -u origin main --force-with-lease -v
-echo 回退并推送完成！
+echo [OK] 回退并推送完成！
 exit /b 0
