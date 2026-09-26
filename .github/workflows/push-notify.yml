@@ -35,14 +35,18 @@ jobs:
           git fetch origin "$BEFORE" 2>/dev/null || \
           echo "fetch 失败（对象可能已被 gc）。"
 
-      - name: Generate diff summary and full diff
+      - name: Generate diff files
         id: diff
         env:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.event.after }}
           FORCED: ${{ github.event.forced }}
         run: |
-          # 决定 diff 范围
+          SUMMARY_FILE="$RUNNER_TEMP/push-summary.txt"
+          FULL_FILE="$RUNNER_TEMP/push-full.txt"
+          echo "summary_file=$SUMMARY_FILE" >> $GITHUB_OUTPUT
+          echo "full_file=$FULL_FILE" >> $GITHUB_OUTPUT
+
           RANGE=""
           if [ "$FORCED" = "true" ] && [ -n "$BEFORE" ] && \
              [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && \
@@ -55,23 +59,20 @@ jobs:
             RANGE="--cached"
           fi
 
-          SUMMARY=$(git diff --stat $RANGE)
-          if [ -z "$SUMMARY" ]; then
+          # 摘要直接写文件，避免 shell 变量 + env 注入
+          git diff --stat $RANGE > "$SUMMARY_FILE" 2>/dev/null || true
+
+          if [ ! -s "$SUMMARY_FILE" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "本次推送无实际文件变更，跳过。"
             exit 0
           fi
 
           echo "skip=false" >> $GITHUB_OUTPUT
-          FULL=$(git diff $RANGE)
 
-          echo "DIFF_SUMMARY<<EOF" >> $GITHUB_ENV
-          echo "$SUMMARY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-          echo "DIFF_FULL<<EOF" >> $GITHUB_ENV
-          echo "$FULL" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # 完整 diff 直接重定向到文件，不进变量
+          git diff $RANGE > "$FULL_FILE" 2>/dev/null || true
+          echo "完整 diff 大小: $(wc -c < "$FULL_FILE") 字节"
 
       - name: Close issues older than 6 months
         if: steps.diff.outputs.skip != 'true'
@@ -114,23 +115,23 @@ jobs:
         if: steps.diff.outputs.skip != 'true'
         id: revert
         uses: actions/github-script@v7
-        env:
-          COMMITS: ${{ toJSON(github.event.commits) }}
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.event.after }}
-          FORCED: ${{ github.event.forced }}
         with:
           script: |
+            const fs = require('fs');
             const { execSync } = require('child_process');
 
-            const commits = JSON.parse(process.env.COMMITS || '[]');
-            const before = process.env.BEFORE || '';
-            const after = process.env.AFTER || '';
-            const forced = process.env.FORCED === 'true';
+            // 从 GITHUB_EVENT_PATH 读取整个事件，避免 toJSON 内联
+            const event = JSON.parse(
+              fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')
+            );
+            const commits = event.commits || [];
+            const before = event.before || '';
+            const after = event.after || '';
+            const forced = event.forced === true;
 
             const droppedShas = new Set();
 
-            // ① git revert 提交
+            // ① 普通 git revert
             for (const c of commits) {
               const msg = c.message || '';
               for (const m of msg.matchAll(/This reverts commit ([0-9a-f]{7,40})\./g)) {
@@ -171,7 +172,6 @@ jobs:
               }
             );
 
-            // 正文里的 Commit: <sha>，支持短 sha 与完整 sha 互相匹配
             function issueMatchesSha(body, sha) {
               if (!body) return false;
               const m = body.match(/Commit:\s*([0-9a-f]{7,40})/i);
@@ -206,31 +206,39 @@ jobs:
         if: steps.diff.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
+          SUMMARY_FILE: ${{ steps.diff.outputs.summary_file }}
+          FULL_FILE: ${{ steps.diff.outputs.full_file }}
           CLOSED_COUNT: ${{ steps.stale.outputs.closed_count }}
           CLOSED_LIST: ${{ steps.stale.outputs.closed_issues }}
           REVERTED_COUNT: ${{ steps.revert.outputs.reverted_count }}
           REVERTED_LIST: ${{ steps.revert.outputs.reverted_issues }}
-          COMMITS: ${{ toJSON(github.event.commits) }}
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.event.after }}
-          FORCED: ${{ github.event.forced }}
         with:
           script: |
-            const summary = process.env.DIFF_SUMMARY || '(无变更)';
-            const full = process.env.DIFF_FULL || '';
+            const fs = require('fs');
+
+            const event = JSON.parse(
+              fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')
+            );
+            const commits = event.commits || [];
+            const before = event.before || '';
+            const after = event.after || '';
+            const forced = event.forced === true;
+
+            const summaryFile = process.env.SUMMARY_FILE;
+            const fullFile = process.env.FULL_FILE;
             const closedCount = parseInt(process.env.CLOSED_COUNT || '0', 10);
             const closedList = process.env.CLOSED_LIST || '';
             const revertedCount = parseInt(process.env.REVERTED_COUNT || '0', 10);
             const revertedList = process.env.REVERTED_LIST || '';
-            const forced = process.env.FORCED === 'true';
-            const before = process.env.BEFORE || '';
-            const after = process.env.AFTER || '';
             const MAX_BODY = 65536;
 
-            const commits = JSON.parse(process.env.COMMITS || '[]');
+            // 摘要从文件读（一般很小）
+            const summary = fs.existsSync(summaryFile)
+              ? fs.readFileSync(summaryFile, 'utf8')
+              : '(无变更)';
+
             const headSha = '${{ github.sha }}';
 
-            // 提交列表：普通 push 用 commits；force push 用 before → after 提示
             let commitLines;
             if (commits.length > 0) {
               commitLines = commits
@@ -267,17 +275,30 @@ jobs:
             \`\`\`
             `;
 
-            const fullSection = `
+            // 先估算 full 文件大小，避免把巨大内容读进内存拼接
+            let fullContent = '';
+            let omitted = false;
+            if (fs.existsSync(fullFile)) {
+              const fullSize = fs.statSync(fullFile).size;
+              const estimated = header.length
+                + '\n\n--- 完整 Diff ---\n```diff\n\n```\n'.length
+                + fullSize;
+              if (estimated > MAX_BODY) {
+                omitted = true;
+              } else {
+                fullContent = fs.readFileSync(fullFile, 'utf8');
+              }
+            }
+
+            let body;
+            if (!omitted) {
+              body = header + `
 
             --- 完整 Diff ---
             \`\`\`diff
-            ${full}
+            ${fullContent}
             \`\`\`
             `;
-
-            let body;
-            if (header.length + fullSection.length <= MAX_BODY) {
-              body = header + fullSection;
             } else {
               body = header + `\n\n> ⚠️ 完整 diff 超过 ${MAX_BODY} 字符限制，已省略。`;
             }

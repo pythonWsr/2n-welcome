@@ -11,7 +11,8 @@ NOTICE
 
 4. This project stores all 5104 media files from the florr.io Chinese Wiki, which were saved before the site was blocked as of August 4, 2026.
    These files remain licensed under the CC-BY-SA license (see https://creativecommons.org/licenses/by-sa/4.0/). A small portion of the files may be covered by other CC-style open licenses.
+   To reduce repository size, 430 images marked as derivative works were removed on September 26, 2026.
 
 5. We would like to thank Github@Llhleo (Florr.io@Llhleo) for providing the HTML code of the start page.
-   The complete source files and open-source license are stored in the ./data/start directory (with dist/* renamed to 2n/*).
+   The original code files are stored in the ./data/start/dist directory (assets excluded), while the modified code is stored in ./data/start/2n.
    Original website: https://llhleo.github.io/2n/

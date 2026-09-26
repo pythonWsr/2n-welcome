@@ -6,10 +6,10 @@ window.TwoNLeadersContent = {
     lines: ['不是头衔的陈列，', '是一次次实际贡献。']
   },
   people: [
-    { number:'01', role:'会长', roleEn:'PRESIDENT', name:'awdc', description:'拥有 2 个 Super。' },
-    { number:'02', role:'副会长', roleEn:'VICE PRESIDENT', name:'flowerwsr', description:'精通计算机，参与 Florr Wiki 维护及公会成员表等资料的编写与维护。' },
-    { number:'03', role:'副会长', roleEn:'VICE PRESIDENT', name:'CNFlyDream', description:'拥有 3 个 S。' },
-    { number:'04', role:'管理层', roleEn:'MANAGEMENT', name:'sschara', description:'为公会贡献 3 次 Blood Sacrifice。' },
-    { number:'05', role:'管理层', roleEn:'MANAGEMENT', name:'20180333', description:'等级 112，拥有 2 个 S，S 评分 2。' }
+    { number:'01', role:'会长', roleEn:'PRESIDENT', name:'awdc', description:'尽职尽责，组织各项公会活动' },
+    { number:'02', role:'副会长', roleEn:'VICE PRESIDENT', name:'flowerwsr', description:'精通计算机，参与florrio中文维基及公会网站等资料的维护' },
+    { number:'03', role:'副会长', roleEn:'VICE PRESIDENT', name:'CNFlyDream', description:'充满活力，主导制作公会宣传片及其他视频' },
+    { number:'04', role:'副会长', roleEn:'MANAGEMENT', name:'sschara', description:'贡献最大，为公会贡献3次 Blood Sacrifice' },
+    { number:'05', role:'实习副会长', roleEn:'MANAGEMENT', name:'20180333', description:'参与多项公会网站数据的实时更新' }
   ]
 };
