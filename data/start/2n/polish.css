@@ -1,0 +1,102 @@
+/* Motion-only overrides. No scroll/layout/profile ownership. */
+:root { --motion-soft:cubic-bezier(.22,.65,.3,1); --motion-enter:360ms; --motion-exit:180ms; }
+html.is-enhanced[data-input='touch'] .biome-copy { opacity:1;transform:none;transition:none; }
+html.is-enhanced[data-input='touch'] .biome-copy>* {
+  opacity:0;transform:translate3d(0,16px,0);
+  transition:opacity var(--motion-exit) ease-out,transform var(--motion-enter) var(--motion-soft);
+}
+html.is-enhanced[data-input='touch'] .biome.is-native-visible .biome-copy>* { opacity:1;transform:none; }
+html.is-enhanced[data-input='touch'] .biome.is-native-visible .biome-copy>h2 { transition-delay:35ms; }
+html.is-enhanced[data-input='touch'] .biome.is-native-visible .biome-copy>p { transition-delay:70ms; }
+html.is-enhanced.is-reduced-motion .biome-copy>* { opacity:1!important;transform:none!important;transition:none!important; }
+@media(prefers-reduced-motion:reduce) {
+  html.is-enhanced .biome-copy>* { opacity:1!important;transform:none!important;transition:none!important; }
+}
+
+/* Management enters as editorial text, with a small role/name/body cadence. */
+html.is-enhanced[data-input='touch'] .leader-card>div { opacity:1;transform:none;transition:none; }
+html.is-enhanced[data-input='touch'] .leader-card>div>* {
+  opacity:0;transform:translate3d(0,14px,0);
+  transition:opacity var(--motion-exit) ease-out,transform var(--motion-enter) var(--motion-soft);
+}
+html.is-enhanced[data-input='touch'] .leader-card.is-native-visible>div>* { opacity:1;transform:none; }
+html.is-enhanced[data-input='touch'] .leader-card.is-native-visible h3 { transition-delay:30ms; }
+html.is-enhanced[data-input='touch'] .leader-card.is-native-visible p { transition-delay:60ms; }
+html.is-enhanced.is-reduced-motion .leader-card>div>* { opacity:1!important;transform:none!important;transition:none!important; }
+@media(prefers-reduced-motion:reduce) {
+  html.is-enhanced .leader-card>div>* { opacity:1!important;transform:none!important;transition:none!important; }
+}
+
+/* A quiet relay into the film and ending; the video remains directly usable. */
+html.is-enhanced[data-input='touch'] .film-copy,
+html.is-enhanced[data-input='touch'] .closing>p,
+html.is-enhanced[data-input='touch'] .closing>h2,
+html.is-enhanced[data-input='touch'] .closing>span {
+  opacity:0;transform:translate3d(0,8px,0);
+  transition:opacity 220ms ease-out,transform var(--motion-enter) var(--motion-soft);
+}
+html.is-enhanced[data-input='touch'] .film.is-native-visible .film-copy,
+html.is-enhanced[data-input='touch'] .closing.is-native-visible>p,
+html.is-enhanced[data-input='touch'] .closing.is-native-visible>h2,
+html.is-enhanced[data-input='touch'] .closing.is-native-visible>span { opacity:1;transform:none; }
+html.is-enhanced .story-controls { transition:color 180ms ease-out,transform .24s,opacity .24s; }
+html.is-enhanced.is-reduced-motion .film-copy,
+html.is-enhanced.is-reduced-motion .closing>* { opacity:1!important;transform:none!important;transition:none!important; }
+@media(prefers-reduced-motion:reduce) {
+  html.is-enhanced .film-copy,html.is-enhanced .closing>* { opacity:1!important;transform:none!important;transition:none!important; }
+}
+
+/* Color system: editorial paper, night animation, untouched biome imagery. */
+.intro-screen,.is-booting .intro-screen,.is-enhanced .intro-screen { background:var(--night);color:var(--light); }
+.load-rule i { background:var(--aqua); }
+.site-header { background:rgb(247 247 243 / .92); }
+.hero { background:var(--paper); }
+.bridge,.members { background:var(--night);color:var(--light); }
+.bridge-orb { background:linear-gradient(135deg,var(--aqua) 5%,var(--blue) 90%); }
+.bridge-second { color:var(--blue-soft); }
+.bridge-second span { background:linear-gradient(100deg,var(--blue),var(--blue-soft));background-clip:text;-webkit-background-clip:text;color:transparent; }
+.bridge-label { color:var(--light-soft); }
+.leaders { background:var(--paper);color:var(--ink); }
+.section-intro p,.leader-card .role { color:var(--ink-soft); }
+.leader-card .number { color:var(--blue); }
+.leader-card p,.section-intro>span { color:#34383E; }
+.biome-copy h2 { color:var(--biome-title,var(--light)); }
+.biome-copy p { color:var(--biome-body,rgba(243,246,248,.82)); }
+.biome-copy>span { color:var(--biome-eyebrow,rgba(243,246,248,.68)); }
+.biome[style*='desert.png'] { --biome-title:var(--ink);--biome-body:#34383E;--biome-eyebrow:var(--ink-soft); }
+
+/* Chapter state changes only when the active chapter changes. */
+html[data-theme='light'],html[data-theme='biome-light'] {
+  --brand-color:var(--ink);--chrome-primary:var(--ink);
+  --chrome-muted:var(--ink-soft);--chrome-line:#C8CDD2;--chrome-active:var(--blue);
+}
+html[data-theme='dark'],html[data-theme='biome-dark'] {
+  --brand-color:var(--light);--chrome-primary:var(--light);
+  --chrome-muted:var(--light-soft);--chrome-line:#344252;--chrome-active:var(--blue-soft);
+}
+html.is-enhanced[data-theme] .brand-visual.is-docked { color:var(--brand-color); }
+html.is-enhanced[data-theme] .story-controls { color:var(--chrome-primary);text-shadow:none; }
+html.is-enhanced[data-theme] .story-controls .chapter-count,
+html.is-enhanced[data-theme] .story-controls .replay-intro { color:var(--chrome-muted); }
+html.is-enhanced[data-theme] .story-controls .progress { color:var(--chrome-active);background:var(--chrome-line);opacity:1; }
+html.is-enhanced[data-theme] .story-controls .progress i { background:var(--chrome-active); }
+
+.member-core,.anniversary-particle {
+  background:linear-gradient(135deg,var(--aqua),var(--blue-soft) 50%,var(--blue));
+}
+.is-enhanced .member-cloud span { color:#07101A;background:linear-gradient(145deg,var(--aqua),var(--blue-soft)); }
+.is-enhanced .member-cloud span:nth-child(3n) { background:linear-gradient(145deg,var(--blue-soft),var(--blue)); }
+.member-core::before,.is-enhanced .member-cloud span::before,.anniversary-particle::before {
+  background:radial-gradient(ellipse at 26% 30%,var(--aqua) 0%,var(--blue-soft) 45%,var(--blue) 80%);
+}
+.member-core::after,.is-enhanced .member-cloud span::after,.anniversary-particle::after {
+  background:radial-gradient(ellipse at 72% 25%,var(--aqua) 0%,var(--blue-soft) 45%,var(--blue) 80%);
+}
+.anniversary-particle b {
+  background:radial-gradient(circle at 30% 25%,var(--aqua),var(--particle-color,var(--blue-soft)) 72%);
+}
+.anniversary-title span { background:none;color:var(--blue-soft);-webkit-text-fill-color:currentColor; }
+.member-caption { color:var(--light-soft); }
+.film,.closing { background:var(--paper);color:var(--ink); }
+.film .eyebrow,.closing>span { color:var(--ink-soft); }
+.film-copy>p:last-child { color:#34383E; }

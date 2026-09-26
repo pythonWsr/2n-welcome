@@ -1,0 +1,15 @@
+/* v35: keep the management -> member transition on stable compositor layers on touch Safari. */
+html[data-input='touch'] .member-fusion,
+html[data-input='touch'] .members,
+html[data-input='touch'] .leaders {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* v35.5: 95-member roster. The liquid engine scales each 116px label bubble
+   down to its area-conserving SVG radius; use a larger source font so names
+   remain legible after that transform without enlarging the physical droplet. */
+html.is-enhanced .member-cloud span {
+  font-size:28px;
+  padding:10px;
+}

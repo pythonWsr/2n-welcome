@@ -1,0 +1,70 @@
+/* v41.1: section-owned surfaces scroll with the real story panels. */
+.bridge {
+  background:var(--night);
+  color:var(--light);
+}
+.bridge::before {
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 85% 78% at 52% 54%,var(--night-3) 0%,var(--night-2) 49%,var(--night) 100%);
+}
+.bridge-orb {
+  z-index:1;
+  background:radial-gradient(circle at 34% 28%,var(--blue-soft) 0%,var(--blue) 13%,var(--night-3) 49%,var(--night-2) 77%);
+}
+.bridge-copy,.bridge-label {z-index:2;}
+.bridge-first {color:var(--light);}
+.bridge-second {color:var(--light-soft);}
+.bridge-second span {background:linear-gradient(100deg,var(--blue-soft),var(--light));background-clip:text;-webkit-background-clip:text;color:transparent;}
+
+.leaders,.leader-list,.leader-card {background:var(--paper);color:var(--ink);}
+.section-intro {
+  position:relative;
+  background:linear-gradient(110deg,var(--paper) 54%,#EFF1EE 100%);
+  border-color:var(--line);
+}
+.section-intro::before {
+  content:'';position:absolute;top:12vh;left:6vw;width:64px;height:2px;
+  background:var(--blue);pointer-events:none;
+}
+.leader-card {border-color:var(--line);}
+.leader-card .number {font-size:22px;line-height:1;color:var(--blue);}
+.leader-card h3 {color:var(--ink);}
+.leader-card .role,.section-intro p {color:var(--ink-soft);}
+.leader-card p,.section-intro>span {color:#34383E;}
+
+/* The entire liquid sequence occupies one uninterrupted night space. */
+.members {background:var(--night);color:var(--light);}
+.members::before {
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 74% 78% at 51% 49%,var(--night-3) 0%,var(--night-2) 47%,var(--night) 100%);
+}
+.members .member-fusion,.members .member-core,.members .anniversary-particles {z-index:1;}
+.members .member-cloud {z-index:2;}
+.members .member-heading,.members .member-caption {z-index:3;}
+.members .member-message,.members .member-result,.members .anniversary-title {color:var(--light);}
+.members .member-caption {color:var(--light-soft);}
+
+/* The film opens a paper page and the ending stays on that same surface. */
+.film,.closing {background:var(--paper);color:var(--ink);}
+.film::before {
+  content:'';position:absolute;inset:0 auto 0 0;width:min(5vw,64px);
+  background:#ECEFEA;pointer-events:none;
+}
+.film-copy {position:relative;}
+.film-copy::before {
+  content:'';display:block;width:64px;height:2px;margin-bottom:32px;background:var(--ink);
+}
+.film .eyebrow,.closing>span {color:var(--ink-soft);}
+.film h2,.closing h2,.closing p {color:var(--ink);}
+.film video {border:1px solid var(--line);}
+
+/* The mark follows the surface at its own viewport position on native touch. */
+html.is-enhanced[data-input='touch'][data-brand-theme='light'] {--brand-color:var(--ink);}
+html.is-enhanced[data-input='touch'][data-brand-theme='dark'] {--brand-color:var(--light);}
+html.is-enhanced[data-theme] .story-controls {
+  color:var(--chrome-primary);
+  transition:color 180ms ease-out,transform .24s,opacity .24s;
+}
+html.is-enhanced[data-theme] .story-controls .chapter-name {color:var(--chrome-primary);}
+html.is-enhanced[data-theme] .story-controls .progress {background:var(--chrome-line);}
+html.is-enhanced[data-theme] .story-controls .progress i {background:var(--chrome-active);}

@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="/">
+<title>2n liquid A/B</title>
+<script src="profile.js" defer></script><script src="motion.js" defer></script>
+<script src="v35-runtime.js" defer></script><script src="liquid.js" defer></script>
+<script src="liquid-renderers.js" defer></script>
+<style>body{background:#191919;color:white;font:14px monospace}#stage{position:relative;width:390px;height:600px}svg,canvas{position:absolute;inset:0;width:390px;height:600px}pre{white-space:pre-wrap}</style>
+</head><body><button id="run">Run SVG / Canvas benchmark</button>
+<pre id="result">Idle. Same 95-member geometry, 390×600, DPR 1. Orders AB then BA.</pre>
+<div id="stage"><svg viewBox="-195 -300 390 600"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="-168" y1="-168" x2="168" y2="168"><stop stop-color="#a6ebc5"/><stop offset=".5" stop-color="#64b7d0"/><stop offset="1" stop-color="#2875f0"/></linearGradient></defs><path fill="url(#g)" fill-rule="nonzero"/></svg><canvas></canvas></div>
+<script>
+document.querySelector('#run').onclick=async function() {
+  this.disabled=true;
+  const M=TwoNMotion,L=TwoNLiquid,B=TwoNLiquidRenderers;
+  const gather=L.buildGather(M,95,390,600),split=L.buildSplit(M,95,390,600,gather.finalRadius);
+  const svg=document.querySelector('svg'),canvas=document.querySelector('canvas');
+  const renderers={svg:new B.SVGRenderer(svg.querySelector('path')),canvas:new B.CanvasRenderer(canvas,390,600,gather.finalRadius)};
+  const results={svg:{work:[],interval:[]},canvas:{work:[],interval:[]}};
+  for(const backend of ['svg','canvas','canvas','svg']) {
+    svg.style.visibility=backend==='svg'?'visible':'hidden';
+    canvas.style.visibility=backend==='canvas'?'visible':'hidden';
+    let previous=0;
+    for(let i=0;i<64;i++) {
+      const now=await new Promise(requestAnimationFrame),start=performance.now();
+      const isSplit=i>=40;
+      const state=isSplit?L.splitAt(split,(i-40)/23):L.gatherAt(M,gather,.08+i/39*.75);
+      renderers[backend].render(state,isSplit);
+      const elapsed=performance.now()-start;
+      if(i>3) {results[backend].work.push(elapsed);results[backend].interval.push(now-previous);}
+      previous=now;
+    }
+  }
+  const percentile=(a,q)=>a.slice().sort((a,b)=>a-b)[Math.floor((a.length-1)*q)];
+  const summary={profile:TwoNProfile.input,viewport:'390x600 at 1x',
+    caveat:'Chrome cloud is not iPhone Safari. Work time excludes deferred SVG raster; frame interval includes scheduling noise.'};
+  for(const [backend,r] of Object.entries(results)) summary[backend]={
+    medianWorkMs:percentile(r.work,.5),p95WorkMs:percentile(r.work,.95),
+    medianFrameMs:percentile(r.interval,.5),p95FrameMs:percentile(r.interval,.95)};
+  document.querySelector('#result').textContent=JSON.stringify(summary,null,2);
+  this.disabled=false;
+};
+</script></body></html>

@@ -74,25 +74,21 @@
     <div class="loading-placeholder">加载中...</div>
   </section>
 
-  <!-- 栏目标题横向滑动导航 -->
+  <!-- 栏目标题横向滑动导航（按钮由 tabs.json 动态生成） -->
   <nav class="tab-nav" id="tabNav">
     <div class="tab-track" id="tabTrack">
-      <button class="tab-btn active" data-tab="home">首页</button>
-      <button class="tab-btn" data-tab="announcements">通知</button>
-      <button class="tab-btn" data-tab="surveys">问卷</button>
-      <button class="tab-btn" data-tab="join">加入</button>
-      <button class="tab-btn" data-tab="about">关于</button>
+      <!-- 按钮由脚本根据 ./data/tabs.json 生成 -->
     </div>
   </nav>
 
   <!-- 栏目内容容器 -->
   <main class="tab-content" id="tabContent">
-    <div class="placeholder-content" id="tabPlaceholder">首页内容加载中...</div>
+    <div class="placeholder-content" id="tabPlaceholder">栏目加载中...</div>
   </main>
 
   <!-- 底部 -->
   <footer class="footer">
-    <div class="version">Version 0.7.0</div>
+    <div class="version">Version 0.7.2</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </footer>
 </div>
@@ -133,34 +129,94 @@
 <!-- 设置菜单交互（外部脚本） -->
 <script src="./main/settings.js"></script>
 
-<!-- 栏目切换 -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabPlaceholder = document.getElementById('tabPlaceholder');
+<!-- 栏目切换 + 内容加载（读取 data/tabs.json） -->
+<script type="module">
+  import { parseWiki } from './main/wikiParser.js';
 
-    const tabTexts = {
-      home: '首页内容加载中...',
-      announcements: '通知内容加载中...',
-      surveys: '问卷内容加载中...',
-      join: '加入内容加载中...',
-      about: '关于内容加载中...'
-    };
+  const tabTrack = document.getElementById('tabTrack');
+  const tabContent = document.getElementById('tabContent');
+  const contentCache = {};
+  let tabsConfig = [];
 
-    tabButtons.forEach(btn => {
+  // 根据入口文件扩展名选择渲染方式
+  function renderContent(text, filename) {
+    if (filename.endsWith('.wiki')) return parseWiki(text);
+    if (filename.endsWith('.html')) return extractBody(text);
+    // 未来可扩展：.md → markdownParser、.csv → csvParser
+    return text;
+  }
+
+  // 若是完整 HTML 文档，只取 <body> 内内容
+  function extractBody(html) {
+    const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    return m ? m[1] : html;
+  }
+
+  // 解析标题（支持字符串或 {zh, en}）
+  function resolveTitle(title) {
+    if (typeof title === 'string') return title;
+    if (title && typeof title === 'object') {
+      const lang = (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+      return title[lang] || title.zh || title.en || '';
+    }
+    return '';
+  }
+
+  async function loadTab(tab) {
+    if (contentCache[tab.id]) {
+      tabContent.innerHTML = contentCache[tab.id];
+      return;
+    }
+
+    tabContent.innerHTML = '<div class="placeholder-content">加载中...</div>';
+
+    const path = `./${tab.folder}/${tab.entry}?_=${Date.now()}`;
+    try {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error('加载失败');
+      const text = await res.text();
+      const html = renderContent(text, tab.entry);
+      contentCache[tab.id] = html;
+      tabContent.innerHTML = html;
+    } catch (e) {
+      console.error(`栏目 ${tab.id} 加载失败:`, e);
+      tabContent.innerHTML = '<div class="placeholder-content">内容加载失败</div>';
+    }
+  }
+
+  function buildTabs(config) {
+    tabTrack.innerHTML = '';
+    config.tabs.forEach((tab, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+      btn.dataset.tab = tab.id;
+      btn.textContent = resolveTitle(tab.title);
       btn.addEventListener('click', () => {
-        tabButtons.forEach(b => b.classList.remove('active'));
+        tabTrack.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const tab = btn.getAttribute('data-tab');
-        if (tabPlaceholder && tabTexts[tab]) {
-          tabPlaceholder.textContent = tabTexts[tab];
-        }
+        loadTab(tab);
       });
+      tabTrack.appendChild(btn);
     });
-  });
+  }
+
+  async function initTabs() {
+    try {
+      const res = await fetch('./data/tabs.json');
+      if (!res.ok) throw new Error('tabs.json 加载失败');
+      tabsConfig = await res.json();
+      buildTabs(tabsConfig);
+      if (tabsConfig.tabs.length) loadTab(tabsConfig.tabs[0]);
+    } catch (e) {
+      console.error(e);
+      tabContent.innerHTML = '<div class="placeholder-content">栏目配置加载失败</div>';
+    }
+  }
+
+  initTabs();
 </script>
 
-<!-- 加载 Wiki 介绍内容 -->
+<!-- 加载 Wiki 介绍内容（顶部文字，与下方栏目独立） -->
 <script type="module">
   import { parseWiki } from './main/wikiParser.js';
 

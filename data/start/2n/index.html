@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#F7F7F3">
+  <meta name="description" content="2n · Florr.io Guild，成立于 2 月 24 日。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="2n · 五境同行">
+  <meta property="og:description" content="2n · Florr.io Guild，成立于 2 月 24 日。">
+  <meta property="og:url" content="https://llhleo.github.io/2n/">
+  <meta property="og:image" content="https://llhleo.github.io/2n/assets/og-2n.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://llhleo.github.io/2n/assets/og-2n.png">
+  <title>2n · 五境同行</title>
+  <link rel="icon" href="assets/florr-icon.webp">
+  <script>
+    document.documentElement.classList.add('is-booting');
+    window.twoNFallback = function () {
+      document.documentElement.classList.remove('is-booting', 'is-enhanced', 'is-intro-locked');
+      document.documentElement.classList.add('motion-fallback');
+      document.documentElement.dataset.state = 'fallback';
+      window.dispatchEvent(new Event('2n:fallback'));
+    };
+    window.twoNBootTimer = setTimeout(window.twoNFallback, 12000);
+  </script>
+  <link rel="stylesheet" href="style.css?v=1.0.0">
+  <link rel="stylesheet" href="v35.css?v=1.0.0">
+  <link rel="stylesheet" href="mobile.css?v=1.0.0">
+  <link rel="stylesheet" href="polish.css?v=1.0.0">
+  <link rel="stylesheet" href="visual-impact.css?v=1.0.0">
+  <script src="profile.js?v=1.0.0" defer></script>
+  <script src="perf.js?v=1.0.0" defer></script>
+  <script src="motion.js?v=1.0.0" defer></script>
+  <script src="v35-runtime.js?v=1.0.0" defer></script>
+  <script src="liquid.js?v=1.0.0" defer></script>
+  <script src="mobile-story.js?v=1.0.0" defer></script>
+  <script src="touch-timeline.js?v=1.0.0" defer></script>
+  <script src="leaders-data.js?v=1.0.0" defer></script>
+  <script src="app.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#story">跳到主要内容</a>
+
+  <div class="intro-screen" aria-label="开场动画">
+    <div class="intro-meta"><span>2n / FLORR.IO GUILD</span><span class="load-status" role="status">准备场景</span></div>
+    <div class="intro-statement" aria-hidden="true">
+      <div class="line-mask"><span class="intro-line intro-line-one">不是所有公会，</span></div>
+      <div class="line-mask"><span class="intro-line intro-line-two">都叫 <em>2<sup>n</sup></em>。</span></div>
+    </div>
+    <div class="load-rule"><i></i></div>
+    <button class="skip-intro" type="button">跳过开场</button>
+  </div>
+
+  <header class="site-header" aria-label="主导航">
+    <button class="brand-button" type="button" data-go="0" aria-label="返回开场">
+      <span class="brand-wordmark" aria-hidden="true">2<sup>n</sup></span>
+      <img class="brand-image" src="assets/guild-mark-candidate.png" alt="2n 公会候选标徽">
+    </button>
+  </header>
+
+  <div class="story-controls" inert>
+    <div class="chapter-position"><span class="chapter-count"><b>01</b> / 11</span><span class="chapter-name">序章</span></div>
+    <div class="progress" aria-hidden="true"><i></i></div>
+    <button class="replay-intro" type="button">重播开场</button>
+    <button class="previous-chapter" type="button" aria-label="上一章节">←</button>
+    <button class="next-chapter" type="button" aria-label="下一章节">→</button>
+  </div>
+
+  <main id="story" class="story-shell">
+    <section class="hero" id="opening" data-chapter="序章" aria-label="2n 公会">
+      <div class="hero-stage">
+        <div class="hero-static" aria-hidden="true"></div>
+        <canvas class="world-back" aria-hidden="true"></canvas>
+        <p class="hero-eyebrow">FLORR.IO GUILD <span>EST. FEB 24</span></p>
+        <div class="hero-mark" aria-label="2n">
+          <span class="hero-wordmark" aria-hidden="true">2<sup>n</sup></span>
+          <img class="hero-image-mark" src="assets/guild-mark-candidate.png" alt="2n 公会标徽">
+        </div>
+        <canvas class="world-front" aria-hidden="true"></canvas>
+        <button class="scroll-cue" type="button" data-section="biomes"><span>进入五境</span><span class="cue-direction">滑动探索 →</span></button>
+      </div>
+    </section>
+    <div class="story-viewport">
+      <div class="story-track">
+        <section class="panel biome" id="biomes" data-chapter="花园" style="--image:url('assets/garden.png');--tone:#22a956">
+          <div class="biome-copy"><span>01 · GARDEN</span><h2>花园</h2><p>从最熟悉的绿色出发。这里保存相遇、成长与公会最早的记忆。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="沙漠" style="--image:url('assets/desert.png');--tone:#c3a56a">
+          <div class="biome-copy"><span>02 · DESERT</span><h2>沙漠</h2><p>风沙让路线变得漫长，也让每一次并肩前进更有分量。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="海洋" style="--image:url('assets/ocean.png');--tone:#397cae">
+          <div class="biome-copy"><span>03 · OCEAN</span><h2>海洋</h2><p>蓝色深处没有固定答案。探索、判断与协作让队伍保持方向。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="丛林" style="--image:url('assets/jungle.png');--tone:#198f4e">
+          <div class="biome-copy"><span>04 · JUNGLE</span><h2>丛林</h2><p>密集的路径考验默契；真正可靠的成员，总能在复杂里找到彼此。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="地狱" style="--image:url('assets/hell.png');--tone:#aa3034">
+          <div class="biome-copy"><span>05 · HELL</span><h2>地狱</h2><p>越过最后一道红色边界，留下的不只是战绩，也是共同承担。</p></div>
+        </section>
+
+        <section class="panel bridge" id="together" data-chapter="同行的力量" aria-label="一个优秀的公会，离不开并肩同行的成员，更离不开尽心负责的管理层">
+          <div class="bridge-orb" aria-hidden="true"></div>
+          <div class="bridge-copy" aria-hidden="true">
+            <p class="bridge-line bridge-first">一个优秀的公会，<br>离不开并肩同行的成员。</p>
+            <p class="bridge-line bridge-second">更离不开<br><span>尽心负责的管理层。</span></p>
+          </div>
+        </section>
+
+        <section class="panel leaders" id="leaders" data-chapter="管理层">
+          <div class="section-intro">
+            <p>THE PEOPLE BEHIND 2n</p>
+            <h2>管理层</h2>
+            <span>不是头衔的陈列，<br>是一次次实际贡献。</span>
+          </div>
+          <div class="leader-list" id="leader-list">
+            <article class="leader-card"><span class="number">01</span><div><span class="role">会长 / PRESIDENT</span><h3>awdc</h3><p>拥有 2 个 Super。</p></div></article>
+            <article class="leader-card"><span class="number">02</span><div><span class="role">副会长 / VICE PRESIDENT</span><h3>flowerwsr</h3><p>精通计算机，参与 Florr Wiki 维护及公会成员表等资料的编写与维护。</p></div></article>
+            <article class="leader-card"><span class="number">03</span><div><span class="role">副会长 / VICE PRESIDENT</span><h3>CNFlyDream</h3><p>拥有 3 个 S。</p></div></article>
+            <article class="leader-card"><span class="number">04</span><div><span class="role">管理层 / MANAGEMENT</span><h3>sschara</h3><p>为公会贡献 3 次 Blood Sacrifice。</p></div></article>
+            <article class="leader-card"><span class="number">05</span><div><span class="role">管理层 / MANAGEMENT</span><h3>20180333</h3><p>等级 112，拥有 2 个 S，S 评分 2。</p></div></article>
+          </div>
+        </section>
+
+        <section class="panel members" id="members" data-chapter="汇聚成 2n">
+          <div class="member-core" aria-hidden="true"></div>
+          <div class="member-heading">
+            <h2 class="member-message">每一个名字，<br>都是一份力量。</h2>
+            <h2 class="member-result">汇成同一个<br><span>2<sup>n</sup></span></h2>
+            <h2 class="anniversary-title">2n 公会<br>已成立<span>半周年。</span></h2>
+          </div>
+          <div class="anniversary-particles" aria-hidden="true"></div>
+          <div class="member-cloud" id="member-cloud" aria-label="公会成员">
+            <span>0033</span><span>0irrolf</span><span>11no</span><span>1234rg</span><span>1235323456</span><span>20180333</span><span>495219301012</span><span>76yshudygc8si</span><span>a1s1d1</span><span>ACE_KING_CN</span><span>awdc</span><span>binbin313</span><span>BNDS888</span><span>bookshelf</span><span>buzhi209526</span><span>chaovn</span><span>ChasonWang</span><span>chifv</span><span>chue</span><span>citizens</span><span>Civilization</span><span>Clark_1203</span><span>CNFlyDream</span><span>con9i</span><span>Cor_mic</span><span>Crossxwx</span><span>ddzddtx</span><span>dianlao</span><span>egn</span><span>eric110831</span><span>Etv</span><span>fakeM28</span><span>flo9178rr</span><span>flowerwsr</span><span>fly-cy</span><span>grassland</span><span>gygarrolfback</span><span>HaiFei_114514</span><span>Hadrian</span><span>henrycao2025</span><span>hhfjh</span><span>Hhh123456</span><span>hqshqs</span><span>Hugh22‑</span><span>Hugo12168</span><span>ijllllll</span><span>ILXN</span><span>indeterminate</span><span>imstarry_01</span><span>INeedMoreLuck</span><span>IT‑TI</span><span>JioNFo</span><span>jkl123</span><span>keep_shining</span><span>khanhhaha</span><span>LCY2024oO</span><span>lhtbeijing</span><span>Llhleo</span><span>longmany</span><span>LTJ</span><span>lucky_qwq</span><span>M62</span><span>madeaflaower</span><span>melor</span><span>MeteorFall</span><span>physical37</span><span>player_7736</span><span>PYH5</span><span>Ronnie_O</span><span>royluo‑super</span><span>S1mar</span><span>shuriken</span><span>smilemo_abyss</span><span>sschara</span><span>Sussa</span><span>swfyhzh19</span><span>Sy3l30L</span><span>TanZhe</span><span>Taurus</span><span>two_weeks</span><span>Unamed0436</span><span>vaio</span><span>WAWA_QWQ</span><span>wbzhdqshh</span><span>Williamwang12</span><span>wonderer</span><span>WTHLIKEXYY</span><span>Wuyiliuba</span><span>XiaoShuai2025</span><span>X-zero</span><span>xtxsh</span><span>yuanshen1</span><span>zhy10</span><span>ZHZ114514</span><span>Zioles</span>
+          </div>
+        </section>
+
+        <section class="panel film" id="film" data-chapter="影像">
+          <div class="film-copy">
+            <p class="eyebrow">HALF-YEAR FILM</p>
+            <h2>半周年纪念</h2>
+          </div>
+          <video controls preload="none" playsinline poster="assets/ocean.png">
+            <source src="assets/half-year.mp4" type="video/mp4">
+            你的浏览器不支持视频播放。
+          </video>
+        </section>
+
+        <section class="panel closing" data-chapter="2n">
+          <img src="assets/florr-icon.webp" alt="Florr 游戏图标">
+          <p>FLORR.IO GUILD</p>
+          <h2>2<sup>n</sup></h2>
+          <span>EST. FEB 24</span>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <noscript><p class="fallback-note">动画未启用，你仍可以向下浏览全部内容。</p></noscript>
+</body>
+</html>

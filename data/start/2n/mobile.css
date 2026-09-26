@@ -1,0 +1,49 @@
+/* v40: all new layout/compositor rules are isolated to touch input. */
+html.is-enhanced[data-input='touch'],
+html.is-enhanced[data-input='touch'] body {height:100%;overflow:hidden;overscroll-behavior-x:none;}
+html.is-enhanced[data-input='touch'] .story-shell {
+  position:fixed;inset:0;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;
+  touch-action:pan-x pan-y;overscroll-behavior-x:none;scrollbar-width:none;
+}
+html.is-enhanced[data-input='touch'] .story-shell::-webkit-scrollbar {display:none;}
+html.is-enhanced[data-input='touch'].is-intro-locked .story-shell {overflow:hidden;}
+html.is-enhanced[data-input='touch'] .story-viewport {display:contents;}
+html.is-enhanced[data-input='touch'] .story-track {
+  position:relative;display:flex;width:max-content;height:var(--view-height);
+  transform:none!important;will-change:auto;
+}
+html.is-enhanced[data-input='touch'] .hero {
+  position:relative;inset:auto;flex:0 0 100vw;width:100vw;height:100%;min-height:0;
+}
+/* The real front canvas stays above this single brand in the Hero scene.
+   Once clear of the terrain, the same node moves to its fixed header layer. */
+html.is-enhanced[data-input='touch'] .hero-mark.brand-visual.brand-in-scene {
+  position:absolute;top:0;left:0;z-index:2;
+}
+html.is-enhanced[data-input='touch'] .native-chapter {position:relative;flex:none;height:100%;}
+html.is-enhanced[data-input='touch'] .native-chapter>.panel {
+  position:sticky;left:0;top:0;width:100vw;height:100%;transform:none!important;opacity:1!important;
+}
+html.is-enhanced[data-input='touch'] .biome-copy,
+html.is-enhanced[data-input='touch'] .leader-card>div {
+  opacity:0;transform:translate3d(32px,24px,0);
+  transition:opacity .38s ease-out,transform .55s ease-out;
+}
+html.is-enhanced[data-input='touch'] .biome.is-native-visible .biome-copy,
+html.is-enhanced[data-input='touch'] .leader-card.is-native-visible>div {
+  opacity:1;transform:none;
+}
+html.is-enhanced[data-input='touch'] .biome-visual {transform:none;}
+html.is-enhanced[data-input='touch'] .leaders {
+  flex:0 0 auto;width:max-content;contain:layout paint;
+}
+html.is-enhanced[data-input='touch'] .leaders .section-intro,
+html.is-enhanced[data-input='touch'] .leaders .leader-card {
+  flex:0 0 100vw;width:100vw;
+}
+html.is-enhanced[data-input='touch'] .leaders .leader-list {flex:none;}
+html.is-enhanced[data-input='touch'] .native-chapter:has(.bridge) {background:var(--night);}
+html.is-enhanced[data-input='touch'] .native-chapter:has(.members) {background:var(--night);}
+html.is-enhanced[data-input='touch'] .member-cloud span {opacity:0;}
+html.is-enhanced[data-input='touch'].is-reduced-motion .biome-copy,
+html.is-enhanced[data-input='touch'].is-reduced-motion .leader-card>div {opacity:1;transform:none;}

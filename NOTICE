@@ -9,4 +9,9 @@ NOTICE
 
 3. The pyramid map coloring tool in this project is inspired by QQ@加载LNF (QQ number: 3195652587).
 
-4. This project stores all 5104 media files from the florr.io Chinese Wiki, which were saved before the site was blocked as of August 4, 2026. These files remain licensed under the CC-BY-SA license (see https://creativecommons.org/licenses/by-sa/4.0/). A small portion of the files may be covered by other CC-style open licenses.
+4. This project stores all 5104 media files from the florr.io Chinese Wiki, which were saved before the site was blocked as of August 4, 2026.
+   These files remain licensed under the CC-BY-SA license (see https://creativecommons.org/licenses/by-sa/4.0/). A small portion of the files may be covered by other CC-style open licenses.
+
+5. We would like to thank Github@Llhleo (Florr.io@Llhleo) for providing the HTML code of the start page.
+   The complete source files and open-source license are stored in the ./data/start directory (with dist/* renamed to 2n/*).
+   Original website: https://llhleo.github.io/2n/

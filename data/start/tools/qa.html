@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>2n v20 · 本地尺寸验收</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#202220;color:#fff;font:14px Arial,sans-serif}header{height:70px;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}button,select{font:inherit;padding:8px 12px;border:1px solid #666;background:#202220;color:#fff}main{display:grid;place-items:center}iframe{display:block;border:0;outline:1px solid #555;width:390px;height:800px;background:#eee}p{margin:0;color:#aaa}
+</style>
+<header><strong>2n v20 · 小屏验收</strong><label>画面尺寸 <select id="size"><option value="390,800">390 × 800</option><option value="320,680">320 × 680</option><option value="844,390">844 × 390</option></select></label><label>运行方式 <select id="mode"><option value="normal">完整动画</option><option value="noscript">禁用脚本</option><option value="missing">主脚本缺失</option></select></label><p>尺寸模拟，不代表 iPhone 真机测试</p></header>
+<main><iframe title="手机预览" src="/"></iframe></main>
+<script>
+const preview=document.querySelector('iframe');
+document.querySelector('#size').onchange=event=>{const[w,h]=event.target.value.split(',');preview.style.width=w+'px';preview.style.height=h+'px';};
+document.querySelector('#mode').onchange=event=>{
+  if(event.target.value==='noscript')preview.setAttribute('sandbox','allow-same-origin');else preview.removeAttribute('sandbox');
+  preview.src=event.target.value==='missing'?'/__qa/missing-app':'/';
+};
+</script>
+</html>

@@ -1,0 +1,34 @@
+{
+  "tabs": [
+    {
+      "id": "home",
+      "title": "首页",
+      "folder": "data/start",
+      "entry": "index.html"
+    },
+    {
+      "id": "announcements",
+      "title": "通知",
+      "folder": "data/announcements",
+      "entry": "index.wiki"
+    },
+    {
+      "id": "surveys",
+      "title": "问卷",
+      "folder": "data/surveys",
+      "entry": "index.html"
+    },
+    {
+      "id": "join",
+      "title": "加入",
+      "folder": "data/join",
+      "entry": "index.html"
+    },
+    {
+      "id": "about",
+      "title": "关于",
+      "folder": "data/about",
+      "entry": "index.wiki"
+    }
+  ]
+}

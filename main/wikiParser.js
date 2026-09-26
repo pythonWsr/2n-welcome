@@ -156,7 +156,7 @@ function renderInline(text) {
   out = out.replace(/''(.*?)''/g, '<em>$1</em>');
 
   // 4) 模块调用（支持嵌套）
-  out = renderModules(out, false);
+  out = renderModules(out, true);
 
   // 5) 内部链接 [[页面名|显示文本]]
   out = out.replace(/\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]/g, (match, page, display) => {

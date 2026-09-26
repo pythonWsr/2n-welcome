@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN" class="is-intro-locked">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2f0e9">
+  <meta name="description" content="2n · Florr.io Guild，成立于 2 月 24 日。">
+  <title>2n · Florr.io Guild</title>
+  <link rel="icon" href="assets/florr-icon.webp">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#story">跳到主要内容</a>
+
+  <header class="site-header" aria-label="主导航">
+    <button class="brand-button" type="button" data-go="0" aria-label="返回开场">
+      <span class="brand-wordmark" aria-hidden="true">2<sup>n</sup></span>
+      <img class="brand-image" src="assets/guild-mark-candidate.png" alt="2n 公会候选标徽">
+    </button>
+    <nav class="chapter-nav" aria-label="章节">
+      <button type="button" data-section="biomes">生态</button>
+      <button type="button" data-section="leaders">管理层</button>
+      <button type="button" data-section="film">影像</button>
+    </nav>
+    <span class="chapter-count" aria-live="polite"><b>01</b> / 10</span>
+  </header>
+
+  <div class="progress" aria-hidden="true"><i></i></div>
+
+  <main id="story" class="story-shell">
+    <div class="story-viewport">
+      <div class="story-track">
+        <section class="panel hero" data-chapter="开场" data-nav="home">
+          <div class="hero-world" aria-hidden="true">
+            <i style="--image:url('assets/garden.png')"></i>
+            <i style="--image:url('assets/desert.png')"></i>
+            <i style="--image:url('assets/ocean.png')"></i>
+            <i style="--image:url('assets/jungle.png')"></i>
+            <i style="--image:url('assets/hell.png')"></i>
+          </div>
+          <div class="hero-mark" aria-label="2n">
+            <span class="hero-wordmark">2<sup>n</sup></span>
+            <img class="hero-image-mark" src="assets/guild-mark-candidate.png" alt="2n 公会标徽">
+          </div>
+          <div class="hero-foreground" aria-hidden="true">
+            <i style="--image:url('assets/garden.png')"></i>
+            <i style="--image:url('assets/desert.png')"></i>
+            <i style="--image:url('assets/ocean.png')"></i>
+            <i style="--image:url('assets/jungle.png')"></i>
+            <i style="--image:url('assets/hell.png')"></i>
+          </div>
+          <div class="hero-copy">
+            <p>FLORR.IO GUILD · EST. FEB 24</p>
+            <h1>不是所有工会，<br>都叫 2n。</h1>
+          </div>
+          <p class="scroll-cue">SCROLL TO EXPLORE <span>→</span></p>
+        </section>
+
+        <section class="panel biome" id="biomes" data-chapter="花园" style="--image:url('assets/garden.png');--tone:#22a956">
+          <div class="biome-copy"><span>01 · GARDEN</span><h2>花园</h2><p>从最熟悉的绿色出发。这里保存相遇、成长与工会最早的记忆。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="沙漠" style="--image:url('assets/desert.png');--tone:#c3a56a">
+          <div class="biome-copy"><span>02 · DESERT</span><h2>沙漠</h2><p>风沙让路线变得漫长，也让每一次并肩前进更有分量。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="海洋" style="--image:url('assets/ocean.png');--tone:#397cae">
+          <div class="biome-copy"><span>03 · OCEAN</span><h2>海洋</h2><p>蓝色深处没有固定答案。探索、判断与协作让队伍保持方向。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="丛林" style="--image:url('assets/jungle.png');--tone:#198f4e">
+          <div class="biome-copy"><span>04 · JUNGLE</span><h2>丛林</h2><p>密集的路径考验默契；真正可靠的成员，总能在复杂里找到彼此。</p></div>
+        </section>
+        <section class="panel biome" data-chapter="地狱" style="--image:url('assets/hell.png');--tone:#aa3034">
+          <div class="biome-copy"><span>05 · HELL</span><h2>地狱</h2><p>越过最后一道红色边界，留下的不只是战绩，也是共同承担。</p></div>
+        </section>
+
+        <section class="panel leaders" id="leaders" data-chapter="管理层">
+          <div class="section-intro">
+            <p>THE PEOPLE BEHIND 2n</p>
+            <h2>管理层</h2>
+            <span>不是头衔的陈列，<br>是一次次实际贡献。</span>
+          </div>
+          <div class="leader-list" id="leader-list"></div>
+        </section>
+
+        <section class="panel members" data-chapter="成员">
+          <div>
+            <p class="eyebrow">AROUND 100 MEMBERS</p>
+            <h2>名字组成工会，<br>行动留下共同历史。</h2>
+          </div>
+          <div class="member-cloud" id="member-cloud" aria-label="部分公会成员"></div>
+        </section>
+
+        <section class="panel film" id="film" data-chapter="影像">
+          <div class="film-copy">
+            <p class="eyebrow">HALF-YEAR FILM</p>
+            <h2>半周年纪念</h2>
+            <p>完整影像只在你主动播放时加载，避免拖慢开场。</p>
+          </div>
+          <video controls preload="metadata" playsinline poster="assets/ocean.png">
+            <source src="assets/half-year.mp4" type="video/mp4">
+            你的浏览器不支持视频播放。
+          </video>
+        </section>
+
+        <section class="panel closing" data-chapter="2n">
+          <img src="assets/florr-icon.webp" alt="Florr 游戏图标">
+          <p>FLORR.IO GUILD</p>
+          <h2>2<sup>n</sup></h2>
+          <span>EST. FEB 24</span>
+          <button type="button" data-go="0">回到开始 ↑</button>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <noscript><style>html.is-intro-locked,html.is-intro-locked body{overflow:auto!important}.story-viewport{position:static!important}.story-track{display:block!important;transform:none!important}.panel{min-height:100vh!important}.hero-copy,.hero-mark{opacity:1!important;transform:none!important}</style></noscript>
+</body>
+</html>

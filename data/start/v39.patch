@@ -1,0 +1,1312 @@
+From 3055c54f3c4abea9136c8f469ac35ef65fe9ffe2 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:01:02 -0300
+Subject: [PATCH 1/7] v39 liquid continuity
+
+---
+ CHECKPOINT-v39.md   |  6 ++++
+ dist/app.js         | 11 ++++--
+ dist/liquid.js      | 84 ++++++++++++++++-----------------------------
+ dist/motion.js      | 10 +++++-
+ dist/v35-runtime.js | 20 +----------
+ 5 files changed, 53 insertions(+), 78 deletions(-)
+ create mode 100644 CHECKPOINT-v39.md
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+new file mode 100644
+index 0000000..3299704
+--- /dev/null
++++ b/CHECKPOINT-v39.md
+@@ -0,0 +1,6 @@
++# v39 checkpoints
++
++Base: main f9ba99e (v38). GitHub branch creation: integration 403.
++
++1. Read current entrypoints, liquid/motion/runtime, styles and Canvas.
++2. Explicit reversible contact/absorption; interpolated conserved area; fine liquid sampling; bounded visual progress.
+diff --git a/dist/app.js b/dist/app.js
+index 620f6d5..8174219 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -62,6 +62,7 @@
+   const leaders=one('.leaders');
+   const viewport=one('.story-viewport');
+   let gatherPlan,splitPlan,lastLiquidPhase=-1;
++  let visualLiquid=0, liquidTarget=0;
+   const svgNS='http://www.w3.org/2000/svg';
+   const fusion=document.createElementNS(svgNS,'svg');
+   fusion.classList.add('member-fusion'); fusion.setAttribute('aria-hidden','true');
+@@ -291,7 +292,7 @@
+     lastLiquidPhase=phase;fusion.dataset.reduced=String(reduced);
+     const mapped=phase<=.355?phase:phase<=.47?lerp(.355,.43,progress(phase,.355,.47)):lerp(.43,1,progress(phase,.47,1));
+     const stage=M.anniversary(mapped),gather=progress(phase,0,.30);
+-    memberMessage.style.opacity = reduced ? '0' : String(1-smooth(progress(gather,.52,.73)));
++    memberMessage.style.opacity = reduced ? '0' : String(smooth(progress(gather,.235,.315))*(1-smooth(progress(gather,.68,.82))));
+     memberResult.style.opacity = reduced ? '1' : String(smooth(progress(gather,.67,.9))*stage.resultFade);
+     anniversaryTitle.style.opacity = reduced ? '1' : String(stage.title);
+     if(reduced) {
+@@ -354,7 +355,11 @@
+     scrolling.x = bridgeState.x;
+     const memberState = M.bridgeScroll(scrolling.x, memberStart, memberDuration);
+     scrolling.x = memberState.x;
+-    renderMembers(memberState.phase, scrolling.x);
++    liquidTarget=memberState.phase;
++    visualLiquid=reduced?liquidTarget:M.liquidProgress(visualLiquid,liquidTarget,dt);
++    // Keep the stage in view while its bounded visual progress catches up.
++    if(Math.abs(visualLiquid-liquidTarget)>.00001) scrolling.x=memberStart;
++    renderMembers(visualLiquid, scrolling.x);
+     const shift = smooth(progress(bridgeState.phase,.12,.76));
+     const fade = smooth(progress(bridgeState.phase,.76,1));
+     orb.style.transform = reduced ? 'none' : 'translate3d(' + (-shift*width*.95) + 'px,0,0) scale(' + lerp(1.1,.26,shift) + ')';
+@@ -419,7 +424,7 @@
+     if (playing && state.complete) finishIntro();
+     const unsettled = Math.abs(desired-renderedScroll)>.1;
+     const pointerUnsettled = !touchFirst && (Math.abs(cursorX-wantedX)>.1 || Math.abs(cursorY-wantedY)>.1);
+-    if (playing || unsettled || pointerUnsettled) schedule();
++    if (playing || unsettled || pointerUnsettled || Math.abs(visualLiquid-liquidTarget)>.00001) schedule();
+   }
+ 
+   function schedule() {
+diff --git a/dist/liquid.js b/dist/liquid.js
+index e453df3..6fa80ea 100644
+--- a/dist/liquid.js
++++ b/dist/liquid.js
+@@ -70,7 +70,7 @@
+ 
+   function neck(x,y,R,bx,by,r) {
+     const d=Math.hypot(bx-x,by-y);
+-    const gap=Math.min(24,r*.82);
++    const gap=Math.max(10,Math.min(28,r*1.15));
+     if(R<1 || r<1 || d<=Math.abs(R-r)+.01 || d>=R+r+gap) return '';
+     const theta=Math.atan2(by-y,bx-x);
+     const intersect=d<R+r;
+@@ -80,7 +80,7 @@
+     // A compact tangent bridge reads as a high-surface-tension neck rather than
+     // a metaball/goo connector. It vanishes quickly once the drop separates.
+     const strength=.50*(1-ramp(d,R+r,R+r+gap));
+-    if(strength<.10) return '';
++    if(strength<.001) return '';
+     const a1=theta+u+(outer-u)*strength;
+     const a2=theta-u-(outer-u)*strength;
+     const a3=theta+Math.PI-v-(Math.PI-v-outer)*strength;
+@@ -125,7 +125,7 @@
+     }
+   }
+ 
+-  function buildGather(M,count,width,height,steps=touchFirst?360:600) {
++  function buildGather(M,count,width,height,steps=720) {
+     const dense=count>48;
+     const seed=Math.min(width*.06,height*.045,28);
+     const finalRadius=Math.min(width*.72,height*.65)*.6;
+@@ -136,62 +136,35 @@
+     const sourceRadii=rawRadii.map(r=>r*areaScale);
+     const meanArea=targetArea/Math.max(1,count);
+     const rows=[];
+-    let radius=seed;
+-    const absorbed=Array(count).fill(0);
+-
++    // Transfer is a function of local progress, never of the previous mother's
++    // radius. A growing neighbour cannot trigger an absorption avalanche.
+     for(let k=0;k<=steps;k++) {
+       const phase=k/steps;
+-      const states=Array.from({length:count},(_,i)=> {
+-        const p=M.memberPath(i,count,phase,width,height);
+-        const r=sourceRadii[i];
+-        const targetRadius=Math.max(0,radius-r*.94);
+-        if(dense) {
+-          // Dense roster: use a small shared angular drift while a member is
+-          // visible. This produces only a short ~15-20deg tangent arc before
+-          // absorption. It is NOT an orbit and cannot approach half a turn.
+-          // Sharing the same drift at each frame also preserves the golden-angle
+-          // spacing between simultaneously visible droplets.
+-          const theta=p.heading+phase*4.4;
+-          const cs=Math.cos(theta),sn=Math.sin(theta);
+-          const rx=Math.max(68,width*.5-46),ry=Math.max(90,height*.5-92);
+-          const edgeBase=Math.min(
+-            rx/Math.max(.06,Math.abs(Math.cos(p.heading))),
+-            ry/Math.max(.06,Math.abs(Math.sin(p.heading)))
+-          )*.975;
+-          const gap=Math.max(54,r*3.2);
+-          const startRadius=Math.max(edgeBase,targetRadius+gap);
+-          const ringRadius=targetRadius+gap;
+-          const enter=smooth(ramp(p.approach,0,.30));
+-          const merge=smooth(ramp(p.approach,.68,1));
+-          let radial=mix(startRadius,ringRadius,enter);
+-          radial=mix(radial,targetRadius,merge);
+-          return {
+-            x:cs*radial,
+-            y:sn*radial,
+-            scale:p.scale,mix:p.mix,approach:p.approach,heading:theta,
+-            collisionR:r*Math.sqrt(1-absorbed[i])*ramp(p.mix,0,.09)
+-          };
+-        }
+-        return {
+-          x:p.x+Math.cos(p.heading)*targetRadius*p.approach,
+-          y:p.y+Math.sin(p.heading)*targetRadius*p.approach,
+-          scale:p.scale,mix:p.mix,approach:p.approach,heading:p.heading,
+-          collisionR:r*Math.sqrt(1-absorbed[i])*ramp(p.mix,0,.09)
+-        };
++      const paths=Array.from({length:count},(_,i)=>M.memberPath(i,count,phase,width,height));
++      const absorbed=paths.map(p=>ramp(p.approach,.64,1));
++      const radius=Math.sqrt(seed*seed+sourceRadii.reduce((sum,r,i)=>sum+r*r*absorbed[i],0));
++      const states=paths.map((p,i)=> {
++        const source=sourceRadii[i], amount=absorbed[i];
++        const r=source*Math.sqrt(1-amount);
++        const heading=p.heading+(dense?phase*1.8:0);
++        const cs=Math.cos(heading),sn=Math.sin(heading);
++        const edge=Math.min(Math.max(68,width*.5-46)/Math.max(.06,Math.abs(cs)),
++          Math.max(90,height*.5-92)/Math.max(.06,Math.abs(sn)));
++        const gap=Math.max(10,Math.min(28,source*1.15));
++        const waiting=radius+source+gap+Math.max(24,source);
++        // .48-.64 is a real contact dwell, before any area is transferred.
++        let radial=mix(Math.max(edge,waiting),radius+source+gap*.72,ramp(p.approach,0,.48));
++        radial=mix(radial,radius+source*.80,ramp(p.approach,.48,.64));
++        radial=mix(radial,Math.max(0,radius-r*.96),ramp(amount,0,1));
++        return {x:cs*radial,y:sn*radial,scale:p.scale,mix:p.mix,
++          approach:p.approach,heading,collisionR:r*(1-ramp(p.approach,.40,.64))};
+       });
+       if(!dense) separateDrops(states,2.5,3,18);
+-      for(let i=0;i<count;i++) {
+-        const p=states[i],r=sourceRadii[i];
+-        const overlap=radius+r-Math.hypot(p.x,p.y);
+-        const entered=ramp(overlap,0,1.65*r);
+-        absorbed[i]=Math.max(absorbed[i],entered);
+-      }
+-      radius=Math.sqrt(seed*seed+sourceRadii.reduce((sum,r,i)=>sum+r*r*absorbed[i],0));
+-      rows.push({radius,absorbed:absorbed.slice(),samples:states.map(({x,y,scale,mix,approach,heading})=>({x,y,scale,mix,approach,heading}))});
++      rows.push({radius,absorbed,samples:states});
+     }
+     return {
+       rows,steps,seed,finalRadius,count,width,height,sourceRadii,meanArea,dense,
+-      totalArea:seed*seed+targetArea,renderSteps:touchFirst?720:1080,
++      totalArea:seed*seed+targetArea,renderSteps:2400,
+       cacheKey:-1,cacheValue:null
+     };
+   }
+@@ -205,7 +178,7 @@
+     const q=renderKey/plan.renderSteps;
+     const sample=q*plan.steps,k=Math.floor(sample),t=sample-k;
+     const a=plan.rows[k],b=plan.rows[Math.min(k+1,plan.steps)];
+-    const radius=mix(a.radius,b.radius,t);
++    let radius=plan.seed*plan.seed;
+     let rx=0,ry=0;
+     const lobes=[];
+     const drops=Array.from({length:plan.count},(_,i)=> {
+@@ -217,6 +190,7 @@
+       };
+       const absorbed=mix(a.absorbed[i],b.absorbed[i],t);
+       const source=plan.sourceRadii[i];
++      radius+=source*source*absorbed;
+       const areaR=source*Math.sqrt(Math.max(0,1-absorbed));
+       const reveal=Math.sqrt(ramp(p.mix,0,.09));
+       const pulse=Math.sin(absorbed*Math.PI)*clamp(source*source/plan.meanArea,.55,1.7);
+@@ -233,11 +207,11 @@
+         scale:renderedR/58,absorbed,collisionR:renderedR
+       };
+     });
+-    if(!plan.dense) separateDrops(drops,2.5,5,30);
++    radius=Math.sqrt(radius);
+     const recoilScale=plan.dense?.32:1;
+     const x=clamp(rx*recoilScale,-6,6),y=clamp(ry*recoilScale,-6,6);
+     for(const drop of drops) {drop.x+=x*drop.absorbed;drop.y+=y*drop.absorbed;}
+-    if(!plan.dense) separateDrops(drops,2.5,3,8);
++
+     const speed=Math.hypot(x,y);
+     const deform={lobes,axis:speed>.01?Math.atan2(y,x):0,stretch:Math.min(.022,speed*.0026)};
+     const value={radius,x,y,drops,deform};
+diff --git a/dist/motion.js b/dist/motion.js
+index 463448e..40b71b8 100644
+--- a/dist/motion.js
++++ b/dist/motion.js
+@@ -96,7 +96,15 @@
+     const envelope=Math.sin(clamp(gather)*Math.PI);
+     return {x:clamp(x,-7,7)+Math.sin(gather*15)*1.5*envelope,y:clamp(y,-7,7)+Math.cos(gather*12)*1.5*envelope,stretch:Math.min(.035,stretch)};
+   }
+-  const api = Object.freeze({ clamp, lerp, progress, smooth, easeOut, DURATION, intro, scroll, bridgeScroll, memberPath, anniversary, anniversaryParticle, recoil });
++  // Symmetric and frame-bounded: even a delayed Safari frame cannot skip the
++  // whole contact interval. Slow scrolling remains effectively direct.
++  function liquidProgress(current,target,dt) {
++    const delta=target-current;
++    const limit=current<.30 || target<.30 ? .003 : current<.47 || target<.47 ? .0045 : .035;
++    const step=Math.min(limit,Math.max(.00025,Math.abs(delta)*(1-Math.exp(-dt/28))));
++    return Math.abs(delta)<=step?target:current+Math.sign(delta)*step;
++  }
++  const api = Object.freeze({ liquidProgress, clamp, lerp, progress, smooth, easeOut, DURATION, intro, scroll, bridgeScroll, memberPath, anniversary, anniversaryParticle, recoil });
+   if (typeof module === 'object' && module.exports) module.exports = api;
+   else target.TwoNMotion = api;
+ })(typeof window === 'object' ? window : this);
+diff --git a/dist/v35-runtime.js b/dist/v35-runtime.js
+index 9a42672..47215c4 100644
+--- a/dist/v35-runtime.js
++++ b/dist/v35-runtime.js
+@@ -26,7 +26,7 @@
+     // a deterministic tangential bow around the growing mother drop, so every
+     // member follows one clean curved sweep instead of a straight chord or loop.
+     const start=.012+index/Math.max(1,count-1)*.72;
+-    const duration=.060+noise(index+15)*.014;
++    const duration=.095+noise(index+15)*.020;
+     const local=progress(phase,start,start+duration);
+     const t=smooth(progress(local,.07,1));
+     const angle=index*2.399963+noise(index+9)*.16;
+@@ -57,24 +57,6 @@
+     return nativeAnniversaryParticle(index,SPLIT_COUNT,phase,width,height);
+   };
+ 
+-  motion.bridgeScroll=function(distance,start,duration){
+-    const state=nativeBridgeScroll(distance,start,duration);
+-    if(duration>=4800&&state.phase>0&&state.phase<1){
+-      const steps=touchFirst?720:1080;
+-      const raw=clamp((distance-start)/duration);
+-      state.phase=Math.round(raw*steps)/steps;
+-      // The mother radius reaches ~50% at gather≈.23 for the 95-member plan.
+-      // Delay the first line until that point, then fade it before the result
+-      // title takes over. CSS !important makes this override app.js' old inline
+-      // opacity timing without changing the rest of the app shell.
+-      const gather=progress(state.phase,0,.30);
+-      const message=smooth(progress(gather,.235,.315))*(1-smooth(progress(gather,.68,.82)));
+-      root.style.setProperty('--member-message-opacity',String(message));
+-    } else if(duration>=4800) {
+-      root.style.setProperty('--member-message-opacity','0');
+-    }
+-    return state;
+-  };
+   window.TwoNMotion=Object.freeze(motion);
+ 
+   // Let iOS Safari keep native momentum; suppress the old custom horizontal
+-- 
+2.51.1
+
+
+From 7b4ab38266ec06846ae5aa5ae47871972148017b Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:01:39 -0300
+Subject: [PATCH 2/7] v39 liquid split
+
+---
+ CHECKPOINT-v39.md |  1 +
+ dist/app.js       |  8 ++++++--
+ dist/liquid.js    | 36 +++++++++++++++---------------------
+ 3 files changed, 22 insertions(+), 23 deletions(-)
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+index 3299704..d329f63 100644
+--- a/CHECKPOINT-v39.md
++++ b/CHECKPOINT-v39.md
+@@ -4,3 +4,4 @@ Base: main f9ba99e (v38). GitHub branch creation: integration 403.
+ 
+ 1. Read current entrypoints, liquid/motion/runtime, styles and Canvas.
+ 2. Explicit reversible contact/absorption; interpolated conserved area; fine liquid sampling; bounded visual progress.
++3. Shared compact release neck, staggered separation and tangent flight; split mass transfers into 23 retained orbit drops.
+diff --git a/dist/app.js b/dist/app.js
+index 8174219..f20b5d3 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -222,6 +222,10 @@
+     memberStart = members.offsetLeft;
+     gatherPlan=L.buildGather(M,memberBubbles.length,width,height);
+     splitPlan=L.buildSplit(M,memberBubbles.length,width,height,gatherPlan.rows[gatherPlan.steps].radius);
++    anniversaryParticles.forEach((dot,i)=> {
++      const p=splitPlan.plan[i];
++      if(p.active) { dot.style.width=p.orbitRadius*2+'px';dot.style.height=p.orbitRadius*2+'px'; }
++    });
+     lastLiquidPhase=-1;
+     fusion.setAttribute('viewBox',[-width/2,-height/2,width,height].join(' '));
+     const gradient=fusion.querySelector('linearGradient');
+@@ -320,8 +324,8 @@
+       splittingState.drops.forEach(drop=> {
+         // Connected lobes belong to the mother silhouette; only detached drops
+         // transfer to the colored compositor layers.
+-        const r=drop.r*Math.sqrt(1-drop.handoff);
+-        outline+=L.circle(drop.x,drop.y,r)+L.neck(0,0,splittingState.radius,drop.x,drop.y,r);
++        const r=drop.r;
++        if(drop.handoff<1) outline+=L.circle(drop.x,drop.y,r)+L.neck(0,0,splittingState.radius,drop.x,drop.y,r);
+       });
+       liquidPath.setAttribute('d',outline);
+     }
+diff --git a/dist/liquid.js b/dist/liquid.js
+index 6fa80ea..64443b0 100644
+--- a/dist/liquid.js
++++ b/dist/liquid.js
+@@ -233,13 +233,13 @@
+         tangent:(i%2?1:-1)*(.55+(i%5)*.08)
+       };
+     });
+-    const mother=s=>radius*Math.sqrt(Math.max(0,1-entries.reduce((sum,p)=>sum+(p.active?ramp((s-p.start)/p.duration,.08,.46):0),0)/Math.max(1,activeCount)));
++    const weights=entries.reduce((sum,p)=>sum+(p.active?p.orbitRadius*p.orbitRadius:0),0);
+     for(const p of entries) {
+-      if(!p.active) continue;
+-      p.birthRadius=mother(p.start+p.duration*.16)*.95;
+-      p.volumeRadius=Math.max(p.orbitRadius,radius/Math.sqrt(activeCount)*.92);
++      if(p.active) p.orbitRadius*=radius/Math.sqrt(weights);
+     }
+-    return {plan:entries,mother,activeCount,renderSteps:touchFirst?540:900,cacheKey:-1,cacheValue:null};
++    const mother=s=>Math.sqrt(Math.max(0,radius*radius-entries.reduce((sum,p)=>
++      sum+(p.active?p.orbitRadius*p.orbitRadius*ramp((s-p.start)/p.duration,.04,.50):0),0)));
++    return {plan:entries,mother,activeCount,totalArea:radius*radius,renderSteps:1800,cacheKey:-1,cacheValue:null};
+   }
+ 
+   function splitAt(plan,s) {
+@@ -253,31 +253,25 @@
+     const drops=plan.plan.map((p,i)=> {
+       if(!p.active) return {x:0,y:0,r:0,collisionR:0,handoff:0,color:0,scale:0,local:0};
+       const local=clamp((q-p.start)/p.duration);
+-      const grow=ramp(local,0,.24);
+-      const flight=ramp(local,.20,1);
+-      const shrink=ramp(local,.48,1);
+-      const angle=p.orbit.angle+Math.sin(flight*Math.PI)*.14;
+-      const distance=mix(p.birthRadius,p.orbit.radius,flight);
+-      const r=mix(p.volumeRadius,p.orbitRadius,shrink)*grow;
+-      const drift=Math.sin(local*Math.PI)*p.tangent*4;
++      const transferred=ramp(local,.04,.50);
++      const r=p.orbitRadius*Math.sqrt(transferred);
++      const release=ramp(local,.48,.68);
++      const flight=ramp(local,.64,1);
++      const angle=p.orbit.angle+Math.sin(flight*Math.PI)*.09;
++      const gap=Math.max(10,Math.min(28,r*1.15));
++      const contact=plan.mother(q)+r*mix(.35,.94,ramp(local,.04,.48));
++      const distance=mix(contact+release*gap*1.35,p.orbit.radius,flight);
++      const drift=Math.sin(flight*Math.PI)*p.tangent*3;
+       const x=Math.cos(angle)*distance-Math.sin(angle)*drift;
+       const y=Math.sin(angle)*distance+Math.cos(angle)*drift;
+       const bulge=Math.sin(ramp(local,0,.52)*Math.PI)*(1-ramp(local,.52,.82));
+       if(bulge>.02) lobes.push({angle,weight:bulge*(.7+(i%4)*.08)});
+       return {
+         x,y,r,collisionR:r*(1-ramp(local,.02,.24)),
+-        handoff:ramp(local,.66,1),color:ramp(local,.5,1),
++        handoff:ramp(local,.74,1),color:ramp(local,.5,1),
+         scale:r/Math.max(.001,p.orbitRadius),local
+       };
+     });
+-    const detached=drops.map(d=>({...d,collisionR:d.r*ramp(d.local,.28,.55)}));
+-    separateDrops(detached,2.0,3,20);
+-    for(let i=0;i<drops.length;i++) {
+-      if(!plan.plan[i].active) continue;
+-      const blend=ramp(drops[i].local,.28,.55);
+-      drops[i].x=mix(drops[i].x,detached[i].x,blend);
+-      drops[i].y=mix(drops[i].y,detached[i].y,blend);
+-    }
+     const deform={lobes,axis:0,stretch:Math.min(.014,lobes.reduce((s,l)=>s+l.weight,0)*.0018)};
+     const value={radius:plan.mother(q),drops,deform};
+     plan.cacheKey=renderKey;plan.cacheValue=value;
+-- 
+2.51.1
+
+
+From f8ec72dcd36784b4da98665f6cf07f0800797f6b Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:02:24 -0300
+Subject: [PATCH 3/7] v39 liquid performance
+
+---
+ CHECKPOINT-v39.md   |  1 +
+ dist/app.js         | 24 ++++++++++++++++++------
+ dist/liquid.js      | 23 ++++++++++++-----------
+ dist/v35-runtime.js | 26 +-------------------------
+ 4 files changed, 32 insertions(+), 42 deletions(-)
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+index d329f63..b999096 100644
+--- a/CHECKPOINT-v39.md
++++ b/CHECKPOINT-v39.md
+@@ -5,3 +5,4 @@ Base: main f9ba99e (v38). GitHub branch creation: integration 403.
+ 1. Read current entrypoints, liquid/motion/runtime, styles and Canvas.
+ 2. Explicit reversible contact/absorption; interpolated conserved area; fine liquid sampling; bounded visual progress.
+ 3. Shared compact release neck, staggered separation and tangent flight; split mass transfers into 23 retained orbit drops.
++4. Compact circle arcs, reusable mother points and gather drops, unchanged-path/hidden-label write guards; removed listener monkey patch and bridge quantization.
+diff --git a/dist/app.js b/dist/app.js
+index f20b5d3..e6ef9ed 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -22,6 +22,8 @@
+   const meter = one('.progress i');
+   const counter = one('.chapter-count b');
+   const chapterName = one('.chapter-name');
++  const previousButton=one('.previous-chapter'),nextButton=one('.next-chapter');
++  const themeMeta=one('meta[name="theme-color"]');
+   const panels = all('.panel');
+   const mediaQuery = matchMedia('(prefers-reduced-motion: reduce)');
+   const qaTouch = location.hostname === 'terminal.local' && new URLSearchParams(location.search).has('qa-touch');
+@@ -69,6 +71,14 @@
+   fusion.innerHTML='<defs><linearGradient id="fusion-color" gradientUnits="userSpaceOnUse"><stop stop-color="#a6ebc5"/><stop offset=".5" stop-color="#64b7d0"/><stop offset="1" stop-color="#2875f0"/></linearGradient></defs><path fill="url(#fusion-color)" fill-rule="nonzero"/>';
+   const liquidPath=fusion.querySelector('path');
+   members.prepend(fusion);
++  let lastOutline='';
++  function writeLiquid(outline) {
++    if(outline!==lastOutline) {liquidPath.setAttribute('d',outline);lastOutline=outline;}
++  }
++  const labelOpacity=new Float64Array(memberBubbles.length).fill(-1);
++  memberBubbles.forEach(label=> {
++    label.style.fontSize=(label.textContent.length>10?22:28)+'px';
++  });
+   const anniversaryTitle = one('.anniversary-title');
+   const anniversaryParticles = memberBubbles.map((_,i)=> {
+     const dot=document.createElement('i');
+@@ -276,7 +286,7 @@
+     root.classList.toggle('is-ink-footer', index === 7 || index === 9 || index === 10);
+     const surface = index === 0 ? '#f3f2ec' : getComputedStyle(panels[index-1]).backgroundColor;
+     root.style.setProperty('--surface-color',surface);
+-    one('meta[name="theme-color"]').content=surface;
++    themeMeta.content=surface;
+   }
+ 
+   function renderMembers(phase, x) {
+@@ -314,10 +324,10 @@
+       flow.drops.forEach((drop,i)=> {
+         if(drop.r>.1) outline+=L.circle(drop.x,drop.y,drop.r)+L.neck(flow.x,flow.y,flow.radius,drop.x,drop.y,drop.r);
+         const label=memberBubbles[i];
+-        label.style.opacity=String(drop.label);
++        if(labelOpacity[i]!==drop.label) {label.style.opacity=String(drop.label);labelOpacity[i]=drop.label;}
+         if(drop.label>.001) label.style.transform='translate(-50%,-50%) translate3d('+drop.x+'px,'+drop.y+'px,0) scale('+drop.scale+')';
+       });
+-      liquidPath.setAttribute('d',outline);
++      writeLiquid(outline);
+     } else if(splitting) {
+       splittingState=L.splitAt(splitPlan,progress(phase,.355,.47));
+       let outline=L.circle(0,0,splittingState.radius);
+@@ -327,7 +337,7 @@
+         const r=drop.r;
+         if(drop.handoff<1) outline+=L.circle(drop.x,drop.y,r)+L.neck(0,0,splittingState.radius,drop.x,drop.y,r);
+       });
+-      liquidPath.setAttribute('d',outline);
++      writeLiquid(outline);
+     }
+     anniversaryParticles.forEach((dot,i)=> {
+       if(gathering) {dot.style.opacity='0';return;}
+@@ -422,8 +432,8 @@
+       g.content.style.transform = reduced ? 'none' : 'translateY(' + (1-reveal)*65 + 'px)';
+     });
+     updateChapter(chapter);
+-    one('.previous-chapter').disabled = renderedScroll < 2;
+-    one('.next-chapter').disabled = renderedScroll >= lead+travel-2;
++    previousButton.disabled = renderedScroll < 2;
++    nextButton.disabled = renderedScroll >= lead+travel-2;
+     root.dataset.introTime = String(Math.round(ready ? M.DURATION : time));
+     if (playing && state.complete) finishIntro();
+     const unsettled = Math.abs(desired-renderedScroll)>.1;
+@@ -539,6 +549,7 @@
+     else if(event.key==='PageUp' || (event.key===' '&&event.shiftKey)) nextStop(-1);
+     else goTo(scrollY+(['ArrowRight','ArrowDown'].includes(event.key)?1:-1)*width*.55);
+   });
++  if(!touchFirst) {
+   addEventListener('touchstart', event=>{
+     if(!active || event.touches.length!==1 || isControl(event.target)) {touch=null;return;}
+     touch={x:event.touches[0].clientX,y:event.touches[0].clientY,lastX:event.touches[0].clientX,mode:null};
+@@ -553,6 +564,7 @@
+     touch.lastX=x;
+   },{passive:false});
+   addEventListener('touchend',()=>{touch=null;},{passive:true});
++  }
+   addEventListener('pointermove', event=>{
+     if(event.pointerType!=='mouse' || !active || reduced) return;
+     wantedX=(event.clientX/width-.5)*24; wantedY=(event.clientY/height-.5)*14; schedule();
+diff --git a/dist/liquid.js b/dist/liquid.js
+index 64443b0..2cbd42d 100644
+--- a/dist/liquid.js
++++ b/dist/liquid.js
+@@ -11,15 +11,15 @@
+     target.matchMedia('(pointer:coarse)').matches || (target.navigator&&target.navigator.maxTouchPoints>0)
+   ));
+   const precision=touchFirst?2:3;
+-  const fmt=p=>p.map(v=>Number(v.toFixed(precision))).join(' ');
++  const num=v=>Number(v.toFixed(precision));
++  const fmt=p=>num(p[0])+' '+num(p[1]);
++  const motherPoints=Array.from({length:28},()=>[0,0]);
+   let pendingMother=null;
+ 
+   function plainCircle(x,y,r) {
+     if(r<.05) return '';
+-    // Keep the winding direction consistent with softMother(). The previous arc-
+-    // based circle used the opposite winding, so when it overlapped the mother
+-    // drop under fill-rule=nonzero Safari rendered subtraction holes/cutouts.
+-    return softMother(x,y,r,null);
++    // Two clockwise arcs share the positive winding of softMother and neck.
++    return `M ${num(x+r)} ${num(y)} A ${num(r)} ${num(r)} 0 1 1 ${num(x-r)} ${num(y)} A ${num(r)} ${num(r)} 0 1 1 ${num(x+r)} ${num(y)} Z `;
+   }
+ 
+   function softMother(x,y,r,deform) {
+@@ -28,7 +28,7 @@
+     const totalWeight=lobes.reduce((sum,l)=>sum+l.weight,0);
+     const stretch=clamp(deform&&deform.stretch||0,0,.028);
+     const axis=deform&&Number.isFinite(deform.axis)?deform.axis:0;
+-    const points=[];
++    const points=motherPoints;
+     for(let i=0;i<segments;i++) {
+       const a=i/segments*Math.PI*2;
+       let local=0;
+@@ -42,7 +42,7 @@
+       const bulge=clamp(local*.025,-.018,.038);
+       const inertia=stretch*Math.cos(2*(a-axis));
+       const rr=r*(1+bulge+inertia);
+-      points.push([x+Math.cos(a)*rr,y+Math.sin(a)*rr]);
++      points[i][0]=x+Math.cos(a)*rr;points[i][1]=y+Math.sin(a)*rr;
+     }
+     const tension=.92;
+     let d=`M ${fmt(points[0])} `;
+@@ -181,7 +181,8 @@
+     let radius=plan.seed*plan.seed;
+     let rx=0,ry=0;
+     const lobes=[];
+-    const drops=Array.from({length:plan.count},(_,i)=> {
++    const drops=plan.drops||(plan.drops=Array.from({length:plan.count},()=>({})));
++    for(let i=0;i<plan.count;i++) {
+       const pa=a.samples[i],pb=b.samples[i];
+       const p={
+         x:mix(pa.x,pb.x,t),y:mix(pa.y,pb.y,t),scale:mix(pa.scale,pb.scale,t),
+@@ -198,15 +199,15 @@
+       rx-=Math.cos(p.heading)*impulse;ry-=Math.sin(p.heading)*impulse;
+       if(pulse>.025) lobes.push({angle:Math.atan2(p.y,p.x),weight:Math.min(1.4,pulse)});
+       const renderedR=areaR*reveal;
+-      return {
++      Object.assign(drops[i], {
+         x:p.x,y:p.y,r:renderedR,areaR,
+         label:ramp(p.mix,0,.10)*(1-ramp(absorbed,.03,.45)),
+         // The DOM member bubble is 116px wide (58px radius). Scale it to the
+         // exact SVG radius so large rosters do not leave oversized label circles
+         // floating over the smaller area-conserving liquid droplets.
+         scale:renderedR/58,absorbed,collisionR:renderedR
+-      };
+-    });
++      });
++    }
+     radius=Math.sqrt(radius);
+     const recoilScale=plan.dense?.32:1;
+     const x=clamp(rx*recoilScale,-6,6),y=clamp(ry*recoilScale,-6,6);
+diff --git a/dist/v35-runtime.js b/dist/v35-runtime.js
+index 47215c4..89388b9 100644
+--- a/dist/v35-runtime.js
++++ b/dist/v35-runtime.js
+@@ -59,29 +59,5 @@
+ 
+   window.TwoNMotion=Object.freeze(motion);
+ 
+-  // Let iOS Safari keep native momentum; suppress the old custom horizontal
+-  // touch interception while app.js registers its bootstrap handlers.
+-  const nativeAdd=window.addEventListener;
+-  const blocked=new Set(['touchstart','touchmove','touchend']);
+-  let booting=true;
+-  window.addEventListener=function(type,listener,options){
+-    if(booting&&blocked.has(type)) return;
+-    return nativeAdd.call(this,type,listener,options);
+-  };
+-
+-  nativeAdd.call(window,'DOMContentLoaded',()=>{
+-    booting=false;
+-    window.addEventListener=nativeAdd;
+-    root.dataset.version='35.8';
+-    document.querySelectorAll('.anniversary-particle').forEach((dot,i)=>{
+-      if(i>=SPLIT_COUNT){
+-        dot.style.display='none';
+-        return;
+-      }
+-      // Restore the original pre-dense-roster particle size.
+-      const size=16+(i%5)*3;
+-      dot.style.width=size+'px';
+-      dot.style.height=size+'px';
+-    });
+-  },{once:true});
++  // Event routing belongs to app.js; do not monkey-patch window listeners.
+ })();
+-- 
+2.51.1
+
+
+From 71f93259c481e2162e8b1a00bd7ddfac2449ee4f Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:04:00 -0300
+Subject: [PATCH 4/7] v39 mobile biomes
+
+---
+ CHECKPOINT-v39.md |   1 +
+ dist/app.js       | 107 +++++++++++++++++++++++++++++++++++-----------
+ dist/v35.css      |  16 +++++++
+ 3 files changed, 100 insertions(+), 24 deletions(-)
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+index b999096..409705b 100644
+--- a/CHECKPOINT-v39.md
++++ b/CHECKPOINT-v39.md
+@@ -6,3 +6,4 @@ Base: main f9ba99e (v38). GitHub branch creation: integration 403.
+ 2. Explicit reversible contact/absorption; interpolated conserved area; fine liquid sampling; bounded visual progress.
+ 3. Shared compact release neck, staggered separation and tangent flight; split mass transfers into 23 retained orbit drops.
+ 4. Compact circle arcs, reusable mother points and gather drops, unchanged-path/hidden-label write guards; removed listener monkey patch and bridge quantization.
++5. Touch layout uses native biome horizontal scrolling; independent vertical chapter holds and cached top positions preserve bridge/liquid progress. Desktop track retained.
+diff --git a/dist/app.js b/dist/app.js
+index e6ef9ed..3ac2d15 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -97,7 +97,7 @@
+     controls.classList.toggle('is-shown',shown);
+     controls.inert=!shown || !ready;
+   }
+-  const scrollForX = x => lead + x + (x > bridgeStart ? bridgeDuration : 0) + (x > memberStart ? memberDuration : 0);
++  const scrollForX = x => touchFirst ? x : lead + x + (x > bridgeStart ? bridgeDuration : 0) + (x > memberStart ? memberDuration : 0);
+ 
+   function setMotionPreference() {
+     reduced = mediaQuery.matches;
+@@ -212,6 +212,66 @@
+     }
+   }
+ 
++  let biomeRail=null, bridgeHold=null, memberHold=null;
++  let mobileBridgeTop=0,mobileMemberTop=0,biomeScroll=0,leaderScroll=0;
++  const leaderCards=all('.leader-card');
++  function setupMobile() {
++    if(!touchFirst) return;
++    biomeRail=document.createElement('div');biomeRail.className='biome-rail native-rail';
++    biomeRail.setAttribute('role','region');biomeRail.setAttribute('aria-label','五境，左右滑动');
++    biomeRail.tabIndex=0;
++    track.prepend(biomeRail);
++    all('.biome').forEach(panel=>biomeRail.append(panel));
++    for(const panel of [bridge,members]) {
++      const hold=document.createElement('div');hold.className='chapter-hold';
++      panel.before(hold);hold.append(panel);
++      if(panel===bridge) bridgeHold=hold;else memberHold=hold;
++    }
++    biomeRail.addEventListener('scroll',()=>{biomeScroll=biomeRail.scrollLeft;schedule();},{passive:true});
++  }
++  function measureLiquid() {
++    gatherPlan=L.buildGather(M,memberBubbles.length,width,height);
++    splitPlan=L.buildSplit(M,memberBubbles.length,width,height,gatherPlan.rows[gatherPlan.steps].radius);
++    anniversaryParticles.forEach((dot,i)=> {
++      const p=splitPlan.plan[i];
++      if(p.active) { dot.style.width=p.orbitRadius*2+'px';dot.style.height=p.orbitRadius*2+'px'; }
++    });
++    lastLiquidPhase=-1;
++    fusion.setAttribute('viewBox',[-width/2,-height/2,width,height].join(' '));
++    const gradient=fusion.querySelector('linearGradient');
++    gradient.setAttribute('x1',-gatherPlan.finalRadius);gradient.setAttribute('y1',-gatherPlan.finalRadius);
++    gradient.setAttribute('x2',gatherPlan.finalRadius);gradient.setAttribute('y2',gatherPlan.finalRadius);
++  }
++  function measureMobile(preserve,oldY,oldLead,oldTravel) {
++    bridgeDuration=Math.round(height*2.2);
++    memberDuration=Math.round(Math.max(width*7.2,height*12));
++    track.style.paddingTop=lead+'px';
++    bridgeHold.style.height=(height+bridgeDuration)+'px';
++    memberHold.style.height=(height+memberDuration)+'px';
++    shell.style.height='auto';
++    // All layout reads are confined to this measurement pass.
++    const top=element=>element.getBoundingClientRect().top+scrollY;
++    mobileBridgeTop=top(bridgeHold);mobileMemberTop=top(memberHold);
++    const biomeTop=top(biomeRail);
++    geometry=panels.map((panel,i)=>({panel,x:i<5?biomeTop:top(panel===bridge?bridgeHold:panel===members?memberHold:panel),
++      width,copy:panel.querySelector('.biome-copy'),visual:panel.querySelector('.biome-visual'),
++      railOffset:i<5?i*width:0,surface:getComputedStyle(panel).backgroundColor}));
++    cardGeometry=leaderCards.map(card=>({card,x:top(card),width,content:card.lastElementChild}));
++    bridgeStart=mobileBridgeTop;memberStart=mobileMemberTop;
++    travel=Math.max(0,shell.offsetHeight-height-lead);
++    logoTop=mark.offsetTop;logoHeight=mark.offsetHeight;
++    measureLiquid();
++    stops=[0,...geometry.map(g=>g.x),mobileBridgeTop+bridgeDuration,
++      ...[.30,.47,.65,.86,1].map(p=>mobileMemberTop+memberDuration*p)];
++    stops=[...new Set(stops)].sort((a,b)=>a-b);
++    if(scene) scene.resize();
++    if(preserve&&initialized&&ready) {
++      const next=oldY<=oldLead?oldY/oldLead*lead:lead+(oldY-oldLead)/Math.max(1,oldTravel)*travel;
++      scrollTo({top:clamp(next,0,lead+travel),behavior:'instant'});renderedScroll=scrollY;
++    }
++    schedule();
++  }
++
+   function measure(preserve = true) {
+     const oldLead = lead, oldTravel = travel, oldY = scrollY;
+     const previousEntry = oldLead ? oldY / oldLead : 0;
+@@ -220,27 +280,19 @@
+     height = innerHeight;
+     root.style.setProperty('--view-height', height + 'px');
+     lead = Math.round(Math.max(width * .94, height * .78));
++    if(touchFirst) {measureMobile(preserve,oldY,oldLead,oldTravel);return;}
+     geometry = panels.map(panel => ({
+       panel,
+       x:panel.offsetLeft,
+       width:panel.offsetWidth,
+       copy:panel.querySelector('.biome-copy'),
++      surface:getComputedStyle(panel).backgroundColor,
+       visual:panel.querySelector('.biome-visual')
+     }));
+     bridgeStart = bridge.offsetLeft;
+     bridgeDuration = Math.round(Math.max(width * 1.8, height * 2.2));
+     memberStart = members.offsetLeft;
+-    gatherPlan=L.buildGather(M,memberBubbles.length,width,height);
+-    splitPlan=L.buildSplit(M,memberBubbles.length,width,height,gatherPlan.rows[gatherPlan.steps].radius);
+-    anniversaryParticles.forEach((dot,i)=> {
+-      const p=splitPlan.plan[i];
+-      if(p.active) { dot.style.width=p.orbitRadius*2+'px';dot.style.height=p.orbitRadius*2+'px'; }
+-    });
+-    lastLiquidPhase=-1;
+-    fusion.setAttribute('viewBox',[-width/2,-height/2,width,height].join(' '));
+-    const gradient=fusion.querySelector('linearGradient');
+-    gradient.setAttribute('x1',-gatherPlan.finalRadius);gradient.setAttribute('y1',-gatherPlan.finalRadius);
+-    gradient.setAttribute('x2',gatherPlan.finalRadius);gradient.setAttribute('y2',gatherPlan.finalRadius);
++    measureLiquid();
+     memberDuration = Math.round(Math.max(width*7.2, height*12));
+     travel = Math.max(0, track.scrollWidth - width) + bridgeDuration + memberDuration;
+     shell.style.height = (lead + travel + height) + 'px';
+@@ -284,17 +336,17 @@
+     chapterName.textContent = index === 0 ? '序章' : panels[index-1].dataset.chapter;
+     root.classList.toggle('is-light-chrome', index > 0 && index <= 6 || index === 8);
+     root.classList.toggle('is-ink-footer', index === 7 || index === 9 || index === 10);
+-    const surface = index === 0 ? '#f3f2ec' : getComputedStyle(panels[index-1]).backgroundColor;
++    const surface = index === 0 ? '#f3f2ec' : geometry[index-1].surface;
+     root.style.setProperty('--surface-color',surface);
+     themeMeta.content=surface;
+   }
+ 
+   function renderMembers(phase, x) {
+-    const arriving = smooth(progress(x,memberStart-width,memberStart));
++    const arriving = touchFirst ? 1 : smooth(progress(x,memberStart-width,memberStart));
+     const crossing=x>=memberStart-width && x<memberStart;
+     // One dissolve over an opaque, uniform management-colored backing. Never
+     // fade both surfaces, which exposed a dark seam under the moving last card.
+-    members.style.transform = x < memberStart ? 'translate3d(' + (x-memberStart) + 'px,0,0)' : 'none';
++    members.style.transform = !touchFirst && x < memberStart ? 'translate3d(' + (x-memberStart) + 'px,0,0)' : 'none';
+     members.style.opacity = String(arriving);
+     members.style.zIndex = '2';
+     leaders.style.opacity='1';
+@@ -365,9 +417,10 @@
+     if (Math.abs(renderedScroll-desired) < .1) renderedScroll = desired;
+     cursorX = lerp(cursorX, wantedX, .07); cursorY = lerp(cursorY, wantedY, .07);
+     const scrolling = M.scroll(renderedScroll, lead, travel);
+-    const bridgeState = M.bridgeScroll(scrolling.x, bridgeStart, bridgeDuration);
++    const bridgeState = touchFirst ? {x:scrolling.x,phase:progress(desired,mobileBridgeTop,mobileBridgeTop+bridgeDuration)} : M.bridgeScroll(scrolling.x, bridgeStart, bridgeDuration);
+     scrolling.x = bridgeState.x;
+-    const memberState = M.bridgeScroll(scrolling.x, memberStart, memberDuration);
++    const memberState = touchFirst ? {x:memberStart+clamp((desired-mobileMemberTop)/height,-2,2)*width,phase:progress(desired,mobileMemberTop,mobileMemberTop+memberDuration)} : M.bridgeScroll(scrolling.x, memberStart, memberDuration);
++    if(touchFirst && desired>=mobileMemberTop && desired<=mobileMemberTop+memberDuration) memberState.x=memberStart;
+     scrolling.x = memberState.x;
+     liquidTarget=memberState.phase;
+     visualLiquid=reduced?liquidTarget:M.liquidProgress(visualLiquid,liquidTarget,dt);
+@@ -385,7 +438,7 @@
+     const entry = reduced ? scrolling.entry : smooth(scrolling.entry);
+     root.classList.toggle('is-breathing',ready && !reduced && renderedScroll<2);
+     applyIntro(state);
+-    track.style.transform = 'translate3d(' + (-scrolling.x) + 'px,0,0)';
++    track.style.transform = touchFirst ? 'none' : 'translate3d(' + (-scrolling.x) + 'px,0,0)';
+     meter.style.transform = 'scaleX(' + scrolling.progress + ')';
+     hero.style.opacity = 1 - smooth(progress(entry, .68, 1));
+     hero.style.visibility = entry >= 1 ? 'hidden' : 'visible';
+@@ -406,10 +459,12 @@
+     let chapter = 0;
+     for (let i=0; i<geometry.length; i++) {
+       const g = geometry[i];
+-      const relative = g.x - scrolling.x;
+-      const visible = relative < width && relative + g.width > 0 && entry > .7;
++      const vertical=g.x-desired;
++      const relative = touchFirst ? (g.copy?g.railOffset-biomeScroll:vertical) : g.x-scrolling.x;
++      const chapterHeight=g.panel===members?height+memberDuration:g.panel===bridge?height+bridgeDuration:height;
++      const visible = touchFirst ? vertical<height && vertical+chapterHeight>0 && (!g.copy || relative<width && relative+width>0) : relative < width && relative + g.width > 0 && entry > .7;
+       g.panel.inert = !ready || !visible;
+-      if (entry >= .86 && relative <= width*.5) chapter = i+1;
++      if (entry >= .86 && (touchFirst ? vertical<=height*.5 && (!g.copy || relative<=width*.5) : relative<=width*.5)) chapter=i+1;
+       const copy = g.copy;
+       if (copy) {
+         // Only the current and neighbouring ecosystem need per-frame styling.
+@@ -426,8 +481,9 @@
+       }
+     }
+     cardGeometry.forEach(g => {
+-      if (g.x-scrolling.x > width*1.15 || g.x+g.width-scrolling.x < -width*.15) return;
+-      const reveal = reduced ? 1 : easeOut(progress(1-(g.x-scrolling.x)/width,.04,.85));
++      const relative=touchFirst?g.x-desired:g.x-scrolling.x;
++      if (relative > width*1.15 || relative+g.width < -width*.15) return;
++      const reveal = reduced ? 1 : easeOut(progress(1-relative/width,.04,.85));
+       g.content.style.opacity = reveal;
+       g.content.style.transform = reduced ? 'none' : 'translateY(' + (1-reveal)*65 + 'px)';
+     });
+@@ -474,6 +530,8 @@
+     root.classList.remove('is-booting','is-enhanced','is-intro-locked');
+     root.classList.add('motion-fallback');
+     shell.style.height='auto'; hero.style.cssText=''; mark.style.cssText='';
++    track.style.cssText='';
++    if(touchFirst) {bridgeHold.style.height='auto';memberHold.style.height='auto';}
+     introScreen.classList.add('is-finished'); introScreen.inert=true;
+     for (const element of [header,controls,hero,...panels]) { element.inert=false; element.style.opacity=''; }
+     for (const element of [...introLines,eyebrow,cue]) element.style.cssText='';
+@@ -525,7 +583,7 @@
+     schedule();
+   }, {passive:true});
+   addEventListener('wheel', event => {
+-    if (!active || event.ctrlKey) return;
++    if (!active || event.ctrlKey || (touchFirst && event.target.closest?.('.native-rail'))) return;
+     if (!ready) { event.preventDefault(); return; }
+     if (!isControl(event.target) && Math.abs(event.deltaX)>Math.abs(event.deltaY)) {
+       event.preventDefault();
+@@ -624,6 +682,7 @@
+       }));
+       if(!active) return;
+       scene=new WorldScene(images);
++      setupMobile();
+       root.classList.add('is-enhanced');
+       root.classList.remove('is-booting');
+       measure(false); initialized=true;
+diff --git a/dist/v35.css b/dist/v35.css
+index e1b5dce..7554baf 100644
+--- a/dist/v35.css
++++ b/dist/v35.css
+@@ -13,3 +13,19 @@ html.is-enhanced .member-cloud span {
+   font-size:28px;
+   padding:10px;
+ }
++
++/* v39: native touch chapters. No touchmove interception or scroll trapping. */
++html.is-enhanced[data-input='touch'] .story-viewport { position:relative; inset:auto; height:auto; min-height:0; overflow:visible; }
++html.is-enhanced[data-input='touch'] .story-track { display:block; height:auto; will-change:auto; }
++html.is-enhanced[data-input='touch'] .panel { height:var(--view-height); width:100%; min-height:0; }
++html.is-enhanced[data-input='touch'] .native-rail { display:flex; width:100%; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x proximity; touch-action:pan-x pan-y pinch-zoom; overscroll-behavior-x:contain; scrollbar-width:none; }
++html.is-enhanced[data-input='touch'] .native-rail::-webkit-scrollbar { display:none; }
++html.is-enhanced[data-input='touch'] .biome-rail>.biome { flex:0 0 100%; scroll-snap-align:start; }
++html.is-enhanced[data-input='touch'] .chapter-hold>.panel { position:sticky; top:0; }
++html.is-enhanced[data-input='touch'] .leaders { display:block; height:auto; }
++html.is-enhanced[data-input='touch'] .leader-list { display:block; }
++html.is-enhanced[data-input='touch'] .section-intro,
++html.is-enhanced[data-input='touch'] .leader-card { width:100%; height:var(--view-height); }
++html:not(.is-enhanced) .biome-rail { display:block; }
++html:not(.is-enhanced) .chapter-hold { height:auto!important; }
++html.is-enhanced[data-input='touch'].is-reduced-motion .members { height:auto; min-height:var(--view-height); position:relative; }
+-- 
+2.51.1
+
+
+From fe5589e9212166f2ecbf216f55a9ee47726e6edf Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:04:39 -0300
+Subject: [PATCH 5/7] v39 mobile leaders
+
+---
+ CHECKPOINT-v39.md |  1 +
+ dist/app.js       | 20 ++++++++++++++++++--
+ dist/v35.css      |  5 +++++
+ 3 files changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+index 409705b..a442a34 100644
+--- a/CHECKPOINT-v39.md
++++ b/CHECKPOINT-v39.md
+@@ -7,3 +7,4 @@ Base: main f9ba99e (v38). GitHub branch creation: integration 403.
+ 3. Shared compact release neck, staggered separation and tangent flight; split mass transfers into 23 retained orbit drops.
+ 4. Compact circle arcs, reusable mother points and gather drops, unchanged-path/hidden-label write guards; removed listener monkey patch and bridge quantization.
+ 5. Touch layout uses native biome horizontal scrolling; independent vertical chapter holds and cached top positions preserve bridge/liquid progress. Desktop track retained.
++6. Management native horizontal rail, cached card offsets, native gestures and chapter-button rail navigation.
+diff --git a/dist/app.js b/dist/app.js
+index 3ac2d15..2ec1e0c 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -228,6 +228,9 @@
+       if(panel===bridge) bridgeHold=hold;else memberHold=hold;
+     }
+     biomeRail.addEventListener('scroll',()=>{biomeScroll=biomeRail.scrollLeft;schedule();},{passive:true});
++    leaders.classList.add('native-rail');leaders.tabIndex=0;
++    leaders.setAttribute('aria-label','管理层，左右滑动');
++    leaders.addEventListener('scroll',()=>{leaderScroll=leaders.scrollLeft;schedule();},{passive:true});
+   }
+   function measureLiquid() {
+     gatherPlan=L.buildGather(M,memberBubbles.length,width,height);
+@@ -256,7 +259,8 @@
+     geometry=panels.map((panel,i)=>({panel,x:i<5?biomeTop:top(panel===bridge?bridgeHold:panel===members?memberHold:panel),
+       width,copy:panel.querySelector('.biome-copy'),visual:panel.querySelector('.biome-visual'),
+       railOffset:i<5?i*width:0,surface:getComputedStyle(panel).backgroundColor}));
+-    cardGeometry=leaderCards.map(card=>({card,x:top(card),width,content:card.lastElementChild}));
++    const leaderLeft=leaders.getBoundingClientRect().left;
++    cardGeometry=leaderCards.map(card=>({card,x:card.getBoundingClientRect().left-leaderLeft+leaders.scrollLeft,width,content:card.lastElementChild}));
+     bridgeStart=mobileBridgeTop;memberStart=mobileMemberTop;
+     travel=Math.max(0,shell.offsetHeight-height-lead);
+     logoTop=mark.offsetTop;logoHeight=mark.offsetHeight;
+@@ -481,7 +485,7 @@
+       }
+     }
+     cardGeometry.forEach(g => {
+-      const relative=touchFirst?g.x-desired:g.x-scrolling.x;
++      const relative=touchFirst?g.x-leaderScroll:g.x-scrolling.x;
+       if (relative > width*1.15 || relative+g.width < -width*.15) return;
+       const reveal = reduced ? 1 : easeOut(progress(1-relative/width,.04,.85));
+       g.content.style.opacity = reveal;
+@@ -555,6 +559,17 @@
+   }
+   function nextStop(direction) {
+     const current = scrollY;
++    if(touchFirst) {
++      const rail=current>=geometry[6].x-height*.25 && current<geometry[6].x+height*.75?leaders:
++        current>=geometry[0].x-height*.25 && current<geometry[0].x+height*.75?biomeRail:null;
++      if(rail) {
++        const index=Math.round((rail===leaders?leaderScroll:biomeScroll)/width);
++        const last=rail===leaders?leaderCards.length:4;
++        if(index+direction>=0 && index+direction<=last) {
++          rail.scrollTo({left:(index+direction)*width,behavior:reduced?'instant':'smooth'});return;
++        }
++      }
++    }
+     const candidates = direction>0 ? stops.filter(x=>x>current+4) : stops.filter(x=>x<current-4).reverse();
+     if (candidates.length) goTo(candidates[0]);
+   }
+@@ -598,6 +613,7 @@
+       else if(scrollKeys.includes(event.key) && !isControl(event.target)) event.preventDefault();
+       return;
+     }
++    if(touchFirst && event.target.closest?.('.native-rail') && ['ArrowLeft','ArrowRight'].includes(event.key)) return;
+     if(isControl(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
+     if(!scrollKeys.includes(event.key)) return;
+     event.preventDefault();
+diff --git a/dist/v35.css b/dist/v35.css
+index 7554baf..780b99c 100644
+--- a/dist/v35.css
++++ b/dist/v35.css
+@@ -29,3 +29,8 @@ html.is-enhanced[data-input='touch'] .leader-card { width:100%; height:var(--vie
+ html:not(.is-enhanced) .biome-rail { display:block; }
+ html:not(.is-enhanced) .chapter-hold { height:auto!important; }
+ html.is-enhanced[data-input='touch'].is-reduced-motion .members { height:auto; min-height:var(--view-height); position:relative; }
++
++html.is-enhanced[data-input='touch'] .leaders.native-rail { display:flex; height:var(--view-height); }
++html.is-enhanced[data-input='touch'] .leaders .leader-list { display:flex; flex:0 0 auto; }
++html.is-enhanced[data-input='touch'] .leaders .section-intro,
++html.is-enhanced[data-input='touch'] .leaders .leader-card { flex:0 0 100vw; width:100vw; scroll-snap-align:start; }
+-- 
+2.51.1
+
+
+From d2051727876c71c5c33c48057282cfb8bc7feb9e Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:05:40 -0300
+Subject: [PATCH 6/7] v39 ios performance
+
+---
+ CHECKPOINT-v39.md |  1 +
+ dist/app.js       | 75 +++++++++++++++++++++++++++++------------------
+ dist/index.html   | 12 ++++----
+ dist/v35.css      |  3 ++
+ package.json      |  4 +--
+ 5 files changed, 59 insertions(+), 36 deletions(-)
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+index a442a34..02c16b8 100644
+--- a/CHECKPOINT-v39.md
++++ b/CHECKPOINT-v39.md
+@@ -8,3 +8,4 @@ Base: main f9ba99e (v38). GitHub branch creation: integration 403.
+ 4. Compact circle arcs, reusable mother points and gather drops, unchanged-path/hidden-label write guards; removed listener monkey patch and bridge quantization.
+ 5. Touch layout uses native biome horizontal scrolling; independent vertical chapter holds and cached top positions preserve bridge/liquid progress. Desktop track retained.
+ 6. Management native horizontal rail, cached card offsets, native gestures and chapter-button rail navigation.
++7. Cached Canvas gradients/terrain/size; stable touch viewport with real resize/orientation rebuild; v39 entrypoints.
+diff --git a/dist/app.js b/dist/app.js
+index 2ec1e0c..fbcd292 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -37,7 +37,7 @@
+     panel.prepend(visual);
+   });
+   root.dataset.brand = BRAND_MODE;
+-  root.dataset.version = '34';
++  root.dataset.version = '39';
+   root.dataset.input = touchFirst ? 'touch' : 'pointer';
+ 
+   let reduced = mediaQuery.matches;
+@@ -114,6 +114,7 @@
+       this.fg = this.front.getContext('2d');
+       if (!this.bg || !this.fg) throw new Error('Canvas unavailable');
+       this.atlas = document.createElement('canvas');
++      this.terrain=new Map();this.sizeKey='';this.drawKey='';
+     }
+     makeAtlas() {
+       // Match the painted aspect ratio; retain game-texture proportions on phones.
+@@ -144,6 +145,9 @@
+       });
+     }
+     resize() {
++      const key=[width,height,touchFirst?1:Math.min(devicePixelRatio||1,1.5)].join(':');
++      if(this.sizeKey===key) return;
++      this.sizeKey=key;this.drawKey='';this.terrain.clear();
+       this.makeAtlas();
+       // A 1x canvas is enough beneath the textured artwork on touch screens and
+       // avoids pushing two retina-sized canvases through every scroll frame.
+@@ -152,6 +156,10 @@
+         canvas.width = Math.round(width * this.dpr);
+         canvas.height = Math.round(height * this.dpr);
+       }
++      this.sky=this.bg.createLinearGradient(0,0,0,height);
++      this.sky.addColorStop(0,'#f3f2ec');this.sky.addColorStop(.53,'#e9ece1');this.sky.addColorStop(1,'#c3d2bc');
++      this.shade=this.fg.createLinearGradient(0,height*.60,0,height);
++      this.shade.addColorStop(0,'transparent');this.shade.addColorStop(1,'#0a100950');
+     }
+     ridge(x, base, amplitude, phase) {
+       return base + height * amplitude * (
+@@ -165,15 +173,20 @@
+       ctx.translate(width * .5, height * .5);
+       ctx.scale(zoom, zoom);
+       ctx.translate(-width * .5 + width * .30 * entry, -height * .5 + height * .035 * entry);
+-      ctx.beginPath();
+-      const sample = Math.max(touchFirst ? 9 : 5, width / (touchFirst ? 54 : 100));
+-      for (let x = -width; x <= width * 2; x += sample) {
+-        const y = this.ridge(x, base + offsetY, amplitude, phase);
+-        if (x === -width) ctx.moveTo(x, y); else ctx.lineTo(x, y);
++      const key=[base,amplitude,phase].join(':');
++      let contour=this.terrain.get(key);
++      if(!contour) {
++        contour=new Path2D();
++        const sample=Math.max(touchFirst?9:5,width/(touchFirst?54:100));
++        for(let x=-width;x<=width*2;x+=sample) {
++          const y=this.ridge(x,base,amplitude,phase);
++          if(x===-width) contour.moveTo(x,y);else contour.lineTo(x,y);
++        }
++        contour.lineTo(width*2,height*3);contour.lineTo(-width,height*3);contour.closePath();
++        this.terrain.set(key,contour);
+       }
+-      ctx.lineTo(width * 2, height * 3); ctx.lineTo(-width, height * 3); ctx.closePath();
+-      ctx.clip();
+-      ctx.drawImage(this.atlas, -width * .08 + offsetX, base - height * .19 + offsetY, width * 1.16, height * 1.25);
++      ctx.translate(0,offsetY);ctx.clip(contour);
++      ctx.drawImage(this.atlas,-width*.08+offsetX,base-height*.19,width*1.16,height*1.25);
+       if (wash) {
+         ctx.fillStyle = wash; ctx.fillRect(-width, -height, width * 3, height * 4);
+       }
+@@ -186,15 +199,16 @@
+     }
+     draw(state, entry, now) {
+       const { bg, fg } = this;
++      const key=[state.world,entry,touchFirst?0:cursorX,touchFirst?0:cursorY,touchFirst||reduced?0:now].join(':');
++      if(key===this.drawKey) return;
++      this.drawKey=key;
+       this.back.style.transform='none';
+       this.front.style.transform='none';
+       for (const ctx of [bg, fg]) {
+         ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+         ctx.clearRect(0, 0, width, height);
+       }
+-      const sky = bg.createLinearGradient(0, 0, 0, height);
+-      sky.addColorStop(0, '#f3f2ec'); sky.addColorStop(.53, '#e9ece1'); sky.addColorStop(1, '#c3d2bc');
+-      bg.fillStyle = sky; bg.fillRect(0, 0, width, height);
++      bg.fillStyle = this.sky; bg.fillRect(0, 0, width, height);
+       const drift = reduced || touchFirst ? 0 : Math.sin(now / 7800) * 2;
+       const base = logoTop + logoHeight * .67;
+       const rise = (1 - state.world) * height * .24;
+@@ -206,9 +220,7 @@
+       const centralWave = this.ridge(width * .5, 0, .035, 2.5);
+       const frontBase = base - centralWave;
+       this.sheet(fg, frontBase, .035, 2.5, pointerX * .85, rise * .5 + pointerY * .42 + drift * .6 - entry * height * .04, '#09180915', entry);
+-      const shade = fg.createLinearGradient(0, height * .60, 0, height);
+-      shade.addColorStop(0, 'transparent'); shade.addColorStop(1, '#0a100950');
+-      fg.fillStyle = shade; fg.fillRect(0, height * .62, width, height * .38);
++      fg.fillStyle = this.shade; fg.fillRect(0, height * .62, width, height * .38);
+     }
+   }
+ 
+@@ -233,6 +245,7 @@
+     leaders.addEventListener('scroll',()=>{leaderScroll=leaders.scrollLeft;schedule();},{passive:true});
+   }
+   function measureLiquid() {
++    if(gatherPlan && gatherPlan.width===width && gatherPlan.height===height) return;
+     gatherPlan=L.buildGather(M,memberBubbles.length,width,height);
+     splitPlan=L.buildSplit(M,memberBubbles.length,width,height,gatherPlan.rows[gatherPlan.steps].radius);
+     anniversaryParticles.forEach((dot,i)=> {
+@@ -280,6 +293,7 @@
+     const oldLead = lead, oldTravel = travel, oldY = scrollY;
+     const previousEntry = oldLead ? oldY / oldLead : 0;
+     const previousTrackRatio = oldTravel ? (oldY - oldLead) / oldTravel : 0;
++    const oldWidth=width,oldHeight=height;
+     width = document.documentElement.clientWidth;
+     height = innerHeight;
+     root.style.setProperty('--view-height', height + 'px');
+@@ -430,6 +444,11 @@
+     visualLiquid=reduced?liquidTarget:M.liquidProgress(visualLiquid,liquidTarget,dt);
+     // Keep the stage in view while its bounded visual progress catches up.
+     if(Math.abs(visualLiquid-liquidTarget)>.00001) scrolling.x=memberStart;
++    if(touchFirst) {
++      const catching=Math.abs(visualLiquid-liquidTarget)>.00001 && visualLiquid>0 && visualLiquid<.47 &&
++        (desired<mobileMemberTop || desired>mobileMemberTop+memberDuration);
++      members.classList.toggle('is-catching',catching);
++    }
+     renderMembers(visualLiquid, scrolling.x);
+     const shift = smooth(progress(bridgeState.phase,.12,.76));
+     const fade = smooth(progress(bridgeState.phase,.76,1));
+@@ -457,7 +476,7 @@
+     if (scene && entry < 1) {
+       // After the intro, mobile moves the finished layers on the compositor.
+       // Desktop keeps the richer per-frame canvas camera.
+-      if (touchFirst && ready && !reduced) scene.transform(entry);
++      if (touchFirst && ready && !reduced) {scene.draw(state,0,now);scene.transform(entry);}
+       else scene.draw(state, reduced ? 0 : entry, now);
+     }
+     let chapter = 0;
+@@ -467,7 +486,7 @@
+       const relative = touchFirst ? (g.copy?g.railOffset-biomeScroll:vertical) : g.x-scrolling.x;
+       const chapterHeight=g.panel===members?height+memberDuration:g.panel===bridge?height+bridgeDuration:height;
+       const visible = touchFirst ? vertical<height && vertical+chapterHeight>0 && (!g.copy || relative<width && relative+width>0) : relative < width && relative + g.width > 0 && entry > .7;
+-      g.panel.inert = !ready || !visible;
++      g.panel.inert = !ready || (!visible && !(g.panel===members && members.classList.contains('is-catching')));
+       if (entry >= .86 && (touchFirst ? vertical<=height*.5 && (!g.copy || relative<=width*.5) : relative<=width*.5)) chapter=i+1;
+       const copy = g.copy;
+       if (copy) {
+@@ -532,10 +551,11 @@
+     clearTimeout(window.twoNBootTimer);
+     if (frameId) cancelAnimationFrame(frameId);
+     root.classList.remove('is-booting','is-enhanced','is-intro-locked');
++    members.classList.remove('is-catching');
+     root.classList.add('motion-fallback');
+     shell.style.height='auto'; hero.style.cssText=''; mark.style.cssText='';
+     track.style.cssText='';
+-    if(touchFirst) {bridgeHold.style.height='auto';memberHold.style.height='auto';}
++    if(bridgeHold) {bridgeHold.style.height='auto';memberHold.style.height='auto';}
+     introScreen.classList.add('is-finished'); introScreen.inert=true;
+     for (const element of [header,controls,hero,...panels]) { element.inert=false; element.style.opacity=''; }
+     for (const element of [...introLines,eyebrow,cue]) element.style.cssText='';
+@@ -646,16 +666,15 @@
+   addEventListener('blur',()=>{wantedX=0;wantedY=0;});
+   let resizeTimer;
+   addEventListener('resize',()=>{
+-    // Update the visible surface when Safari retracts its toolbar, while keeping
+-    // scroll distances and the expensive canvas atlas stable during the gesture.
+-    if (touchFirst && Math.abs(document.documentElement.clientWidth-width)<2) {
+-      if(window.visualViewport && Math.abs(window.visualViewport.scale-1)>.01) return;
+-      root.style.setProperty('--view-height',innerHeight+'px');
+-      if(active && initialized) shell.style.height=(lead+travel+innerHeight)+'px';
+-      schedule();
+-      return;
+-    }
+-    clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>measure(),160);
++    if(!active) return;
++    if(window.visualViewport && Math.abs(window.visualViewport.scale-1)>.01) return;
++    // Address-bar changes do not resize sticky chapters, canvases or liquid plans.
++    const sameWidth=Math.abs(document.documentElement.clientWidth-width)<3;
++    if(touchFirst && sameWidth && Math.abs(innerHeight-height)<Math.max(180,height*.25)) return;
++    clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>measure(),180);
++  },{passive:true});
++  addEventListener('orientationchange',()=>{
++    clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(active) measure();},240);
+   },{passive:true});
+   addEventListener('pageshow',event=>{
+     if(event.persisted && initialized) {finishIntro();measure();}
+diff --git a/dist/index.html b/dist/index.html
+index a712b7c..3b4b0a9 100644
+--- a/dist/index.html
++++ b/dist/index.html
+@@ -18,12 +18,12 @@
+     };
+     window.twoNBootTimer = setTimeout(window.twoNFallback, 12000);
+   </script>
+-  <link rel="stylesheet" href="style.css?v=35.8">
+-  <link rel="stylesheet" href="v35.css?v=35.8">
+-  <script src="motion.js?v=35.8" defer></script>
+-  <script src="v35-runtime.js?v=35.8" defer></script>
+-  <script src="liquid.js?v=35.8" defer></script>
+-  <script src="app.js?v=35.8" defer></script>
++  <link rel="stylesheet" href="style.css?v=39">
++  <link rel="stylesheet" href="v35.css?v=39">
++  <script src="motion.js?v=39" defer></script>
++  <script src="v35-runtime.js?v=39" defer></script>
++  <script src="liquid.js?v=39" defer></script>
++  <script src="app.js?v=39" defer></script>
+ </head>
+ <body>
+   <a class="skip-link" href="#story">跳到主要内容</a>
+diff --git a/dist/v35.css b/dist/v35.css
+index 780b99c..8c4274c 100644
+--- a/dist/v35.css
++++ b/dist/v35.css
+@@ -34,3 +34,6 @@ html.is-enhanced[data-input='touch'] .leaders.native-rail { display:flex; height
+ html.is-enhanced[data-input='touch'] .leaders .leader-list { display:flex; flex:0 0 auto; }
+ html.is-enhanced[data-input='touch'] .leaders .section-intro,
+ html.is-enhanced[data-input='touch'] .leaders .leader-card { flex:0 0 100vw; width:100vw; scroll-snap-align:start; }
++
++html.is-enhanced[data-input='touch'] .chapter-hold>.members.is-catching { position:fixed; inset:0; z-index:20!important; }
++html.is-enhanced[data-input='touch'] .biome-visual { contain:paint; }
+diff --git a/package.json b/package.json
+index e62a985..93cff03 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+-  "name": "2n-guild-v20",
+-  "version": "20.0.0",
++  "name": "2n-guild-v39",
++  "version": "39.0.0",
+   "private": true,
+   "scripts": {
+     "dev": "node tools/preview-server.mjs",
+-- 
+2.51.1
+
+
+From 6d03e65723cd7c2900e003bc03d65d2cc97f1519 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 11 Sep 2026 10:09:22 -0300
+Subject: [PATCH 7/7] v39 smoke fixes and checkpoint 8
+
+---
+ CHECKPOINT-v39.md    |  4 ++++
+ dist/app.js          |  4 ++--
+ dist/liquid.js       |  1 +
+ tools/check-site.mjs | 10 +++++-----
+ 4 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/CHECKPOINT-v39.md b/CHECKPOINT-v39.md
+index 02c16b8..29aded0 100644
+--- a/CHECKPOINT-v39.md
++++ b/CHECKPOINT-v39.md
+@@ -9,3 +9,7 @@ Base: main f9ba99e (v38). GitHub branch creation: integration 403.
+ 5. Touch layout uses native biome horizontal scrolling; independent vertical chapter holds and cached top positions preserve bridge/liquid progress. Desktop track retained.
+ 6. Management native horizontal rail, cached card offsets, native gestures and chapter-button rail navigation.
+ 7. Cached Canvas gradients/terrain/size; stable touch viewport with real resize/orientation rebuild; v39 entrypoints.
++8. Static assets/syntax passed; existing 7 tests passed. Dense 95-member touch geometry produced 742 neck samples with conserved gather and split area. Chrome desktop and forced touch branch booted ready; both native rails scrollable and member SVG updated. Fixed pre-initialization RAF discovered in smoke check.
++
++Run: npm run dev (serve dist); npm run check; npm test.
++Next: Terra real-iPhone Safari gesture/visual/performance QA, especially rapid reverse scrolling, split-to-orbit handoff and toolbar/orientation changes. Forced touch Chrome is not an iOS Safari test. Orbit radii now carry the conserved split mass, rather than shrinking away during release.
+diff --git a/dist/app.js b/dist/app.js
+index fbcd292..74afeb3 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -293,7 +293,6 @@
+     const oldLead = lead, oldTravel = travel, oldY = scrollY;
+     const previousEntry = oldLead ? oldY / oldLead : 0;
+     const previousTrackRatio = oldTravel ? (oldY - oldLead) / oldTravel : 0;
+-    const oldWidth=width,oldHeight=height;
+     width = document.documentElement.clientWidth;
+     height = innerHeight;
+     root.style.setProperty('--view-height', height + 'px');
+@@ -382,6 +381,7 @@
+     if(reduced) {
+       memberCloud.style.visibility='visible';
+       memberBubbles.forEach(b=>b.style.opacity='1');
++      labelOpacity.fill(-1);
+       return;
+     }
+     const gathering=phase<=.355, splitting=phase>.355 && phase<.47;
+@@ -422,7 +422,7 @@
+ 
+   function frame(now) {
+     frameId = 0;
+-    if (!active || document.hidden) return;
++    if (!active || !initialized || document.hidden) return;
+     const dt = Math.min(60, Math.max(1, now - (lastFrame || now-16)));
+     lastFrame = now;
+     if (playing) time = Math.min(M.DURATION, now - startedAt);
+diff --git a/dist/liquid.js b/dist/liquid.js
+index 2cbd42d..8ea7ec7 100644
+--- a/dist/liquid.js
++++ b/dist/liquid.js
+@@ -213,6 +213,7 @@
+     const x=clamp(rx*recoilScale,-6,6),y=clamp(ry*recoilScale,-6,6);
+     for(const drop of drops) {drop.x+=x*drop.absorbed;drop.y+=y*drop.absorbed;}
+ 
++    if(!plan.dense) separateDrops(drops,2.5,5,30);
+     const speed=Math.hypot(x,y);
+     const deform={lobes,axis:speed>.01?Math.atan2(y,x):0,stretch:Math.min(.022,speed*.0026)};
+     const value={radius,x,y,drops,deform};
+diff --git a/tools/check-site.mjs b/tools/check-site.mjs
+index 0cd6513..2c74711 100644
+--- a/tools/check-site.mjs
++++ b/tools/check-site.mjs
+@@ -18,10 +18,10 @@ assert.equal((html.match(/class="panel biome"/g)||[]).length,5);
+ assert.equal((html.match(/class="leader-card"/g)||[]).length,5);
+ assert.equal((html.match(/class="panel /g)||[]).length,10);
+ for(const name of ['CNFlyDream','sschara','awdc','flowerwsr','20180333']) assert.ok(html.includes(name));
+-assert.ok(html.indexOf('motion.js?v=35')<html.indexOf('v35-runtime.js?v=35'),'v35 runtime must load after motion.js');
+-assert.ok(html.indexOf('v35-runtime.js?v=35')<html.indexOf('app.js?v=35'),'v35 runtime must load before app.js');
+-assert.ok(html.includes('liquid.js?v=35'));
+-assert.ok(html.includes('v35.css?v=35'));
++assert.ok(html.indexOf('motion.js?v=39')<html.indexOf('v35-runtime.js?v=39'),'v35 runtime must load after motion.js');
++assert.ok(html.indexOf('v35-runtime.js?v=39')<html.indexOf('app.js?v=39'),'v35 runtime must load before app.js');
++assert.ok(html.includes('liquid.js?v=39'));
++assert.ok(html.includes('v35.css?v=39'));
+ assert.ok(html.includes('preload="none"'));
+ assert.ok(html.includes('setTimeout(window.twoNFallback, 12000)'));
+-console.log('Static checks passed: local assets, JS syntax, current chapters/leaders, v35 runtime order, lazy video and fallback.');
++console.log('Static checks passed: local assets, JS syntax, current chapters/leaders, v39 runtime order, lazy video and fallback.');
+-- 
+2.51.1
+
