@@ -10,17 +10,12 @@
 '''flowerwsr''' '''sschara''' '''cnflydream'''<br>
 {{color|#1fdbde|公会}}网站：https://pythonwsr.github.io/2n-welcome<br>
 {{color|#1fdbde|公会}}qq群号：1092759950<br>
-{{color|#1fdbde|公会}}unique榜：<br>
-<table class="wiki-table">
-  <thead>
-    <tr><th>序号</th><th>玩家</th><th>q花瓣</th><th>锻造时间</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>1</td><td style="color:#555555;">'''q'''</td><td style="color:#555555;">Champion's Crown</td><td></td></tr>
-    <tr><td>2</td><td style="color:#555555;">'''0irrolf'''</td><td style="color:#555555;">q Coin</td><td>2026.8.18</td></tr>
-    <tr><td>3</td><td style="color:#555555;">'''physical37'''</td><td style="color:#555555;">q Coin</td><td>2026.8.22</td></tr>
-  </tbody>
-</table><br>
+{{color|#1fdbde|公会}}unique榜：
+{{table|序号,玩家,q花瓣,锻造时间|
+1,{{color|#555555|'''q'''}},{{color|#555555|Champion's Crown}},|
+2,{{color|#555555|'''0irrolf'''}},{{color|#555555|q Coin}},2026.8.18|
+3,{{color|#555555|'''physical37'''}},{{color|#555555|q Coin}},2026.8.22}}
+<br>
 {{color|#1fdbde|公会}}信息表格：https://www.kdocs.cn/l/cvM5Vz8Fd3dC<br>
 {{color|#1fdbde|公会}}成立时间：2月24日，感谢各位的支持！
 <br>
