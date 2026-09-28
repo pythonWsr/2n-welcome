@@ -3,6 +3,10 @@ name: Push Notification via Issue
 on:
   push:
     branches: [ main ]
+  schedule:
+    # 每天 UTC 00:00（北京时间 08:00）自动清理一次
+    - cron: '0 0 * * *'
+  workflow_dispatch:   # 可选：允许手动触发，方便测试
 
 permissions:
   contents: read
@@ -13,11 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        if: github.event_name == 'push'
         with:
           fetch-depth: 0
 
       - name: Fetch before sha (force push 回退检测用)
-        if: github.event.forced == true
+        if: github.event_name == 'push' && github.event.forced == true
         continue-on-error: true
         env:
           BEFORE: ${{ github.event.before }}
@@ -37,6 +42,7 @@ jobs:
 
       - name: Generate diff files
         id: diff
+        if: github.event_name == 'push'
         env:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.event.after }}
@@ -59,7 +65,6 @@ jobs:
             RANGE="--cached"
           fi
 
-          # 摘要直接写文件，避免 shell 变量 + env 注入
           git diff --stat $RANGE > "$SUMMARY_FILE" 2>/dev/null || true
 
           if [ ! -s "$SUMMARY_FILE" ]; then
@@ -69,19 +74,16 @@ jobs:
           fi
 
           echo "skip=false" >> $GITHUB_OUTPUT
-
-          # 完整 diff 直接重定向到文件，不进变量
           git diff $RANGE > "$FULL_FILE" 2>/dev/null || true
           echo "完整 diff 大小: $(wc -c < "$FULL_FILE") 字节"
 
-      - name: Close issues older than 6 months
-        if: steps.diff.outputs.skip != 'true'
+      - name: Close issues older than 90 days
         id: stale
         uses: actions/github-script@v7
         with:
           script: |
             const cutoff = new Date();
-            cutoff.setMonth(cutoff.getMonth() - 6);
+            cutoff.setDate(cutoff.getDate() - 90);   // 90 天前
 
             const issues = await github.paginate(
               github.rest.issues.listForRepo,
@@ -108,11 +110,12 @@ jobs:
               }
             }
 
+            console.log(`本次关闭了 ${closed.length} 个超过 90 天的 Issue。`);
             core.setOutput('closed_count', closed.length);
             core.setOutput('closed_issues', closed.join('\n'));
 
       - name: Close issues whose commit was reverted
-        if: steps.diff.outputs.skip != 'true'
+        if: github.event_name == 'push' && steps.diff.outputs.skip != 'true'
         id: revert
         uses: actions/github-script@v7
         with:
@@ -120,7 +123,6 @@ jobs:
             const fs = require('fs');
             const { execSync } = require('child_process');
 
-            // 从 GITHUB_EVENT_PATH 读取整个事件，避免 toJSON 内联
             const event = JSON.parse(
               fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')
             );
@@ -131,7 +133,6 @@ jobs:
 
             const droppedShas = new Set();
 
-            // ① 普通 git revert
             for (const c of commits) {
               const msg = c.message || '';
               for (const m of msg.matchAll(/This reverts commit ([0-9a-f]{7,40})\./g)) {
@@ -139,7 +140,6 @@ jobs:
               }
             }
 
-            // ② force push 丢弃的提交
             const zero = '0000000000000000000000000000000000000000';
             if (forced && before && before !== zero && after) {
               try {
@@ -203,7 +203,7 @@ jobs:
             core.setOutput('reverted_issues', closed.join('\n'));
 
       - name: Create issue to notify pythonWsr
-        if: steps.diff.outputs.skip != 'true'
+        if: github.event_name == 'push' && steps.diff.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
           SUMMARY_FILE: ${{ steps.diff.outputs.summary_file }}
@@ -232,7 +232,6 @@ jobs:
             const revertedList = process.env.REVERTED_LIST || '';
             const MAX_BODY = 65536;
 
-            // 摘要从文件读（一般很小）
             const summary = fs.existsSync(summaryFile)
               ? fs.readFileSync(summaryFile, 'utf8')
               : '(无变更)';
@@ -251,7 +250,7 @@ jobs:
             }
 
             const staleSection = closedCount > 0
-              ? `\n\n--- 已关闭的过期 Issue（超过 6 个月，共 ${closedCount} 个）---\n${closedList}\n`
+              ? `\n\n--- 已关闭的过期 Issue（超过 90 天，共 ${closedCount} 个）---\n${closedList}\n`
               : '';
 
             const revertedSection = revertedCount > 0
@@ -275,7 +274,6 @@ jobs:
             \`\`\`
             `;
 
-            // 先估算 full 文件大小，避免把巨大内容读进内存拼接
             let fullContent = '';
             let omitted = false;
             if (fs.existsSync(fullFile)) {
