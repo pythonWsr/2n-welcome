@@ -1,0 +1,134 @@
+/* announcements.css – 通知列表与详情样式 */
+
+/* ---------- 列表页 ---------- */
+.announcement-list-page {
+  width: 100%;
+}
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notice-item {
+  display: block;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.notice-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.notice-item-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.notice-unread {
+  color: #d92020;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.notice-head {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.notice-head-normal   { color: #4b5563; }
+.notice-head-important{ color: #dc2626; }
+.notice-head-forward  { color: #2563eb; }
+.notice-head-pinned   { color: #ea8a0c; }
+.notice-head-outdated { color: #9ca3af; }
+.notice-head-debug    { color: #9333ea; }
+
+.notice-item-title {
+  font-weight: 600;
+}
+.notice-item-title-normal   { color: inherit; }
+.notice-item-title-important{ color: #dc2626; }
+.notice-item-title-forward  { color: #2563eb; }
+.notice-item-title-pinned   { color: #ea8a0c; }
+.notice-item-title-outdated { color: #9ca3af; }
+.notice-item-title-debug    { color: #9333ea; }
+
+.notice-item-summary {
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.5;
+  padding-left: 2em;
+}
+
+/* ---------- 分页 ---------- */
+.notice-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.notice-page-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.notice-page-btn:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.notice-page-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* ---------- 深色模式 ---------- */
+@media (prefers-color-scheme: dark) {
+  .notice-item {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .notice-item:hover {
+    background: rgba(30, 41, 59, 0.9);
+  }
+  .notice-head-normal   { color: #9ca3af; }
+  .notice-head-outdated { color: #6b7280; }
+  .notice-item-title-outdated { color: #6b7280; }
+  .notice-item-summary {
+    color: #94a3b8;
+  }
+  .notice-page-btn {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+  }
+  .notice-page-btn:hover {
+    background: rgba(30, 41, 59, 0.9);
+  }
+  .notice-page-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+}

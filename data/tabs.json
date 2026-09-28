@@ -10,7 +10,7 @@
       "id": "announcements",
       "title": "通知",
       "folder": "data/announcements",
-      "entry": "index.wiki"
+      "entry": "index.html"
     },
     {
       "id": "surveys",

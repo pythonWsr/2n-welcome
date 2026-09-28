@@ -1,0 +1,10 @@
+{
+  head: '普通',
+  title: '增设通知功能',
+  summary: '发布通知示例请参考该文件。',
+  time: '2026-04-26',
+  stamp: 'blank',
+  author: ['flowerwsr'],
+
+  main1: '发布通知示例请参考该json文件。'
+}
