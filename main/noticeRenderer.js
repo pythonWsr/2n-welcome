@@ -2,12 +2,13 @@
 import { parseWiki } from './wikiParser.js';
 
 // ---------- 列表项渲染 ----------
-// options: { file, isRead }
 export function renderNoticeListItem(notice, options = {}) {
   const { file = '', isRead = true } = options;
   const head = resolveHead(notice);
   const color = headColorClass(head);
-  const unread = isRead ? '' : '<span class="notice-unread">[未读]</span>';
+  // 「维护」类型的通知不显示未读提示
+  const isMaintenance = notice.head === '维护';
+  const unread = (isRead || isMaintenance) ? '' : '<span class="notice-unread">[未读]</span>';
   const headTag = head ? `<span class="notice-head notice-head-${color}">[${escapeHTML(head)}]</span>` : '';
   const titleCls = `notice-item-title notice-item-title-${color}`;
 
@@ -25,26 +26,21 @@ export function renderNoticeListItem(notice, options = {}) {
 }
 
 // ---------- 详情渲染 ----------
-// options: { stampDir = './data/announcements/stamp' }
 export function renderNoticeDetail(notice, options = {}) {
   const { stampDir = './data/announcements/stamp' } = options;
   const parts = [];
 
-  // 标题居中
   parts.push(`<h1 class="notice-detail-title">${escapeHTML(notice.title)}</h1>`);
 
-  // 时间（灰色小字）
   if (notice.time) {
     parts.push(`<div class="notice-detail-time">${escapeHTML(notice.time)}</div>`);
   }
 
-  // 正文
   parts.push('<div class="notice-detail-body">');
   for (const block of notice.blocks) {
     if (block.type === 'empty') {
       parts.push('<p class="notice-paragraph notice-empty">&nbsp;</p>');
     } else if (block.type === 'main') {
-      // 段落交由 wikiParser 渲染（支持 wiki / HTML），外层加 class 便于缩进
       parts.push(`<div class="notice-paragraph">${parseWiki(block.content)}</div>`);
     } else if (block.type === 'file') {
       parts.push(renderFileBlock(block.data));
@@ -52,7 +48,6 @@ export function renderNoticeDetail(notice, options = {}) {
   }
   parts.push('</div>');
 
-  // 末尾：盖章 + 作者，右侧重叠
   const hasAuthor = notice.author.length > 0;
   const stampSrc = notice.stamp === 'informal'
     ? `${stampDir}/blue.png`
@@ -62,12 +57,12 @@ export function renderNoticeDetail(notice, options = {}) {
 
   if (hasAuthor || stampSrc) {
     parts.push('<div class="notice-signature">');
+    if (stampSrc) {
+      parts.push(`<img class="notice-stamp" src="${stampSrc}" alt="${escapeHTML(notice.stamp)}" loading="lazy">`);
+    }
     if (hasAuthor) {
       const names = notice.author.map(a => escapeHTML(a)).join(' ');
       parts.push(`<span class="notice-author">${names}</span>`);
-    }
-    if (stampSrc) {
-      parts.push(`<img class="notice-stamp" src="${stampSrc}" alt="${escapeHTML(notice.stamp)}" loading="lazy">`);
     }
     parts.push('</div>');
   }
@@ -120,12 +115,12 @@ function headColorClass(head) {
     '转发': 'forward',
     '置顶': 'pinned',
     '过时': 'outdated',
-    '调试': 'debug'
+    '调试': 'debug',
+    '维护': 'maintenance'
   };
   return map[head] || 'normal';
 }
 
-// ---------- 工具 ----------
 function escapeHTML(str) {
   return String(str)
     .replace(/&/g, '&amp;')

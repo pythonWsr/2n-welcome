@@ -1,5 +1,4 @@
-// read.js – 通用文件查看器
-// 支持后缀：notice / wiki / md / csv / json / html / 图片 / 视频 / 音频 / 其他（按纯文本）
+// read.js – 通用文件查看器（支持调试模式编辑器）
 import { parseNotice } from '../main/noticeParser.js';
 import { renderNoticeDetail } from '../main/noticeRenderer.js';
 import { parseWiki } from '../main/wikiParser.js';
@@ -10,7 +9,6 @@ import { hashString, markNoticeAsRead } from '../main/announcementList.js';
 const params = new URLSearchParams(location.search);
 const rawFile = params.get('file') || '';
 
-// 空 file → 回到首页（保留栏目状态由主站 sessionStorage 处理）
 if (!rawFile) {
   location.replace('../index.html');
 } else {
@@ -23,13 +21,11 @@ async function run(file) {
   const backBtn = document.getElementById('readBack');
   const navEl = document.getElementById('readNav');
 
-  // 返回按钮：优先浏览器历史，无历史则回首页
   backBtn.addEventListener('click', () => {
     if (history.length > 1) history.back();
     else location.href = '../index.html';
   });
 
-  // 清理路径（去掉开头 ./）
   const cleaned = file.replace(/^\.\//, '');
   fileNameEl.textContent = cleaned.split('/').pop();
 
@@ -38,8 +34,13 @@ async function run(file) {
     if (!res.ok) throw new Error('文件加载失败');
     const text = await res.text();
 
-    const html = await renderByExt(cleaned, text);
-    contentEl.innerHTML = html;
+    const result = await renderByExt(cleaned, text);
+    contentEl.innerHTML = result.html;
+
+    // 调试模式：初始化源码编辑器
+    if (result.debug) {
+      setupDebugEditor(contentEl, result.raw);
+    }
 
     // 通知：标记已读
     if (cleaned.toLowerCase().endsWith('.notice')) {
@@ -60,42 +61,82 @@ async function run(file) {
   }
 }
 
+// ---------- 调试编辑器 ----------
+function setupDebugEditor(container, rawText) {
+  const editor = container.querySelector('#debugEditor');
+  const content = container.querySelector('#debugContent');
+  if (!editor || !content) return;
+
+  editor.value = rawText || '';
+
+  editor.addEventListener('input', () => {
+    try {
+      const notice = parseNotice(editor.value);
+      content.innerHTML = renderNoticeDetail(notice, {
+        stampDir: '../data/announcements/stamp'
+      });
+    } catch (e) {
+      content.innerHTML = `<div class="debug-error">解析失败：${escapeHtml(e.message)}</div>`;
+    }
+  });
+}
+
 // ---------- 按后缀渲染 ----------
+// 返回 { html, debug?, raw? }
 async function renderByExt(path, text) {
   const ext = path.split('.').pop().toLowerCase();
 
-  switch (ext) {
-    case 'notice': {
-      const notice = parseNotice(text);
-      return renderNoticeDetail(notice, { stampDir: '../data/announcements/stamp' });
+  if (ext === 'notice') {
+    const notice = parseNotice(text);
+    const contentHtml = renderNoticeDetail(notice, {
+      stampDir: '../data/announcements/stamp'
+    });
+
+    // 调试类型：下方追加源码编辑器
+    if (notice.head === '调试') {
+      return {
+        html: `
+          <div id="debugContent" class="debug-content">${contentHtml}</div>
+          <section class="debug-panel">
+            <h2 class="debug-heading">源码（可编辑）</h2>
+            <textarea id="debugEditor" class="debug-editor" spellcheck="false"></textarea>
+          </section>
+        `,
+        debug: true,
+        raw: text
+      };
     }
+    return { html: contentHtml };
+  }
+
+  switch (ext) {
     case 'wiki':
-      return parseWiki(text);
+      return { html: parseWiki(text) };
     case 'md':
     case 'markdown':
-      return parseMarkdown(text);
+      return { html: parseMarkdown(text) };
     case 'csv':
-      return csvToTable(text);
+      return { html: csvToTable(text) };
     case 'json': {
       try {
         const obj = JSON.parse(text);
-        return `<pre class="json-view">${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`;
+        return { html: `<pre class="json-view">${escapeHtml(JSON.stringify(obj, null, 2))}</pre>` };
       } catch {
-        return `<pre>${escapeHtml(text)}</pre>`;
+        return { html: `<pre>${escapeHtml(text)}</pre>` };
       }
     }
     case 'html':
     case 'htm':
-      return text; // 直接注入
+      return { html: text };
     case 'png': case 'jpg': case 'jpeg':
     case 'gif': case 'webp': case 'svg':
-      return `<img src="../${escapeHtml(path)}" alt="" style="max-width:100%;border-radius:12px;">`;
+      return { html: `<img src="../${escapeHtml(path)}" alt="" style="max-width:100%;border-radius:12px;">` };
     case 'mp4': case 'webm': case 'mov':
-      return `<video controls preload="metadata" src="../${escapeHtml(path)}" style="max-width:100%;border-radius:12px;"></video>`;
+      return { html: `<video controls preload="metadata" src="../${escapeHtml(path)}" style="max-width:100%;border-radius:12px;"></video>` };
     case 'mp3': case 'wav': case 'ogg':
-      return `<audio controls preload="metadata" src="../${escapeHtml(path)}"></audio>`;
+      return { html: `<audio controls preload="metadata" src="../${escapeHtml(path)}"></audio>` };
     default:
-      return `<pre>${escapeHtml(text)}</pre>`;
+      return { html: `<pre>${escapeHtml(text)}</pre>` };
   }
 }
 
@@ -137,11 +178,10 @@ async function loadSiblingNav(filePath, navEl) {
       makeItem(prev, '← 上一条', prevTitle, 'prev') +
       makeItem(next, '下一条 →', nextTitle, 'next');
   } catch {
-    // 无 index.json 或其他错误：静默忽略
+    // 静默忽略
   }
 }
 
-// 读取 .notice 的 title
 async function getTitle(path) {
   try {
     const res = await fetch(`../${path}?_=${Date.now()}`);
