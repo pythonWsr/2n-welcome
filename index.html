@@ -4,22 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
   <title>[2n] 公会 · 欢迎</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="./main/css/base.css">
-  <link rel="stylesheet" href="./main/css/components.css">
-
-  <!-- 主题：在 <head> 内同步决定，避免闪烁 -->
   <script>
     (function() {
-      try {
-        var stored = localStorage.getItem('theme-mode');
-        var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var useDark = stored === 'dark' || (!stored && systemDark);
-        var href = useDark ? './main/css/theme-dark.css' : './main/css/theme-light.css';
-        document.write('<link rel="stylesheet" id="theme-link" href="' + href + '">');
-      } catch (e) {
-        document.write('<link rel="stylesheet" id="theme-link" href="./main/css/theme-light.css">');
-      }
+      var ts = Date.now();
+      document.write('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">');
+      document.write('<link rel="stylesheet" href="./main/css/base.css?v=' + ts + '">');
+      document.write('<link rel="stylesheet" href="./main/css/components.css?v=' + ts + '">');
+      var stored = localStorage.getItem('theme-mode');
+      var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var useDark = stored === 'dark' || (!stored && systemDark);
+      var themeHref = useDark ? './main/css/theme-dark.css' : './main/css/theme-light.css';
+      document.write('<link rel="stylesheet" id="theme-link" href="' + themeHref + '?v=' + ts + '">');
     })();
   </script>
   <script>
@@ -29,7 +24,7 @@
         mq.addEventListener('change', function(e) {
           if (localStorage.getItem('theme-mode')) return;
           var link = document.getElementById('theme-link');
-          if (link) link.href = e.matches ? './main/css/theme-dark.css' : './main/css/theme-light.css';
+          if (link) link.href = (e.matches ? './main/css/theme-dark.css' : './main/css/theme-light.css') + '?v=' + Date.now();
         });
       } catch (e) {}
     })();
@@ -48,9 +43,7 @@
       align-items: center;
       gap: 12px;
     }
-    .settings-wrapper {
-      position: relative;
-    }
+    .settings-wrapper { position: relative; }
     .settings-dropdown {
       position: absolute;
       top: 100%;
@@ -63,7 +56,6 @@
 </head>
 <body>
 <div class="page">
-  <!-- 顶部标题与设置 -->
   <header class="main-header">
     <h1 class="main-title" id="guildTitle">[2n] 公会</h1>
     <div class="header-right">
@@ -84,85 +76,54 @@
     </div>
   </header>
 
-  <!-- 轮播区域（图片/视频混合） -->
   <section class="carousel-section" aria-label="活动与通知">
     <div class="carousel-container" id="carousel">
-      <div class="carousel-track" id="carouselTrack">
-        <!-- 轮播项由 main/carousel.js 动态生成 -->
-      </div>
+      <div class="carousel-track" id="carouselTrack"></div>
       <button class="carousel-btn prev" id="carouselPrev" aria-label="上一张"><i class="fas fa-chevron-left"></i></button>
       <button class="carousel-btn next" id="carouselNext" aria-label="下一张"><i class="fas fa-chevron-right"></i></button>
       <div class="carousel-dots" id="carouselDots"></div>
     </div>
   </section>
 
-  <!-- 介绍文字（由 Wiki 解析器动态渲染） -->
   <section class="intro-text" id="introText">
     <div class="loading-placeholder">加载中...</div>
   </section>
 
-  <!-- 栏目标题横向滑动导航（按钮由 tabs.json 动态生成） -->
   <nav class="tab-nav" id="tabNav">
-    <div class="tab-track" id="tabTrack">
-      <!-- 按钮由脚本根据 ./data/tabs.json 生成 -->
-    </div>
+    <div class="tab-track" id="tabTrack"></div>
   </nav>
 
-  <!-- 栏目内容容器 -->
   <main class="tab-content" id="tabContent">
     <div class="placeholder-content" id="tabPlaceholder">栏目加载中...</div>
   </main>
 
-  <!-- 底部 -->
   <footer class="footer">
     <div class="version">Version 0.7.2</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </footer>
 </div>
 
-<!-- Toast 提示 -->
 <div class="toast-tip" id="copyToast">📋 已复制</div>
 
-<!-- 动态加载调试工具脚本（根据 user 参数） -->
-<script>
-  (function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const user = urlParams.get('user');
-    if (!user) return;
+<!-- 调试台（?debug=true 时激活 Eruda，并自动在内部跳转中传递参数） -->
+<script src="./main/debug-console.js"></script>
 
-    function loadScript(src) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-
-    if (user === 'debug') {
-      loadScript('./main/developers/debug.js');
-    } else if (user === 'dev') {
-      loadScript('./main/developers/dev.js');
-    } else if (user === 'admin') {
-      loadScript('./main/developers/admin.js');
-    }
-  })();
-</script>
-
-<!-- 重构提示弹窗（启用） -->
+<!-- 重构提示弹窗 -->
 <script src="./main/refactorNotice.js"></script>
 
 <!-- 轮播控制脚本 -->
 <script src="./main/carousel.js"></script>
 
-<!-- 设置菜单交互（外部脚本） -->
+<!-- 设置菜单交互 -->
 <script src="./main/settings.js"></script>
 
-<!-- 栏目切换 + 内容加载（读取 data/tabs.json，支持 .html 中的 script/link 提取） -->
+<!-- 栏目切换 + 内容加载 -->
 <script type="module">
   import { parseWiki } from './main/wikiParser.js';
 
   const tabTrack = document.getElementById('tabTrack');
   const tabContent = document.getElementById('tabContent');
-  const wikiCache = {}; // 只缓存 .wiki 的渲染结果
+  const wikiCache = {};
   let tabsConfig = [];
   let currentTab = null;
 
@@ -177,11 +138,9 @@
     return '';
   }
 
-  // 处理 .html 内容：提取 <link rel=stylesheet> 注入 head，提取 <script> 执行
   async function processHtmlContent(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    // 样式表去重注入
     doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
       const href = link.getAttribute('href');
       if (!href) return;
@@ -196,14 +155,11 @@
       }
     });
 
-    // 移出脚本（稍后执行）
     const scripts = Array.from(doc.querySelectorAll('script'));
     scripts.forEach(s => s.remove());
 
-    // 注入 HTML 骨架
     tabContent.innerHTML = doc.body.innerHTML;
 
-    // 执行脚本
     for (const oldScript of scripts) {
       await runScript(oldScript);
     }
@@ -230,7 +186,6 @@
     currentTab = tab;
     sessionStorage.setItem(LAST_TAB_KEY, tab.id);
 
-    // 切换 active 按钮状态
     tabTrack.querySelectorAll('.tab-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.tab === tab.id);
     });
@@ -244,9 +199,7 @@
       const text = await res.text();
 
       if (tab.entry.endsWith('.wiki')) {
-        if (!wikiCache[tab.id]) {
-          wikiCache[tab.id] = parseWiki(text);
-        }
+        if (!wikiCache[tab.id]) wikiCache[tab.id] = parseWiki(text);
         tabContent.innerHTML = wikiCache[tab.id];
       } else if (tab.entry.endsWith('.html')) {
         await processHtmlContent(text);
@@ -283,10 +236,7 @@
       if (!res.ok) throw new Error('tabs.json 加载失败');
       tabsConfig = await res.json();
       buildTabs(tabsConfig);
-
       if (!tabsConfig.tabs.length) return;
-
-      // 优先恢复上次的栏目（sessionStorage）
       const lastId = sessionStorage.getItem(LAST_TAB_KEY);
       const lastTab = lastId && tabsConfig.tabs.find(t => t.id === lastId);
       loadTab(lastTab || tabsConfig.tabs[0]);
@@ -296,40 +246,29 @@
     }
   }
 
-  // bfcache 恢复时：重新加载当前栏目（已读状态可能已变化）
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted && currentTab) {
-      loadTab(currentTab);
-    }
+    if (e.persisted && currentTab) loadTab(currentTab);
   });
 
   initTabs();
 </script>
 
-<!-- 加载 Wiki 介绍内容（顶部文字，与下方栏目独立） -->
+<!-- 加载 Wiki 介绍内容 -->
 <script type="module">
   import { parseWiki } from './main/wikiParser.js';
 
   async function loadHomeWiki() {
     const container = document.getElementById('introText');
     try {
-      const res = await fetch('./data/home/home.wiki');
+      const res = await fetch('./data/home/home.wiki?_=' + Date.now());
       if (!res.ok) throw new Error('加载失败');
       const text = await res.text();
-      const html = parseWiki(text);
-      container.innerHTML = html;
+      container.innerHTML = parseWiki(text);
     } catch (e) {
       container.innerHTML = '<div class="loading-placeholder">介绍文字不可用</div>';
     }
   }
-
   loadHomeWiki();
-</script>
-
-<!-- 主逻辑占位，后续接入 -->
-<script type="module">
-  // import { initApp } from './main/app.js';
-  // initApp();
 </script>
 </body>
 </html>
