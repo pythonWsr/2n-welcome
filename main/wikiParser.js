@@ -1,6 +1,6 @@
 // main/wikiParser.js – 支持自定义模块的 MediaWiki 风格解析器
 // 支持：标题、段落、列表、粗体、斜体、内部链接、外部链接、代码块、模块调用、安全 span/table 标签
-// 特殊处理：{{code|lang|"""代码"""}} 作为块级元素，保留换行
+// 特殊处理：{{code|lang|"""代码"""}} 作为块级元素，保留换行；多行 HTML 块（table/div/ul 等）原样输出
 import { moduleMap } from '../module/index.js';
 import { renderCodeBlock } from '../module/code.js';
 
@@ -27,24 +27,20 @@ export function parseWiki(text) {
     }
   };
 
+  // 多行 HTML 块的起始标签（需要在段落前独立处理）
+  const HTML_BLOCK_TAGS = ['table', 'div', 'section', 'article', 'figure', 'ul', 'ol', 'dl', 'blockquote', 'pre', 'aside', 'header', 'footer', 'nav', 'main'];
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
     // ---------- 三反引号代码块 ----------
     if (line.trim().startsWith('```')) {
       flushParagraph();
-      if (inCodeBlock) {
-        flushCodeBlock();
-        inCodeBlock = false;
-      } else {
-        inCodeBlock = true;
-      }
+      if (inCodeBlock) { flushCodeBlock(); inCodeBlock = false; }
+      else { inCodeBlock = true; }
       continue;
     }
-    if (inCodeBlock) {
-      codeLines.push(line);
-      continue;
-    }
+    if (inCodeBlock) { codeLines.push(line); continue; }
 
     // ---------- 4 空格缩进代码块 ----------
     if (/^\s{4}/.test(line)) {
@@ -53,10 +49,7 @@ export function parseWiki(text) {
       if (!inCodeBlock) inCodeBlock = true;
       continue;
     } else {
-      if (inCodeBlock) {
-        flushCodeBlock();
-        inCodeBlock = false;
-      }
+      if (inCodeBlock) { flushCodeBlock(); inCodeBlock = false; }
     }
 
     // ---------- {{code|lang|"""..."""}} 多行代码模块 ----------
@@ -88,13 +81,30 @@ export function parseWiki(text) {
       continue;
     }
 
-    // ---------- 空行结束段落 ----------
-    if (line.trim() === '') {
-      flushParagraph();
-      continue;
+    // ---------- 多行 HTML 块（table / div / ul 等） ----------
+    const htmlStart = line.match(new RegExp('^\\s*<(' + HTML_BLOCK_TAGS.join('|') + ')\\b', 'i'));
+    if (htmlStart) {
+      const tag = htmlStart[1].toLowerCase();
+      const closeRe = new RegExp('</' + tag + '\\s*>', 'i');
+      // 若同一行已闭合（例如 <ul><li>...</li></ul>），按普通段落处理
+      if (!closeRe.test(line)) {
+        flushParagraph();
+        const parts = [line];
+        let closed = false;
+        while (i + 1 < lines.length) {
+          i++;
+          parts.push(lines[i]);
+          if (closeRe.test(lines[i])) { closed = true; break; }
+        }
+        blocks.push({ type: 'html', content: parts.join('\n') });
+        continue;
+      }
     }
 
-    // ---------- 块级模块调用（单独一行，形如 {{module|param1|param2}}） ----------
+    // ---------- 空行 ----------
+    if (line.trim() === '') { flushParagraph(); continue; }
+
+    // ---------- 块级模块调用 ----------
     const moduleMatch = line.match(/^\s*\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}\s*$/);
     if (moduleMatch) {
       const moduleName = moduleMatch[1];
@@ -113,8 +123,7 @@ export function parseWiki(text) {
     if (headingMatch) {
       flushParagraph();
       const level = headingMatch[1].length - 1;
-      const content = headingMatch[2];
-      blocks.push({ type: 'heading', level: Math.min(level, 6), content });
+      blocks.push({ type: 'heading', level: Math.min(level, 6), content: headingMatch[2] });
       continue;
     }
 
@@ -122,8 +131,7 @@ export function parseWiki(text) {
     if (/^\*+\s+/.test(line)) {
       flushParagraph();
       const indent = line.match(/^\*+/)[0].length;
-      const content = line.replace(/^\*+\s+/, '');
-      blocks.push({ type: 'ul', indent, content });
+      blocks.push({ type: 'ul', indent, content: line.replace(/^\*+\s+/, '') });
       continue;
     }
 
@@ -131,8 +139,7 @@ export function parseWiki(text) {
     if (/^#+\s+/.test(line)) {
       flushParagraph();
       const indent = line.match(/^#+/)[0].length;
-      const content = line.replace(/^#+\s+/, '');
-      blocks.push({ type: 'ol', indent, content });
+      blocks.push({ type: 'ol', indent, content: line.replace(/^#+\s+/, '') });
       continue;
     }
 
@@ -150,16 +157,15 @@ function renderBlock(block) {
   switch (block.type) {
     case 'paragraph': {
       const rendered = renderInline(block.content);
-      // 若渲染结果以块级元素开头，则不再包裹 <p>（避免无效嵌套）
-      // 加入更多 HTML 块级标签，避免 <tr>、<td> 等被包进 <p>
       if (/^\s*<(div|pre|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|ul|ol|li|dl|dt|dd|blockquote|section|article|aside|nav|figure|figcaption|header|footer|main|h[1-6]|hr|form|fieldset)\b/i.test(rendered)) {
         return rendered;
       }
       return `<p>${rendered}</p>`;
     }
-    case 'heading':
+    case 'heading': {
       const tag = `h${block.level}`;
       return `<${tag}>${renderInline(block.content)}</${tag}>`;
+    }
     case 'ul':
     case 'ol':
       return renderList(block);
@@ -167,6 +173,9 @@ function renderBlock(block) {
       return `<pre><code>${escapeHTML(block.content)}</code></pre>`;
     case 'code-module':
       return renderCodeBlock(block.lang, escapeHTML(block.code));
+    case 'html':
+      // 多行 HTML 块直接输出（管理员编写，可信）
+      return block.content;
     case 'raw':
       return block.html;
     default:
@@ -184,25 +193,25 @@ function renderList(block) {
 function renderInline(text) {
   let escaped = escapeHTML(text);
 
-  // 行内换行标签
+  // <br>
   escaped = escaped.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
   // 还原 <span>
-  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'span'));
+  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'span'));
   escaped = escaped.replace(/&lt;\/span&gt;/gi, '</span>');
 
-  // 还原表格相关标签
-  escaped = escaped.replace(/&lt;table(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'table'));
+  // 还原表格标签
+  escaped = escaped.replace(/&lt;table(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'table'));
   escaped = escaped.replace(/&lt;\/table&gt;/gi, '</table>');
-  escaped = escaped.replace(/&lt;thead(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'thead'));
+  escaped = escaped.replace(/&lt;thead(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'thead'));
   escaped = escaped.replace(/&lt;\/thead&gt;/gi, '</thead>');
-  escaped = escaped.replace(/&lt;tbody(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'tbody'));
+  escaped = escaped.replace(/&lt;tbody(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'tbody'));
   escaped = escaped.replace(/&lt;\/tbody&gt;/gi, '</tbody>');
-  escaped = escaped.replace(/&lt;tr(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'tr'));
+  escaped = escaped.replace(/&lt;tr(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'tr'));
   escaped = escaped.replace(/&lt;\/tr&gt;/gi, '</tr>');
-  escaped = escaped.replace(/&lt;th(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'th'));
+  escaped = escaped.replace(/&lt;th(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'th'));
   escaped = escaped.replace(/&lt;\/th&gt;/gi, '</th>');
-  escaped = escaped.replace(/&lt;td(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'td'));
+  escaped = escaped.replace(/&lt;td(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'td'));
   escaped = escaped.replace(/&lt;\/td&gt;/gi, '</td>');
 
   // 内联代码模块
@@ -211,7 +220,7 @@ function renderInline(text) {
     (match, lang, codeContent) => renderCodeBlock(lang, codeContent)
   );
 
-  // 粗斜体、粗体、斜体
+  // 粗斜体
   escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
   escaped = escaped.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
   escaped = escaped.replace(/''(.*?)''/g, '<em>$1</em>');
@@ -220,8 +229,7 @@ function renderInline(text) {
   escaped = escaped.replace(/\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}/g, (match, moduleName, paramStr) => {
     const moduleDef = moduleMap[moduleName];
     if (!moduleDef || moduleDef.isBlock) return match;
-    const params = parseParams(paramStr);
-    return moduleDef.render(params);
+    return moduleDef.render(parseParams(paramStr));
   });
 
   // 内部链接
@@ -249,12 +257,8 @@ function safeTagReplacement(attrs, tagName) {
   const safeAttrs = [];
   const classMatch = attrs.match(/class\s*=\s*"([^"]*)"/i);
   const styleMatch = attrs.match(/style\s*=\s*"([^"]*)"/i);
-  if (classMatch && !/[<>]/.test(classMatch[1])) {
-    safeAttrs.push(`class="${classMatch[1]}"`);
-  }
-  if (styleMatch && !/[<>]/.test(styleMatch[1])) {
-    safeAttrs.push(`style="${styleMatch[1]}"`);
-  }
+  if (classMatch && !/[<>]/.test(classMatch[1])) safeAttrs.push(`class="${classMatch[1]}"`);
+  if (styleMatch && !/[<>]/.test(styleMatch[1])) safeAttrs.push(`style="${styleMatch[1]}"`);
   return safeAttrs.length ? `<${tagName} ${safeAttrs.join(' ')}>` : `<${tagName}>`;
 }
 

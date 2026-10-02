@@ -60,7 +60,7 @@ body {
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
   word-break: break-word;
-  overflow: hidden; /* 防止内部超宽元素（含代码块）溢出卡片 */
+  overflow: hidden;
 }
 
 /* ---------- 通知详情 ---------- */
@@ -86,13 +86,13 @@ body {
 }
 
 .notice-paragraph {
-  text-indent: 2em;
   margin: 0 0 12px;
   min-width: 0;
   max-width: 100%;
 }
 
 .notice-paragraph > p {
+  text-indent: 2em;
   margin: 0 0 12px;
 }
 
@@ -102,15 +102,15 @@ body {
   margin: 0;
 }
 
-/* 让段落里的代码块/表格不受首行缩进影响 */
+/* 代码块 / 表格：取消缩进，占满容器宽度，不向外溢出 */
 .notice-paragraph > .wiki-code-block,
 .notice-paragraph > .wiki-table,
 .notice-paragraph > pre,
 .notice-paragraph > table {
   text-indent: 0;
-  margin-left: -2em;   /* 抵消父级的 2em 缩进，让代码块对齐正文左边缘 */
+  margin-left: 0;
   margin-right: 0;
-  max-width: calc(100% + 2em);
+  max-width: 100%;
 }
 
 .notice-file {

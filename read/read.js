@@ -10,7 +10,7 @@ const params = new URLSearchParams(location.search);
 const rawFile = params.get('file') || '';
 
 if (!rawFile) {
-  location.replace('../index.html');
+  location.replace(window.appendDebugParam ? window.appendDebugParam('../index.html') : '../index.html');
 } else {
   run(rawFile);
 }
@@ -22,8 +22,12 @@ async function run(file) {
   const navEl = document.getElementById('readNav');
 
   backBtn.addEventListener('click', () => {
-    if (history.length > 1) history.back();
-    else location.href = '../index.html';
+    if (history.length > 1) {
+      history.back();
+    } else {
+      var url = '../index.html';
+      location.href = window.appendDebugParam ? window.appendDebugParam(url) : url;
+    }
   });
 
   const cleaned = file.replace(/^\.\//, '');
@@ -162,7 +166,8 @@ async function loadSiblingNav(filePath, navEl) {
 
     const makeItem = (target, label, meta, cls) => {
       if (!target || !meta) return `<div class="read-nav-item disabled"></div>`;
-      const href = `./index.html?file=${encodeURIComponent(dir + '/' + target)}`;
+      const rawHref = `./index.html?file=${encodeURIComponent(dir + '/' + target)}`;
+      const href = window.appendDebugParam ? window.appendDebugParam(rawHref) : rawHref;
       const title = meta.title || target;
       const summary = meta.summary || '';
       return `<a class="read-nav-item ${cls}" href="${href}">
@@ -180,7 +185,6 @@ async function loadSiblingNav(filePath, navEl) {
   }
 }
 
-// 读取通知的 title 与 summary
 async function getMeta(path) {
   try {
     const res = await fetch(`../${path}?_=${Date.now()}`);
