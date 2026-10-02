@@ -150,7 +150,9 @@ function renderBlock(block) {
   switch (block.type) {
     case 'paragraph': {
       const rendered = renderInline(block.content);
-      if (/^\s*<(div|pre|table|ul|ol|blockquote|section|article|figure|h[1-6])\b/i.test(rendered)) {
+      // 若渲染结果以块级元素开头，则不再包裹 <p>（避免无效嵌套）
+      // 加入更多 HTML 块级标签，避免 <tr>、<td> 等被包进 <p>
+      if (/^\s*<(div|pre|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|ul|ol|li|dl|dt|dd|blockquote|section|article|aside|nav|figure|figcaption|header|footer|main|h[1-6]|hr|form|fieldset)\b/i.test(rendered)) {
         return rendered;
       }
       return `<p>${rendered}</p>`;
@@ -203,7 +205,7 @@ function renderInline(text) {
   escaped = escaped.replace(/&lt;td(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'td'));
   escaped = escaped.replace(/&lt;\/td&gt;/gi, '</td>');
 
-  // 内联代码模块（文本中夹着 {{code|...|"""单行"""}}）
+  // 内联代码模块
   escaped = escaped.replace(
     /\{\{code\|([^|]+)\|"""([\s\S]*?)"""\}\}/g,
     (match, lang, codeContent) => renderCodeBlock(lang, codeContent)

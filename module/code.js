@@ -27,6 +27,15 @@ export function renderCodeBlock(lang, escapedCode) {
 
 // ---------- 语法高亮 ----------
 function highlight(code, lang) {
+  try {
+    return doHighlight(code, lang);
+  } catch (e) {
+    console.warn('[code] highlight failed:', e);
+    return code;
+  }
+}
+
+function doHighlight(code, lang) {
   const l = String(lang).toLowerCase();
   const aliases = {
     javascript: 'js', ts: 'js', typescript: 'js',
@@ -41,20 +50,20 @@ function highlight(code, lang) {
   if (key === 'html') return highlightHTML(code);
   if (key === 'css')  return highlightCSS(code);
 
-  // 通用流程
   let s = code;
   const tokens = [];
   const store = (html) => {
-    const id = `\uE000T${tokens.length}Z\uE001`;
+    const id = '\uE000T' + tokens.length + 'Z\uE001';
     tokens.push(html);
     return id;
   };
 
-  // 字符串
+  // 1. 字符串
   s = s.replace(/"[^"\n]*"/g, m => store(`<span class="tok-str">${m}</span>`));
   s = s.replace(/'[^'\n]*'/g, m => store(`<span class="tok-str">${m}</span>`));
   s = s.replace(/`[^`\n]*`/g, m => store(`<span class="tok-str">${m}</span>`));
 
+  // 2. 注释
   const bashLike = ['bash', 'python', 'yaml', 'yml', 'ini', 'conf'];
   const cLike = ['js', 'c', 'cpp', 'java', 'go', 'rust'];
 
@@ -65,10 +74,10 @@ function highlight(code, lang) {
     s = s.replace(/\/\/[^\n]*/g, m => store(`<span class="tok-comment">${m}</span>`));
   }
 
-  // 数字
-  s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-num">$1</span>');
+  // 3. 数字（也走 store，避免破坏之前已存的占位符）
+  s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, m => store(`<span class="tok-num">${m}</span>`));
 
-  // 关键字
+  // 4. 关键字（也走 store）
   const keywords = {
     js: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'new', 'this', 'async', 'await', 'try', 'catch', 'import', 'export', 'from', 'default', 'null', 'undefined', 'true', 'false'],
     python: ['def', 'class', 'return', 'if', 'elif', 'else', 'for', 'while', 'try', 'except', 'finally', 'with', 'as', 'import', 'from', 'lambda', 'yield', 'pass', 'raise', 'in', 'not', 'and', 'or', 'is', 'None', 'True', 'False', 'self'],
@@ -78,11 +87,13 @@ function highlight(code, lang) {
   };
   const kws = keywords[key];
   if (kws) {
-    const re = new RegExp(`\\b(${kws.join('|')})\\b`, 'g');
-    s = s.replace(re, '<span class="tok-kw">$1</span>');
+    const re = new RegExp('\\b(' + kws.join('|') + ')\\b', 'g');
+    s = s.replace(re, m => store(`<span class="tok-kw">${m}</span>`));
   }
 
+  // 5. 恢复所有 token
   s = s.replace(/\uE000T(\d+)Z\uE001/g, (_, i) => tokens[+i]);
+
   return s;
 }
 
@@ -91,12 +102,12 @@ function highlightHTML(code) {
   let s = code;
   const tokens = [];
   const store = (html) => {
-    const id = `\uE000T${tokens.length}Z\uE001`;
+    const id = '\uE000T' + tokens.length + 'Z\uE001';
     tokens.push(html);
     return id;
   };
 
-  // 注释：&lt;!-- ... --&gt;
+  // 注释 <!-- ... -->
   s = s.replace(/&lt;!--[\s\S]*?--&gt;/g, m => store(`<span class="tok-comment">${m}</span>`));
 
   // 标签
@@ -118,7 +129,7 @@ function highlightHTML(code) {
         }
         attrHTML += attrs.slice(lastIdx);
       }
-      return `&lt;${slash}<span class="tok-tag">${tagName}</span>${attrHTML}${selfClose}&gt;`;
+      return store(`&lt;${slash}<span class="tok-tag">${tagName}</span>${attrHTML}${selfClose}&gt;`);
     }
   );
 
@@ -131,7 +142,7 @@ function highlightCSS(code) {
   let s = code;
   const tokens = [];
   const store = (html) => {
-    const id = `\uE000T${tokens.length}Z\uE001`;
+    const id = '\uE000T' + tokens.length + 'Z\uE001';
     tokens.push(html);
     return id;
   };
@@ -147,8 +158,8 @@ function highlightCSS(code) {
   s = s.replace(/!important\b/g, m => store(`<span class="tok-kw">${m}</span>`));
   // 数字（含单位）
   s = s.replace(/\b(\d+(?:\.\d+)?)([a-zA-Z%]*)\b/g, (m, num, unit) => store(`<span class="tok-num">${num}${unit}</span>`));
-  // 属性名（ident 后跟冒号）
-  s = s.replace(/([a-zA-Z-]+)(\s*:)/g, (m, prop, colon) => `<span class="tok-attr">${prop}</span>${colon}`);
+  // 属性名
+  s = s.replace(/([a-zA-Z-]+)(\s*:)/g, (m, prop, colon) => store(`<span class="tok-attr">${prop}</span>${colon}`));
 
   s = s.replace(/\uE000T(\d+)Z\uE001/g, (_, i) => tokens[+i]);
   return s;

@@ -1,80 +1,86 @@
 {
   head: '维护',
   title: '管理员指南：安装 Git',
-  summary: 'Windows / macOS / Linux / Termux 各平台安装 Git，并配置 GitHub SSH 访问。',
+  summary: 'Windows / macOS / Linux / Termux 各平台安装 Git 的完整步骤。SSH 配置见下一篇。',
   time: '2026-10-02',
   stamp: 'blank',
   author: ['flowerwsr'],
 
-  main1: '本指南帮助新管理员在不同平台上安装 Git，并完成 GitHub 的 SSH 配置。',
+  main1: '本指南帮助新管理员在不同平台上安装 Git。SSH 配置请见下一篇通知。',
 
   main2: '=== 参考资料 ===',
-  main3: 'Git 官方下载页：https://git-scm.com/downloads',
-  main4: 'Pro Git 中文版（免费）：https://git-scm.com/book/zh/v2',
-  main5: 'GitHub 入门指南：https://docs.github.com/zh/get-started/getting-started-with-git',
+  main3: '* Git 官方下载页：https://git-scm.com/downloads<br>* Pro Git 中文版（免费）：https://git-scm.com/book/zh/v2<br>* GitHub 入门指南：https://docs.github.com/zh/get-started/getting-started-with-git',
 
-  main6: '=== Windows ===',
-  main7: '方式一（推荐）：从官网下载安装包。',
+  main4: '=== Windows ===',
+  main5: '任选一种方式。推荐 winget（Windows 10 1809+ / 11 自带）或官方安装包。',
+
+  main6: '方式一：winget',
+  main7: `{{code|PowerShell|"""winget install --id Git.Git -e --source winget"""}}`,
+
+  main8: '方式二：Chocolatey（需先安装 Chocolatey）',
+  main9: `{{code|PowerShell|"""choco install git -y"""}}`,
+
+  main10: '方式三：Scoop（需先安装 Scoop）',
+  main11: `{{code|PowerShell|"""scoop install git"""}}`,
+
+  main12: '方式四：官方安装包（适用于所有 Windows 版本）',
   file1: { type: 'url', src: 'https://git-scm.com/download/win', alt: '下载 Git for Windows' },
-  main8: '方式二：使用 winget（Windows 10 及以上）。',
-  main9: `{{code|PowerShell|"""winget install --id Git.Git -e --source winget"""}}`,
-  main10: '安装完成后验证：',
-  main11: `{{code|PowerShell|"""git --version"""}}`,
+  main13: '安装过程中一路默认即可。推荐保留默认勾选 "Git from the command line and also from 3rd-party software"，以便在终端中直接使用 git。安装后还会附带一个 Git Bash 终端，类似 Linux 命令行环境。',
+  main14: '验证安装：',
+  main15: `{{code|PowerShell|"""git --version"""}}`,
 
-  main12: '=== macOS ===',
-  main13: '方式一（推荐）：使用 Homebrew。',
-  main14: `{{code|Bash|"""# 若尚未安装 Homebrew，先执行
+  main16: '=== macOS ===',
+  main17: '任选一种方式。推荐 Xcode 命令行工具（最省事）或 Homebrew。',
+
+  main18: '方式一：Xcode 命令行工具（系统自带，最简单）',
+  main19: `{{code|Bash|"""xcode-select --install"""}}`,
+  main20: '执行后会弹出图形化安装窗口，点"安装"并等待完成即可。',
+
+  main21: '方式二：Homebrew（若尚未安装 Homebrew）',
+  main22: `{{code|Bash|"""# 安装 Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 安装 git
+# 通过 Homebrew 安装 git
 brew install git"""}}`,
-  main15: '方式二：从官网下载安装包。',
+
+  main23: '方式三：官方安装包',
   file2: { type: 'url', src: 'https://git-scm.com/download/mac', alt: '下载 Git for macOS' },
-  main16: '验证：',
-  main17: `{{code|Bash|"""git --version"""}}`,
+  main24: '验证安装：',
+  main25: `{{code|Bash|"""git --version"""}}`,
 
-  main18: '=== Linux ===',
-  main19: '根据发行版选择对应命令：',
-  main20: `{{code|Bash|"""# Debian / Ubuntu
-sudo apt update
-sudo apt install git
+  main26: '=== Linux ===',
+  main27: '根据发行版选择对应命令。',
 
-# Fedora
-sudo dnf install git
+  main28: 'Debian / Ubuntu / Linux Mint：',
+  main29: `{{code|Bash|"""sudo apt update
+sudo apt install -y git"""}}`,
 
-# Arch / Manjaro
-sudo pacman -S git"""}}`,
-  main21: '验证：',
-  main22: `{{code|Bash|"""git --version"""}}`,
+  main30: 'Fedora / RHEL / CentOS：',
+  main31: `{{code|Bash|"""sudo dnf install -y git"""}}`,
 
-  main23: '=== Android · Termux ===',
-  main24: 'Termux 是 Android 上的终端模拟器，可从 F-Droid 安装。',
+  main32: 'Arch / Manjaro：',
+  main33: `{{code|Bash|"""sudo pacman -S --noconfirm git"""}}`,
+
+  main34: 'openSUSE：',
+  main35: `{{code|Bash|"""sudo zypper install -y git"""}}`,
+
+  main36: '验证安装：',
+  main37: `{{code|Bash|"""git --version"""}}`,
+
+  main38: '=== Android · Termux ===',
+  main39: 'Termux 是 Android 上的终端模拟器，建议从 F-Droid 安装（Google Play 版本已停止更新）。',
   file3: { type: 'url', src: 'https://f-droid.org/packages/com.termux/', alt: '从 F-Droid 下载 Termux' },
-  main25: '安装后运行以下命令：',
-  main26: `{{code|Bash|"""# 更新包列表
+  main40: '安装后打开 Termux，运行以下命令：',
+  main41: `{{code|Bash|"""# 更新包列表
 pkg update
-pkg upgrade
+pkg upgrade -y
 
 # 安装 git
-pkg install git
+pkg install -y git
 
 # 验证
 git --version"""}}`,
 
-  main27: '=== 配置身份与 SSH ===',
-  main28: '设置 Git 身份（提交时显示）：',
-  main29: `{{code|Bash|"""git config --global user.name "你的用户名"
-git config --global user.email "你的邮箱""""}}`,
-  main30: '生成 SSH 密钥（一路回车即可）：',
-  main31: `{{code|Bash|"""ssh-keygen -t ed25519 -C "你的邮箱"
-
-# 查看并复制公钥内容
-cat ~/.ssh/id_ed25519.pub"""}}`,
-  main32: '将公钥内容粘贴到 GitHub → Settings → SSH and GPG keys。',
-  file4: { type: 'url', src: 'https://github.com/settings/keys', alt: 'GitHub SSH 密钥设置' },
-  main33: '测试连接：',
-  main34: `{{code|Bash|"""ssh -T git@github.com"""}}`,
-  main35: '看到 "Hi 用户名! You\'ve successfully authenticated" 即配置成功。',
-
-  main36: '如有疑问，请在管理群提问。'
+  main42: '=== 常见问题 ===',
+  main43: '* Windows 提示 "git 不是内部或外部命令"：重启终端再试，或重新打开 PowerShell / 命令提示符。安装程序会自动加入 PATH，但已打开的终端需重启才能生效。<br>* macOS 首次使用 git 时提示安装 Xcode 命令行工具：点"安装"并等待即可，或手动执行 xcode-select --install。<br>* Linux 报 "Permission denied"：检查命令前是否加了 sudo。<br>* Termux 报 "Unable to locate package git"：先执行 pkg update 更新索引。<br>* 网络受限导致下载缓慢：可考虑使用镜像源，或改用官方安装包的离线版本。'
 }

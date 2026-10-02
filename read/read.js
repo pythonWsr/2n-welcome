@@ -37,12 +37,10 @@ async function run(file) {
     const result = await renderByExt(cleaned, text);
     contentEl.innerHTML = result.html;
 
-    // 调试模式：初始化源码编辑器
     if (result.debug) {
       setupDebugEditor(contentEl, result.raw);
     }
 
-    // 通知：标记已读
     if (cleaned.toLowerCase().endsWith('.notice')) {
       try {
         const hash = await hashString(text);
@@ -52,7 +50,6 @@ async function run(file) {
       }
     }
 
-    // 上一条/下一条
     await loadSiblingNav(cleaned, navEl);
 
   } catch (e) {
@@ -82,7 +79,6 @@ function setupDebugEditor(container, rawText) {
 }
 
 // ---------- 按后缀渲染 ----------
-// 返回 { html, debug?, raw? }
 async function renderByExt(path, text) {
   const ext = path.split('.').pop().toLowerCase();
 
@@ -92,7 +88,6 @@ async function renderByExt(path, text) {
       stampDir: '../data/announcements/stamp'
     });
 
-    // 调试类型：下方追加源码编辑器
     if (notice.head === '调试') {
       return {
         html: `
@@ -160,40 +155,44 @@ async function loadSiblingNav(filePath, navEl) {
     const prev = idx > 0 ? list[idx - 1] : null;
     const next = idx < list.length - 1 ? list[idx + 1] : null;
 
-    const [prevTitle, nextTitle] = await Promise.all([
-      prev ? getTitle(`${dir}/${prev}`) : Promise.resolve(''),
-      next ? getTitle(`${dir}/${next}`) : Promise.resolve('')
+    const [prevMeta, nextMeta] = await Promise.all([
+      prev ? getMeta(`${dir}/${prev}`) : Promise.resolve(null),
+      next ? getMeta(`${dir}/${next}`) : Promise.resolve(null)
     ]);
 
-    const makeItem = (target, label, title, cls) => {
-      if (!target) return `<div class="read-nav-item disabled"></div>`;
+    const makeItem = (target, label, meta, cls) => {
+      if (!target || !meta) return `<div class="read-nav-item disabled"></div>`;
       const href = `./index.html?file=${encodeURIComponent(dir + '/' + target)}`;
+      const title = meta.title || target;
+      const summary = meta.summary || '';
       return `<a class="read-nav-item ${cls}" href="${href}">
         <span class="read-nav-label">${label}</span>
         <span class="read-nav-title">${escapeHtml(title)}</span>
+        ${summary ? `<span class="read-nav-summary">${escapeHtml(summary)}</span>` : ''}
       </a>`;
     };
 
     navEl.innerHTML =
-      makeItem(prev, '← 上一条', prevTitle, 'prev') +
-      makeItem(next, '下一条 →', nextTitle, 'next');
+      makeItem(prev, '← 上一条', prevMeta, 'prev') +
+      makeItem(next, '下一条 →', nextMeta, 'next');
   } catch {
     // 静默忽略
   }
 }
 
-async function getTitle(path) {
+// 读取通知的 title 与 summary
+async function getMeta(path) {
   try {
     const res = await fetch(`../${path}?_=${Date.now()}`);
-    if (!res.ok) return path.split('/').pop();
+    if (!res.ok) return { title: path.split('/').pop(), summary: '' };
     const text = await res.text();
     if (path.endsWith('.notice')) {
       const n = parseNotice(text);
-      return n.title || path.split('/').pop();
+      return { title: n.title || path.split('/').pop(), summary: n.summary || '' };
     }
-    return path.split('/').pop();
+    return { title: path.split('/').pop(), summary: '' };
   } catch {
-    return path.split('/').pop();
+    return { title: path.split('/').pop(), summary: '' };
   }
 }
 

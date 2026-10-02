@@ -140,7 +140,7 @@ body {
   background: rgba(37, 99, 235, 0.15);
 }
 
-/* ---------- 盖章 + 作者（右侧，盖章在作者上方稍高、更大） ---------- */
+/* ---------- 盖章 + 作者 ---------- */
 .notice-signature {
   position: relative;
   margin-top: 56px;
@@ -260,10 +260,23 @@ body {
 
 .read-nav-title {
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: inherit;
+}
+
+.read-nav-summary {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.45;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ---------- JSON 视图 ---------- */
@@ -274,6 +287,149 @@ body {
   background: rgba(0, 0, 0, 0.03);
   padding: 16px;
   border-radius: 8px;
+}
+
+/* ---------- Wiki 代码块 ---------- */
+.wiki-code-block {
+  text-indent: 0;
+  margin: 16px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #282c34;
+  border: 1px solid #4b5263;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Cascadia Code', 'Roboto Mono', ui-monospace, monospace;
+  font-size: 0.88rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.wiki-code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: #21252b;
+  color: #abb2bf;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #4b5263;
+}
+
+.wiki-code-lang {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9da5b4;
+}
+
+.wiki-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #4b5263;
+  background: #2c313a;
+  color: #abb2bf;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.wiki-code-copy:hover {
+  background: #3a404a;
+  color: #e6e6e6;
+}
+
+.wiki-code-copy.copied {
+  color: #98c379;
+  border-color: #98c379;
+  background: rgba(152, 195, 121, 0.08);
+}
+
+.wiki-code-body {
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  color: #abb2bf;
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5263 #282c34;
+}
+
+.wiki-code-body::-webkit-scrollbar {
+  height: 8px;
+}
+
+.wiki-code-body::-webkit-scrollbar-thumb {
+  background: #4b5263;
+  border-radius: 4px;
+}
+
+.wiki-code-body code {
+  font-family: inherit;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* 语法高亮 token（One Dark 风格） */
+.tok-kw      { color: #c678dd; font-weight: 500; }
+.tok-str     { color: #98c379; }
+.tok-comment { color: #5c6370; font-style: italic; }
+.tok-num     { color: #d19a66; }
+.tok-tag     { color: #e06c75; }
+.tok-attr    { color: #d19a66; }
+
+/* ---------- Wiki 表格 ---------- */
+.wiki-table {
+  text-indent: 0;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.95rem;
+  border: 1px solid #cfdde9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wiki-table th,
+.wiki-table td {
+  border: 1px solid #cfdde9;
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.wiki-table th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #1e3b4f;
+}
+
+.wiki-table tbody tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+/* 无 class 的表格 */
+.read-content table:not(.wiki-table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  border: 1px solid #cfdde9;
+}
+
+.read-content table:not(.wiki-table) th,
+.read-content table:not(.wiki-table) td {
+  border: 1px solid #cfdde9;
+  padding: 10px 14px;
+}
+
+.read-content table:not(.wiki-table) th {
+  background: #f1f5f9;
+  font-weight: 600;
 }
 
 /* ---------- 深色模式 ---------- */
@@ -316,6 +472,7 @@ body {
     background: rgba(30, 41, 59, 0.9);
   }
   .read-nav-label { color: #94a3b8; }
+  .read-nav-summary { color: #94a3b8; }
   .json-view { background: rgba(255, 255, 255, 0.05); }
 
   .debug-panel { border-top-color: #334155; }
@@ -328,6 +485,36 @@ body {
   .debug-error {
     background: rgba(185, 28, 28, 0.15);
     color: #fca5a5;
+  }
+
+  /* 深色主题下代码块边框更亮 */
+  .wiki-code-block { border-color: #5c6370; }
+  .wiki-code-header { border-bottom-color: #5c6370; }
+
+  /* 深色主题下表格 */
+  .wiki-table {
+    border-color: #334155;
+  }
+  .wiki-table th,
+  .wiki-table td {
+    border-color: #334155;
+  }
+  .wiki-table th {
+    background: #1e293b;
+    color: #cbd5e1;
+  }
+  .wiki-table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .read-content table:not(.wiki-table) {
+    border-color: #334155;
+  }
+  .read-content table:not(.wiki-table) th,
+  .read-content table:not(.wiki-table) td {
+    border-color: #334155;
+  }
+  .read-content table:not(.wiki-table) th {
+    background: #1e293b;
   }
 }
 
@@ -347,4 +534,7 @@ body {
   .notice-signature { min-height: 130px; }
   .notice-stamp { width: 96px; height: 96px; bottom: 44px; right: 6px; }
   .notice-author { right: 16px; bottom: 14px; font-size: 1rem; }
+  .wiki-code-block { font-size: 0.82rem; }
+  .wiki-code-body { padding: 12px 14px; }
+  .wiki-code-header { padding: 7px 12px; }
 }
