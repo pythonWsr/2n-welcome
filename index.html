@@ -7,7 +7,34 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="./main/css/base.css">
   <link rel="stylesheet" href="./main/css/components.css">
-  <link rel="stylesheet" id="theme-link" href="./main/css/theme-light.css">
+
+  <!-- 主题：在 <head> 内同步决定，避免闪烁 -->
+  <script>
+    (function() {
+      try {
+        var stored = localStorage.getItem('theme-mode');
+        var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var useDark = stored === 'dark' || (!stored && systemDark);
+        var href = useDark ? './main/css/theme-dark.css' : './main/css/theme-light.css';
+        document.write('<link rel="stylesheet" id="theme-link" href="' + href + '">');
+      } catch (e) {
+        document.write('<link rel="stylesheet" id="theme-link" href="./main/css/theme-light.css">');
+      }
+    })();
+  </script>
+  <script>
+    (function() {
+      try {
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        mq.addEventListener('change', function(e) {
+          if (localStorage.getItem('theme-mode')) return;
+          var link = document.getElementById('theme-link');
+          if (link) link.href = e.matches ? './main/css/theme-dark.css' : './main/css/theme-light.css';
+        });
+      } catch (e) {}
+    })();
+  </script>
+
   <style>
     /* 临时修复：确保头部右侧区域靠右，设置下拉菜单完全可见 */
     .main-header {
@@ -88,7 +115,7 @@
 
   <!-- 底部 -->
   <footer class="footer">
-    <div class="version">Version 0.7.3</div>
+    <div class="version">Version 0.7.2</div>
     <div class="copyright"><i class="far fa-copyright"></i> Copyright 2026 GitHub@pythonWsr Florrio@flowerwsr</div>
   </footer>
 </div>

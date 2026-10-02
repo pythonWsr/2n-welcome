@@ -1,6 +1,6 @@
 // main/wikiParser.js – 支持自定义模块的 MediaWiki 风格解析器
 // 支持：标题、段落、列表、粗体、斜体、内部链接、外部链接、代码块、模块调用、安全 span/table 标签
-// 特殊处理：{{code|lang|"""代码"""}} 代码块模块
+// 特殊处理：{{code|lang|"""代码"""}} 作为块级元素，保留换行
 import { moduleMap } from '../module/index.js';
 import { renderCodeBlock } from '../module/code.js';
 
@@ -30,7 +30,7 @@ export function parseWiki(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // 代码块处理
+    // ---------- 三反引号代码块 ----------
     if (line.trim().startsWith('```')) {
       flushParagraph();
       if (inCodeBlock) {
@@ -45,6 +45,8 @@ export function parseWiki(text) {
       codeLines.push(line);
       continue;
     }
+
+    // ---------- 4 空格缩进代码块 ----------
     if (/^\s{4}/.test(line)) {
       flushParagraph();
       codeLines.push(line.replace(/^\s{4}/, ''));
@@ -57,13 +59,42 @@ export function parseWiki(text) {
       }
     }
 
-    // 空行结束段落
+    // ---------- {{code|lang|"""..."""}} 多行代码模块 ----------
+    const codeStart = line.match(/^\s*\{\{code\|([^|]+)\|"""(.*)$/);
+    if (codeStart && !line.includes('"""}}')) {
+      flushParagraph();
+      const lang = codeStart[1];
+      const parts = [codeStart[2]];
+      while (i + 1 < lines.length && !lines[i + 1].includes('"""}}')) {
+        i++;
+        parts.push(lines[i]);
+      }
+      if (i + 1 < lines.length) {
+        i++;
+        const endIdx = lines[i].indexOf('"""}}');
+        parts.push(lines[i].slice(0, endIdx));
+      }
+      while (parts.length && parts[0].trim() === '') parts.shift();
+      while (parts.length && parts[parts.length - 1].trim() === '') parts.pop();
+      blocks.push({ type: 'code-module', lang, code: parts.join('\n') });
+      continue;
+    }
+
+    // ---------- 单行完整代码模块 ----------
+    const singleCode = line.match(/^\s*\{\{code\|([^|]+)\|"""([\s\S]*?)"""\}\}\s*$/);
+    if (singleCode) {
+      flushParagraph();
+      blocks.push({ type: 'code-module', lang: singleCode[1], code: singleCode[2] });
+      continue;
+    }
+
+    // ---------- 空行结束段落 ----------
     if (line.trim() === '') {
       flushParagraph();
       continue;
     }
 
-    // 块级模块调用（单独一行，形如 {{module|param1|param2}}）
+    // ---------- 块级模块调用（单独一行，形如 {{module|param1|param2}}） ----------
     const moduleMatch = line.match(/^\s*\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}\s*$/);
     if (moduleMatch) {
       const moduleName = moduleMatch[1];
@@ -77,7 +108,7 @@ export function parseWiki(text) {
       }
     }
 
-    // 标题
+    // ---------- 标题 ----------
     const headingMatch = line.match(/^(={2,6})\s*(.*?)\s*\1\s*$/);
     if (headingMatch) {
       flushParagraph();
@@ -87,7 +118,7 @@ export function parseWiki(text) {
       continue;
     }
 
-    // 无序列表
+    // ---------- 无序列表 ----------
     if (/^\*+\s+/.test(line)) {
       flushParagraph();
       const indent = line.match(/^\*+/)[0].length;
@@ -96,7 +127,7 @@ export function parseWiki(text) {
       continue;
     }
 
-    // 有序列表
+    // ---------- 有序列表 ----------
     if (/^#+\s+/.test(line)) {
       flushParagraph();
       const indent = line.match(/^#+/)[0].length;
@@ -105,7 +136,7 @@ export function parseWiki(text) {
       continue;
     }
 
-    // 普通文本行
+    // ---------- 普通文本行 ----------
     currentParagraph.push(line);
   }
 
@@ -119,7 +150,6 @@ function renderBlock(block) {
   switch (block.type) {
     case 'paragraph': {
       const rendered = renderInline(block.content);
-      // 若渲染结果以块级元素开头，则不再包裹 <p>（避免无效嵌套）
       if (/^\s*<(div|pre|table|ul|ol|blockquote|section|article|figure|h[1-6])\b/i.test(rendered)) {
         return rendered;
       }
@@ -133,6 +163,8 @@ function renderBlock(block) {
       return renderList(block);
     case 'code':
       return `<pre><code>${escapeHTML(block.content)}</code></pre>`;
+    case 'code-module':
+      return renderCodeBlock(block.lang, escapeHTML(block.code));
     case 'raw':
       return block.html;
     default:
@@ -150,16 +182,14 @@ function renderList(block) {
 function renderInline(text) {
   let escaped = escapeHTML(text);
 
-  // 处理行内换行标签：先转义，再还原 <br>
+  // 行内换行标签
   escaped = escaped.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
-  // 还原 <span> 标签（允许 class 和 style 属性，且做基本过滤）
-  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (match, attrs) => {
-    return safeTagReplacement(attrs, 'span');
-  });
+  // 还原 <span>
+  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'span'));
   escaped = escaped.replace(/&lt;\/span&gt;/gi, '</span>');
 
-  // 还原表格相关标签（允许 class 和 style 属性）
+  // 还原表格相关标签
   escaped = escaped.replace(/&lt;table(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'table'));
   escaped = escaped.replace(/&lt;\/table&gt;/gi, '</table>');
   escaped = escaped.replace(/&lt;thead(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'thead'));
@@ -173,20 +203,18 @@ function renderInline(text) {
   escaped = escaped.replace(/&lt;td(\s+[^&]*?)?&gt;/gi, (match, attrs) => safeTagReplacement(attrs, 'td'));
   escaped = escaped.replace(/&lt;\/td&gt;/gi, '</td>');
 
-  // 代码模块（必须在通用模块正则之前处理，以支持多行内容）
+  // 内联代码模块（文本中夹着 {{code|...|"""单行"""}}）
   escaped = escaped.replace(
     /\{\{code\|([^|]+)\|"""([\s\S]*?)"""\}\}/g,
-    (match, lang, codeContent) => {
-      return renderCodeBlock(lang, codeContent);
-    }
+    (match, lang, codeContent) => renderCodeBlock(lang, codeContent)
   );
 
-  // 先处理粗斜体、粗体、斜体（使模块参数中的标记生效）
+  // 粗斜体、粗体、斜体
   escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
   escaped = escaped.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
   escaped = escaped.replace(/''(.*?)''/g, '<em>$1</em>');
 
-  // 然后处理模块调用（内联模块）
+  // 通用模块
   escaped = escaped.replace(/\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}/g, (match, moduleName, paramStr) => {
     const moduleDef = moduleMap[moduleName];
     if (!moduleDef || moduleDef.isBlock) return match;
@@ -194,19 +222,19 @@ function renderInline(text) {
     return moduleDef.render(params);
   });
 
-  // 内部链接 [[页面名|显示文本]]
+  // 内部链接
   escaped = escaped.replace(/\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]/g, (match, page, display) => {
     const target = page.trim();
     const text = display ? display.trim() : target;
     return `<a href="#" data-wiki-page="${target}">${escapeHTML(text)}</a>`;
   });
 
-  // 外部链接 [https://example.com 显示文本]
+  // 外部链接
   escaped = escaped.replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]+)\]/g, (match, url, text) => {
     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHTML(text)}</a>`;
   });
 
-  // 裸 URL 自动链接
+  // 裸 URL
   escaped = escaped.replace(/(?<!["'>])(https?:\/\/[^\s<]+)/g, (match) => {
     return `<a href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`;
   });
@@ -214,7 +242,6 @@ function renderInline(text) {
   return escaped;
 }
 
-// 安全的标签属性处理：仅允许 class 和 style 属性，且值中不能包含 < 或 >
 function safeTagReplacement(attrs, tagName) {
   if (!attrs) return `<${tagName}>`;
   const safeAttrs = [];
