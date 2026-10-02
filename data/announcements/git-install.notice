@@ -1,12 +1,12 @@
 {
   head: '维护',
-  title: '管理员指南：安装 Git',
-  summary: 'Windows / macOS / Linux / Termux 各平台安装 Git 的完整步骤。SSH 配置见下一篇。',
+  title: 'Git安装操作说明',
+  summary: 'Windows / macOS / Linux / Termux 各平台安装 Git 的完整步骤。',
   time: '2026-10-02',
   stamp: 'blank',
   author: ['flowerwsr'],
 
-  main1: '本指南帮助新管理员在不同平台上安装 Git。SSH 配置请见下一篇通知。',
+  main1: '本帮助文档供仓库协作者参考，用于在不同平台上安装 Git。',
 
   main2: '=== 参考资料 ===',
   main3: '* Git 官方下载页：https://git-scm.com/downloads<br>* Pro Git 中文版（免费）：https://git-scm.com/book/zh/v2<br>* GitHub 入门指南：https://docs.github.com/zh/get-started/getting-started-with-git',
