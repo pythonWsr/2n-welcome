@@ -60,6 +60,7 @@ body {
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
   word-break: break-word;
+  overflow: hidden; /* 防止内部超宽元素（含代码块）溢出卡片 */
 }
 
 /* ---------- 通知详情 ---------- */
@@ -87,6 +88,8 @@ body {
 .notice-paragraph {
   text-indent: 2em;
   margin: 0 0 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .notice-paragraph > p {
@@ -97,6 +100,17 @@ body {
   text-indent: 0;
   min-height: 1em;
   margin: 0;
+}
+
+/* 让段落里的代码块/表格不受首行缩进影响 */
+.notice-paragraph > .wiki-code-block,
+.notice-paragraph > .wiki-table,
+.notice-paragraph > pre,
+.notice-paragraph > table {
+  text-indent: 0;
+  margin-left: -2em;   /* 抵消父级的 2em 缩进，让代码块对齐正文左边缘 */
+  margin-right: 0;
+  max-width: calc(100% + 2em);
 }
 
 .notice-file {
@@ -229,7 +243,8 @@ body {
 }
 
 .read-nav-item {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -240,7 +255,6 @@ body {
   text-decoration: none;
   color: inherit;
   transition: 0.15s;
-  min-width: 0;
 }
 
 .read-nav-item:hover:not(.disabled) {
@@ -292,6 +306,8 @@ body {
 /* ---------- Wiki 代码块 ---------- */
 .wiki-code-block {
   text-indent: 0;
+  box-sizing: border-box;
+  max-width: 100%;
   margin: 16px 0;
   border-radius: 10px;
   overflow: hidden;
@@ -349,7 +365,10 @@ body {
 .wiki-code-body {
   margin: 0;
   padding: 14px 16px;
+  box-sizing: border-box;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   color: #abb2bf;
   line-height: 1.55;
   white-space: pre;
@@ -373,6 +392,7 @@ body {
   padding: 0;
   color: inherit;
   font-size: inherit;
+  border-radius: 0;
 }
 
 /* 语法高亮 token（One Dark 风格） */
@@ -413,7 +433,6 @@ body {
   background: rgba(0, 0, 0, 0.015);
 }
 
-/* 无 class 的表格 */
 .read-content table:not(.wiki-table) {
   width: 100%;
   border-collapse: collapse;
@@ -491,31 +510,16 @@ body {
   .wiki-code-block { border-color: #5c6370; }
   .wiki-code-header { border-bottom-color: #5c6370; }
 
-  /* 深色主题下表格 */
-  .wiki-table {
-    border-color: #334155;
-  }
+  .wiki-table { border-color: #334155; }
   .wiki-table th,
-  .wiki-table td {
-    border-color: #334155;
-  }
-  .wiki-table th {
-    background: #1e293b;
-    color: #cbd5e1;
-  }
-  .wiki-table tbody tr:nth-child(even) td {
-    background: rgba(255, 255, 255, 0.02);
-  }
-  .read-content table:not(.wiki-table) {
-    border-color: #334155;
-  }
+  .wiki-table td { border-color: #334155; }
+  .wiki-table th { background: #1e293b; color: #cbd5e1; }
+  .wiki-table tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+
+  .read-content table:not(.wiki-table) { border-color: #334155; }
   .read-content table:not(.wiki-table) th,
-  .read-content table:not(.wiki-table) td {
-    border-color: #334155;
-  }
-  .read-content table:not(.wiki-table) th {
-    background: #1e293b;
-  }
+  .read-content table:not(.wiki-table) td { border-color: #334155; }
+  .read-content table:not(.wiki-table) th { background: #1e293b; }
 }
 
 /* ---------- 手机端 ---------- */
