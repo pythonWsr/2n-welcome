@@ -1,0 +1,37 @@
+name: One-time 2n3D snapshot import
+on:
+  push:
+    branches:
+      - copy/2n3d-main-20261007
+permissions:
+  contents: write
+jobs:
+  import:
+    if: github.event.head_commit.message == 'Run 2n3D import'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace branch contents except protected workflow files
+        run: |
+          set -euo pipefail
+          source_commit=85179de8179f299165d494948d6473e941174713
+          branch=copy/2n3d-main-20261007
+          curl -L --fail --silent --show-error "https://github.com/Llhleo/2n-spatial-world/archive/$source_commit.zip" -o /tmp/2n3d-source.zip
+          mkdir /tmp/2n3d-source
+          python3 -c "import zipfile; zipfile.ZipFile('/tmp/2n3d-source.zip').extractall('/tmp/2n3d-source')"
+          source_dir="$(find /tmp/2n3d-source -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$source_dir"
+          git ls-files -z | grep -zv '^.github/workflows/' | xargs -0r git rm -f -- >/dev/null
+          python3 - "$source_dir" "$GITHUB_WORKSPACE" <<'PY'
+          import shutil, sys
+          from pathlib import Path
+          src, dst = Path(sys.argv[1]), Path(sys.argv[2])
+          def ignore(directory, names):
+              if Path(directory).resolve() == (src / '.github').resolve():
+                  return ['workflows']
+              return []
+          shutil.copytree(src, dst, dirs_exist_ok=True, ignore=ignore)
+          PY
+          git add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Import 2n3D website snapshot'
+          git push origin "HEAD:refs/heads/$branch"
