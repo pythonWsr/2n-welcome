@@ -1,0 +1,8 @@
+{
+ "schemaVersion":1,
+ "events":[
+  {"id":"beginnings","date":"2026-02-24","title":"2n工会成立","body":"在花瓣环绕的世界里，2n 有了自己的名字。从这一天起，地图上的相遇，多了一份同行的约定。","source":"用户提供事件并确认文案，2026-10-05","approved":true},
+  {"id":"first-sacrifice","date":"2026-04-03","title":"2n工会首次血祭","body":"首次血祭，成为 2n 历程中的一个刻度。在 Florr 中，血祭让倒下之后的战斗得以延续；对公会而言，这也是一段值得留下的共同记忆。","source":"用户提供事件并确认文案；年份按同年2026处理；游戏机制参考Florr中文维基血祭页","approved":true},
+  {"id":"flourishing","date":"2026-08-18","title":"2n工会首个unique等级花瓣","body":"这片花瓣成为公会日渐繁盛的象征，也为一路同行的日子，留下了值得铭记的印记。","source":"用户提供事件、Unique称呼并确认文案；年份按同年2026处理","approved":true}
+ ]
+}

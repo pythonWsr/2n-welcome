@@ -1,103 +1,40 @@
-## Version 0.7.0
-· ready to rewrite the project
+# 2n Spatial World
 
-## Version 0.6.0
-· add py map stainer<br>
-· add the QR of guild group chat<br>
-· store wiki image data before 2026-8-4
+2n 公会的五区域 3D 展示网站。现有模型、高清花瓣、花朵和人物文案均保留。
 
-## Version 0.5.3
-· update authentication logic to one-time token <br>
-· add DIY survey logic
+- GitHub Pages（正式发布）：https://llhleo.github.io/2n-spatial-world/
+- Sites（迭代预览）：https://twon-dark-spatial-world.llhleo.chatgpt.site
+- 当前开发分支：`experiment/lookback-v2`
+- 当前进展：[PROJECT_STATUS.md](PROJECT_STATUS.md)
+- 接续工作：[CODEX_HANDOFF.md](CODEX_HANDOFF.md)
+- 编辑人物姓名、职务和介绍：[content/people.json](content/people.json)，规则见 [content/README.md](content/README.md)
+- 公会故事设计（已确认；真实事件尚未接入）：[故事方案](docs/2026-10-05-guild-story-proposal.md)
+- 当前预览：[Sites v49 独立结尾](docs/2026-10-05-guild-closure-v49.md)
+- 发布记录：[2026-10-05 Pages 发布](docs/2026-10-05-pages-release.md)
+- 仓库维护规则：[仓库指南](docs/REPOSITORY_GUIDE.md)
+- 文档目录：[docs/README.md](docs/README.md)
 
-## Version 0.5.2
-· separate pipe
+## 目录
 
-## Version 0.5.1
-· adapt the path
+| 目录 | 用途 |
+| --- | --- |
+| `src/` | 场景、加载、镜头、人物展示 |
+| `content/` | 可直接编辑的人物文字 |
+| `public/assets/` | 线上使用的模型和字体 |
+| `scripts/` | 无损传输与资源构建 |
+| `tests/`、`test/` | 回归检查 |
+| `studies/` | 历史模型与视觉研究，保留供追溯 |
+| `docs/archive/` | 已过期的状态和交接快照 |
 
-## Version 0.5.0
-· a major update <br>
-· add 3 developer username <br>
-· add contibution list <br>
-· move mark list to the website
+## 本地运行
 
-## Version 0.4.9
-· we are about to have a major update <br>
-· and which could last a week or more
+Node.js 环境安装依赖后运行 `npm run dev`；生产构建使用 `npm run build`。
+构建会自动生成花瓣实例和无损模型传输产物。`node_modules`、`dist` 和生成的模型传输目录不提交。
 
-## Version 0.4.8
-· require login to display questionnaire
+## 发布与开发边界
 
-## Version 0.4.7
-· fixed a small bug
+2026-10-05 用户明确要求将当前版本发布到 GitHub Pages：`main` 已快进至 `e65616c7ac91d7a381eed03d959baf4c65e77c94`，构建与部署成功。此发布包含 Sites v48 同版运行时代码，不再是早期花朵冻结版。
 
-## Version 0.4.6
-· add a questionnaire survey
+新视觉开发继续使用 `experiment/lookback-v2` 和原 Sites 项目；后续是否更新 Pages 需按当轮授权判断，不自动沿用本次发布授权。向 `main` 提交文档也会触发现有 Pages 工作流，运行时代码不变。
 
-## Version 0.4.5
-· post important notification
-
-## Version 0.4.4
-· force right alignment
-
-## Version 0.4.3
-· fix settings-related issues
-
-## Version 0.4.2
-· add settings
-
-## Version 0.4.1
-· fixed title centering
-
-## Version 0.4.0
-· extract styles to CSS file
-
-## Version 0.3.5
-· add pipe
-
-## Version 0.3.4
-· add debug type
-
-## Version 0.3.3
-· ready for the Announcement function
-
-## Version 0.3.2
-· add update function
-
-## Version 0.3.1
-· add the Change Log
-
-## Version 0.3.0
-· add the decode function
-
-## Version 0.2.4
-· get the standard colors
-
-## Version 0.2.3
-· fix the leader's face reveal
-
-## Version 0.2.2
-· use iframe to show News 
-
-## Version 0.2.1
-· try to use bilibili API to get News but failed 
-
-## Version 0.2.0
-· add News 
-
-## Version 0.1.3
-· promote the styles 
-
-## Version 0.1.2
-· add the Links
-
-## Version 0.1.1
-· add the Quick Start 
-
-## Version 0.1.0
-· add titles <br>
-· add Leaders
-
-## Version 0.0.1
-· set up the page
+旧仓库 `Llhleo/2n` 保持不动。禁止为整理仓库删除模型、研究、历史分支或改写 Git 历史。

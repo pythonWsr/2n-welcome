@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {createMonument} from '../src/monument.js';
+import {sampleClosure} from '../src/guild-closure.js';
+const api=await import('../src/guild-closure-view.js').catch(()=>({}));
+const entry={position:[1630,114,115],target:[1630,55,30],up:[0,1,0]};
+test('closure reuses geometry but owns only its fading materials',()=>{
+ assert.equal(typeof api.createClosureView,'function');
+ const original=createMonument(),view=api.createClosureView({monument:original});
+ assert.equal(view.group.children[0].geometry,original.children[0].geometry);
+ assert.notEqual(view.group.children[0].material,original.children[0].material);
+ let geometryDisposed=0,originalMaterialDisposed=0,ownDisposed=0;
+ original.children[0].geometry.addEventListener('dispose',()=>geometryDisposed++);
+ original.children[0].material.addEventListener('dispose',()=>originalMaterialDisposed++);
+ view.group.children[0].material.addEventListener('dispose',()=>ownDisposed++);
+ const camera=new T.PerspectiveCamera(48,414/896,.2,2400),state=sampleClosure(1,entry);
+ camera.position.fromArray(state.position);camera.lookAt(...state.target);
+ view.update(state,entry,camera,{width:414,height:896});
+ assert.equal(view.group.visible,true);assert.equal(original.children[0].material.opacity,1);
+ const material=view.group.children[0].material;for(let i=0;i<20;i++)view.update(state,entry,camera,{width:414,height:896});
+ assert.equal(view.group.children[0].material,material);assert.equal(view.group.children.length,2);
+ view.update(sampleClosure(0,entry),entry,camera,{width:414,height:896});assert.equal(view.group.visible,false);
+ view.dispose();view.dispose();assert.equal(geometryDisposed,0);assert.equal(originalMaterialDisposed,0);assert.equal(ownDisposed,1);
+});
+test('mark fits the reading safe zone in portrait and landscape',()=>{
+ assert.equal(typeof api.createClosureView,'function');
+ const view=api.createClosureView({monument:createMonument()});
+ for(const [width,height] of [[414,896],[896,414]]){
+  const camera=new T.PerspectiveCamera(48,width/height,.2,2400),state=sampleClosure(1,entry);
+  camera.position.fromArray(state.position);camera.lookAt(...state.target);camera.updateMatrixWorld();
+  view.update(state,entry,camera,{width,height});view.group.updateMatrixWorld(true);
+  const box=new T.Box3().setFromObject(view.group),points=[];
+  for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera));
+  const xs=points.map(p=>(p.x+1)/2),ys=points.map(p=>(1-p.y)/2);
+  assert.ok(Math.min(...xs)>=.12&&Math.max(...xs)<=.88);
+  assert.ok(Math.min(...ys)>=.30&&Math.max(...ys)<=.70);
+  assert.ok(Math.max(...xs)-Math.min(...xs)<=.36);
+ }view.dispose();
+});

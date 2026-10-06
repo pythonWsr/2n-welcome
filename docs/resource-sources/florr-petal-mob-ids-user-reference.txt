@@ -1,0 +1,605 @@
+完整花瓣 ID 列表（1–118） （来源：官方 Wiki + 静态资源，截至 2026 年 9 月）
+ID
+英文名
+常用中文名
+1
+Basic
+基础
+2
+Light
+轻
+3
+Rock
+岩石
+4
+Square
+方块
+5
+Rose
+玫瑰
+6
+Stinger
+刺
+7
+Iris
+鸢尾
+8
+Wing
+翅膀
+9
+Missile
+导弹
+10
+Grapes
+葡萄
+11
+Cactus
+仙人掌
+12
+Faster
+更快
+13
+Bubble
+泡泡
+14
+Pollen
+花粉
+15
+Dandelion
+蒲公英
+16
+Beetle Egg
+甲虫卵
+17
+Antennae
+触角
+18
+Heavy
+重
+19
+Yin Yang
+阴阳
+20
+Web
+蛛网
+21
+Honey
+蜂蜜
+22
+Leaf
+叶子
+23
+Salt
+盐
+24
+Rice
+米
+25
+Corn
+玉米
+26
+Sand
+沙
+27
+Pincer
+钳子
+28
+Yucca
+丝兰
+29
+Magnet
+磁铁
+30
+Yggdrasil
+世界树叶
+31
+Starfish
+海星
+32
+Pearl
+珍珠
+33
+Lightning
+闪电
+34
+Jelly
+水母
+35
+Claw
+爪子
+36
+Shell
+贝壳
+37
+Cutter
+切割器
+38
+Dahlia
+大丽花
+39
+Uranium
+铀
+40
+Sponge
+海绵
+41
+Soil
+土壤
+42
+Fang
+毒牙
+43
+Third Eye
+第三只眼
+44
+Peas
+豌豆
+45
+Mysterious Stick
+神秘树枝
+46
+Clover
+三叶草
+47
+Mysterious Powder
+神秘粉末
+48
+Air
+空气
+49
+Basil
+罗勒
+50
+Orange
+橙子
+51
+Ant Egg
+蚁卵
+52
+Poo
+便便
+53
+Relic
+遗物
+54
+Lotus
+莲花
+55
+Light Bulb
+灯泡
+56
+Cotton
+棉花
+57
+Carrot
+胡萝卜
+58
+Bone
+骨头
+59
+Plank
+木板
+60
+Tomato
+番茄
+61
+Dark Mark
+黑暗印记
+62
+Rubber
+橡胶
+63
+Blood Stinger
+血刺
+64
+Bur
+苍耳
+65
+Root
+根
+66
+Ankh
+安卡
+67
+Dice
+骰子
+68
+Talisman of Evasion
+闪避护符
+69
+Battery
+电池
+70
+Amulet
+护身符
+71
+Compass
+指南针
+72
+Disc
+圆盘
+73
+Shovel
+铲子
+74
+Coin
+硬币
+75
+Poker Chip
+扑克筹码
+76
+Card
+卡牌
+77
+Moon Rock
+月岩
+78
+Privet Berry
+女贞果
+79
+Glass
+玻璃
+80
+Corruption
+腐化
+81
+Mana Orb
+魔力球
+82
+Blueberries
+蓝莓
+83
+Magic Cotton
+魔法棉花
+84
+Magic Stinger
+魔法刺
+85
+Magic Leaf
+魔法叶子
+86
+Magic Cactus
+魔法仙人掌
+87
+Magic Eye
+魔法眼
+88
+Magic Missile
+魔法导弹
+89
+Magic Stick
+魔法树枝
+90
+Coral
+珊瑚
+91
+Magic Bubble
+魔法泡泡
+92
+Nazar Amulet
+纳扎尔护符
+93
+Mimic
+模仿者
+94
+Fragment
+碎片
+95
+Mjölnir
+雷神之锤
+96
+Wax
+蜂蜡
+97
+Golden Leaf
+金叶
+98
+Cogwheel
+齿轮
+99
+Monstera
+龟背竹
+100
+Mecha Antennae
+机甲触角
+101
+Laser
+激光
+102
+Domino
+多米诺
+103
+Bandage
+绷带
+104
+Pharaoh’s Crown
+法老王冠
+105
+Totem
+图腾
+106
+Triangle
+三角形
+107
+Electric Web
+电蛛网
+108
+Blood Sacrifice
+血祭
+109
+Sawblade
+锯片
+110
+Clay
+粘土
+111
+Dust
+尘土
+112
+Broccoli
+西兰花
+113
+Lentil
+小扁豆
+114
+Dead Leaf
+枯叶
+115
+Soul Splitter
+灵魂分裂者
+116
+Paranormal Goggles
+超自然护目镜
+117
+Bean
+豆子
+118
+Champion’s Crown
+冠军王冠
+
+完整怪物 ID 列表
+ID
+英文名
+常用中文名
+1
+Rock
+岩石
+2
+Cactus
+仙人掌
+3
+Ladybug
+瓢虫
+4
+Bee
+蜜蜂
+5
+Baby Ant
+幼蚁
+6
+Worker Ant
+工蚁
+7
+Soldier Ant
+兵蚁
+8
+Queen Ant
+蚁后
+9
+Ant Hole
+蚁穴
+10
+Beetle
+甲虫
+11
+Hornet
+黄蜂
+12, 13
+Centipede
+蜈蚣（身体分段）
+14, 15
+Jungle Centipede
+丛林蜈蚣
+16, 17
+Desert Centipede
+沙漠蜈蚣
+18
+Square
+方块
+19
+Jungle Ladybug
+丛林瓢虫
+20
+Shiny Ladybug
+闪光瓢虫
+21
+Spider
+蜘蛛
+22
+Scorpion
+蝎子
+23
+Soldier Fire Ant
+火蚁兵
+24
+Fire Ant Burrow
+火蚁穴
+25
+Sandstorm
+沙尘暴
+26
+Bubble
+泡泡
+27
+Bumble Bee
+大黄蜂
+28
+Shell
+贝壳
+29
+Starfish
+海星
+30
+Crab
+螃蟹
+31
+Jellyfish
+水母
+32
+Digger
+挖掘者
+33
+Sponge
+海绵
+34, 35
+Leech
+水蛭（身体分段）
+36
+Dandelion
+蒲公英
+37
+Baby Fire Ant
+幼火蚁
+38
+Worker Fire Ant
+工火蚁
+39
+Queen Fire Ant
+火蚁后
+40
+Ant Egg
+蚁卵
+41
+Fire Ant Egg
+火蚁卵
+42
+Fly
+苍蝇
+43
+Leafbug
+叶虫
+44
+Mantis
+螳螂
+45
+Baby Termite
+幼白蚁
+46
+Worker Termite
+工白蚁
+47
+Soldier Termite
+兵白蚁
+48
+Termite Overmind
+白蚁主脑
+49
+Termite Mound
+白蚁丘
+50
+Termite Egg
+白蚁卵
+51
+Bush
+灌木
+52
+Roach
+蟑螂
+53
+Moth
+飞蛾
+54
+Firefly
+萤火虫
+55
+Hel Beetle
+地狱甲虫
+56
+Wasp
+胡蜂
+57
+Target Dummy
+靶子（特殊）
+58
+Hel Spider
+地狱蜘蛛
+59, 60
+Hel Centipede
+地狱蜈蚣
+61
+Hel Wasp
+地狱胡蜂
+62
+Trader
+商人（特殊）
+63
+Gambler
+赌徒
+64
+Oracle
+神谕者（特殊）
+65
+Magic Firefly
+魔法萤火虫
+66
+Titan
+泰坦（特殊）
+67
+Nazar Beetle
+纳扎尔甲虫
+68
+Worm
+蠕虫
+69
+Worm guts
+蠕虫内脏
+70
+Mecha Flower
+机甲花
+71
+Mecha Wasp
+机甲胡蜂
+72
+Mecha Spider
+机甲蜘蛛
+73
+Golden Leafbug
+金叶虫
+74
+Mecha Crab
+机甲螃蟹
+75
+Assembler
+组装者（特殊）
+76
+Barrel
+桶
+77
+Mummy Beetle
+木乃伊甲虫
+78
+Pharaoh Beetle
+法老甲虫
+79
+Tomb
+陵墓
+80
+Silverfish
+衣鱼
+81
+Garbage
+垃圾
+82
+Soldier Diver Ant
+潜水兵蚁
+83
+Ghost
+幽灵
+84
+Crystal
+水晶
+
+调用方式回顾
+	•	花瓣：https://florr.io/petals/{id}.svg 或 https://florr.io/petals/{id}_{稀有度}.svg（稀有度 1~9）
+	•	怪物：https://florr.io/mobs/{id}.svg
+需要我把这份列表导出成 JSON、CSV 或 Markdown 文件吗？

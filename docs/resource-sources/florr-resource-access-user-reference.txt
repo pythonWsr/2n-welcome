@@ -1,0 +1,307 @@
+Florr.io 资源调用文档 （基于官方静态资源 + 社区工具实测，2026年9月更新）
+一、稀有度数字对应表
+数字
+英文名
+中文名
+SVG 后缀示例
+0 / 无
+Common
+普通
+{id}.svg
+1
+Unusual
+罕见
+{id}_1.svg
+2
+Rare
+稀有
+{id}_2.svg
+3
+Epic
+史诗
+{id}_3.svg
+4
+Legendary
+传奇
+{id}_4.svg
+5
+Mythic
+神话
+{id}_5.svg
+6
+Ultra
+究极
+{id}_6.svg
+7
+Super
+超级
+{id}_7.svg
+8
+Eternal
+永恒
+{id}_8.svg
+9
+Unique
+唯一
+{id}_9.svg
+说明：部分花瓣没有低稀有度版本（例如 Antennae 从 Rare 开始），调用不存在的稀有度会返回 404。
+二、调用接口（官方公开）
+1. 花瓣图片
+https://florr.io/petals/{id}.svg                  # Common / 基础版
+https://florr.io/petals/{id}_{rarity}.svg         # 带稀有度（1~9）
+示例：
+	•	Basic 普通：https://florr.io/petals/1.svg
+	•	Light 史诗：https://florr.io/petals/2_3.svg
+	•	Rose 超级：https://florr.io/petals/5_7.svg
+2. 怪物图片
+https://florr.io/mobs/{id}.svg
+（怪物图片通常不按稀有度拆分 SVG，稀有度由游戏内渲染）
+3. 文本 / 数据文件
+https://florr.io/static/i18n/en_US/petals.txt
+https://florr.io/static/i18n/en_US/mobs.txt
+https://florr.io/static/i18n/en_US/rarities.txt
+https://florr.io/static/i18n/zh_CN/petals.txt     # 中文
+https://florr.io/static/i18n/zh_CN/mobs.txt
+4. 地图与地砖
+https://florr.io/static/maps/{map}.tmj
+https://florr.io/static/tiles/{tile}.svg
+https://florr.io/static/tiles/tileset.tsj
+三、花瓣 ID 列表（部分核心，按官方 Wiki 顺序）
+ID
+英文名
+中文常用名
+备注
+1
+Basic
+基础
+起始花瓣
+2
+Light
+轻
+高攻速
+3
+Rock
+岩石
+高耐久
+4
+Square
+方块
+Diep 彩蛋
+5
+Rose
+玫瑰
+主要治疗
+6
+Stinger
+刺
+高伤脆弱
+7
+Iris
+鸢尾
+毒
+8
+Wing
+翅膀
+伸缩
+9
+Missile
+导弹
+可发射
+10
+Grapes
+葡萄
+分裂毒弹
+11
+Cactus
+仙人掌
+加生命上限
+12
+Faster
+更快
+加速旋转
+13
+Bubble
+泡泡
+推进
+14
+Pollen
+花粉
+放置伤害
+15
+Dandelion
+蒲公英
+减治疗
+16
+Beetle Egg
+甲虫卵
+召唤甲虫
+17
+Antennae
+触角
+扩大视野
+18
+Heavy
+重
+减速旋转
+19
+Yin Yang
+阴阳
+改变旋转方向
+20
+Web
+蛛网
+减速区域
+21
+Honey
+蜂蜜
+吸引怪物
+22
+Leaf
+叶子
+被动回血
+23
+Salt
+盐
+反伤
+24
+Rice
+米
+极快装填
+25
+Corn
+玉米
+高血慢装填
+26
+Sand
+沙
+多粒子
+27
+Pincer
+钳子
+减速+毒
+28
+Yucca
+丝兰
+防御位治疗
+29
+Magnet
+磁铁
+扩大拾取范围
+…
+（后续还有约 90 个）
+
+完整列表见官方 Wiki
+目前官方共约 118 个花瓣。完整最新列表请直接访问： https://official-florrio.fandom.com/wiki/Petals
+四、怪物 ID 列表（部分核心）
+ID
+英文名
+中文常用名
+1
+Rock
+岩石
+2
+Cactus
+仙人掌
+3
+Ladybug
+瓢虫
+4
+Bee
+蜜蜂
+5
+Baby Ant
+幼蚁
+6
+Worker Ant
+工蚁
+7
+Soldier Ant
+兵蚁
+8
+Queen Ant
+蚁后
+9
+Ant Hole
+蚁穴
+10
+Beetle
+甲虫
+11
+Hornet
+黄蜂
+12 / 13
+Centipede
+蜈蚣（身体分段）
+14 / 15
+Jungle Centipede
+丛林蜈蚣
+16 / 17
+Desert Centipede
+沙漠蜈蚣
+18
+Square
+方块
+19
+Jungle Ladybug
+丛林瓢虫
+20
+Shiny Ladybug
+闪光瓢虫
+21
+Spider
+蜘蛛
+22
+Scorpion
+蝎子
+23
+Soldier Fire Ant
+火蚁兵
+24
+Fire Ant Burrow
+火蚁穴
+25
+Sandstorm
+沙尘暴
+26
+Bubble
+泡泡
+27
+Bumble Bee
+大黄蜂
+28
+Shell
+贝壳
+29
+Starfish
+海星
+30
+Crab
+螃蟹
+31
+Jellyfish
+水母
+…
+（后续还有更多）
+
+完整列表：https://official-florrio.fandom.com/wiki/Mobs
+五、实用调用示例（JavaScript）
+// 获取花瓣图片
+function getPetalUrl(id, rarity = 0) {
+  if (rarity === 0) return `https://florr.io/petals/${id}.svg`;
+  return `https://florr.io/petals/${id}_${rarity}.svg`;
+}
+
+// 获取怪物图片
+function getMobUrl(id) {
+  return `https://florr.io/mobs/${id}.svg`;
+}
+
+// 示例
+console.log(getPetalUrl(5, 7)); // Rose Super
+console.log(getMobUrl(4));      // Bee
+六、注意事项
+	1	CORS：直接在浏览器跨域加载官方 SVG 通常没问题（官方允许）。如果遇到限制，可像 maps.ashish.top 一样用代理。
+	2	稀有度不存在：某些花瓣没有对应稀有度的 SVG，会 404。
+	3	更新：游戏更新后 ID 可能新增，但旧 ID 一般不会变。
+	4	完整数据源：推荐直接解析官方 petals.txt / mobs.txt，或参考 official-florrio.fandom.com。
+需要我把完整花瓣/怪物 ID 表做成 Excel / JSON / Markdown 文件，或者再补充中文名对照表吗？
