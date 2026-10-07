@@ -5,7 +5,7 @@
 //   node 2nUpdate.mjs [-f] [-m "提交信息"] [--allow-empty] [-r|--revert [sha]]
 //
 // 选项：
-//   -f                  强制模式，跳过远程差异检查
+//   -f                  强制模式，跳过 push 前的落后检查
 //   -m "提交信息"        提交信息
 //   --allow-empty       允许空提交
 //   -r, --revert <sha>  回退到指定提交并强制推送
@@ -36,7 +36,7 @@ function usage() {
   const name = path.basename(process.argv[1]);
   console.log(`用法: ${name} [-f] [-m "提交信息"] [--allow-empty] [-r|--revert [sha]]`);
   console.log('选项:');
-  console.log('  -f                  强制模式，跳过远程差异检查');
+  console.log('  -f                  强制模式，跳过 push 前的落后检查');
   console.log('  -m "提交信息"        提交信息');
   console.log('  --allow-empty       允许空提交');
   console.log('  -r, --revert <sha>  回退到指定提交并强制推送');
@@ -119,7 +119,7 @@ function git(args, opts = {}) {
 
 function gitRun(args) {
   const r = git(args, { stdio: 'inherit' });
-  if (r.status !== 0) process.exit(r.status || 1);
+  return r.status === 0;
 }
 
 function gitCapture(args) {
@@ -141,12 +141,39 @@ const ok = m => console.log(`[OK] ${m}`);
 const warn = m => console.error(`[WARN] ${m}`);
 const err = m => console.error(`[ERROR] ${m}`);
 
+// ---- 检测 rebase 是否处于进行中 ----
+function isRebaseInProgress() {
+  const g = path.join(REPO_ROOT, '.git');
+  return fs.existsSync(path.join(g, 'rebase-merge')) || fs.existsSync(path.join(g, 'rebase-apply'));
+}
+
+// ---- rebase 失败处理 ----
+function handleRebaseFailure() {
+  console.error('');
+  if (isRebaseInProgress()) {
+    err('rebase 冲突，请手动处理：');
+    console.error('  1. 编辑冲突文件（git status 可查看）');
+    console.error('  2. git add <已解决的文件>');
+    console.error('  3. git rebase --continue');
+    console.error('  或放弃本次 rebase：');
+    console.error('     git rebase --abort');
+  } else {
+    err('rebase 失败，请检查网络或本地状态。');
+  }
+  console.error('');
+  console.error('处理完后可重新运行：node 2nUpdate.mjs');
+  process.exit(1);
+}
+
 // ---- 主流程 ----
 async function main() {
   // ============ 回退模式 ============
   if (REVERT_MODE) {
     info('获取远程最新状态...');
-    gitRun(['fetch', 'origin']);
+    if (!gitRun(['fetch', 'origin'])) {
+      err('获取失败，请检查网络或 SSH 配置');
+      process.exit(1);
+    }
 
     if (!REVERT_SHA) {
       info('git log --oneline');
@@ -159,8 +186,7 @@ async function main() {
     }
 
     info(`git reset --hard ${REVERT_SHA}`);
-    const r1 = git(['reset', '--hard', REVERT_SHA], { stdio: 'inherit' });
-    if (r1.status !== 0) {
+    if (!gitRun(['reset', '--hard', REVERT_SHA])) {
       err('回退失败，请检查 SHA 是否有效。');
       process.exit(1);
     }
@@ -169,7 +195,10 @@ async function main() {
     gitRun(['branch', '-M', 'main']);
 
     info('git push -u origin main --force-with-lease -v');
-    gitRun(['push', '-u', 'origin', 'main', '--force-with-lease', '-v']);
+    if (!gitRun(['push', '-u', 'origin', 'main', '--force-with-lease', '-v'])) {
+      err('推送失败');
+      process.exit(1);
+    }
 
     ok('回退并推送完成！');
     return;
@@ -181,83 +210,84 @@ async function main() {
     if (!MSG) MSG = 'a minor update';
   }
 
-  // ============ 非强制模式：检查远程差异 ============
-  if (!FORCE) {
-    info('获取远程最新状态...');
-    const fetchR = git(['fetch', 'origin'], { stdio: 'inherit' });
-    if (fetchR.status !== 0) {
-      err('获取失败，请检查网络或SSH配置');
-      process.exit(1);
-    }
-
-    const BRANCH = gitCapture(['branch', '--show-current']);
-    if (!BRANCH) {
-      err('无法检测当前分支');
-      process.exit(1);
-    }
-
-    const diffR = git(['diff', '--name-only', 'HEAD', `origin/${BRANCH}`]);
-    const diffFiles = (diffR.stdout || '').trim().split('\n').filter(Boolean);
-
-    if (diffFiles.length > 0) {
-      console.log('');
-      warn(`本地与远程 ${BRANCH} 存在差异的文件:`);
-      diffFiles.forEach(f => log(`  ${f}`));
-      console.log('');
-
-      // 备份本地版本到 .local/
-      log('[BACKUP] 备份本地版本到 .local/ ...');
-      fs.mkdirSync(path.join(REPO_ROOT, '.local'), { recursive: true });
-      for (const f of diffFiles) {
-        const abs = path.join(REPO_ROOT, f);
-        if (!fs.existsSync(abs)) continue;
-        const dest = path.join(REPO_ROOT, '.local', f);
-        fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.copyFileSync(abs, dest);
-        log(`  已备份: ${f} -> .local/${f}`);
-      }
-
-      // 用远程覆盖本地
-      info(`使用远程 origin/${BRANCH} 覆盖本地文件...`);
-      for (const f of diffFiles) {
-        const abs = path.join(REPO_ROOT, f);
-        const existsRemote = git(['cat-file', '-e', `origin/${BRANCH}:${f}`]).status === 0;
-        if (existsRemote) {
-          const co = git(['checkout', `origin/${BRANCH}`, '--', f]);
-          if (co.status === 0) log(`  已覆盖: ${f}`);
-          else warn(`  覆盖失败: ${f}`);
-        } else {
-          try { fs.unlinkSync(abs); } catch {}
-          log(`  已删除: ${f}（远程已不存在）`);
-        }
-      }
-
-      console.log('');
-      ok('已用远程文件覆盖本地文件，本地版本已备份到 .local/');
-      log('   请手动合并 .local/ 中的内容到项目文件后再推送。');
-      return;
-    } else {
-      ok('本地与远程无差异，继续推送流程...');
-    }
-  }
-
-  // ============ 正常推送 ============
+  // ============ 提交本地改动 ============
   info('git add .');
   gitRun(['add', '.']);
 
-  if (ALLOW_EMPTY) {
-    info(`git commit --allow-empty -m "${MSG}"`);
-    gitRun(['commit', '--allow-empty', '-m', MSG]);
+  const hasStaged = git(['diff', '--cached', '--quiet']).status === 1;
+  const willCommit = hasStaged || ALLOW_EMPTY;
+
+  if (willCommit) {
+    if (hasStaged) {
+      info(`git commit -m "${MSG}"`);
+      if (!gitRun(['commit', '-m', MSG])) {
+        err('commit 失败');
+        process.exit(1);
+      }
+    } else {
+      // 无暂存内容但允许空提交
+      info(`git commit --allow-empty -m "${MSG}"`);
+      if (!gitRun(['commit', '--allow-empty', '-m', MSG])) {
+        err('commit 失败');
+        process.exit(1);
+      }
+    }
   } else {
-    info(`git commit -m "${MSG}"`);
-    gitRun(['commit', '-m', MSG]);
+    warn('工作区无改动，跳过 commit');
   }
 
+  // ============ 拉取远程状态 ============
+  info('获取远程最新状态...');
+  if (!gitRun(['fetch', 'origin'])) {
+    err('获取失败，请检查网络或 SSH 配置');
+    process.exit(1);
+  }
+
+  const BRANCH = gitCapture(['branch', '--show-current']);
+  if (!BRANCH) {
+    err('无法检测当前分支');
+    process.exit(1);
+  }
+
+  // ============ 判断 ahead / behind ============
+  if (!FORCE) {
+    const behind = parseInt(gitCapture(['rev-list', '--count', `HEAD..origin/${BRANCH}`]) || '0', 10);
+    const ahead = parseInt(gitCapture(['rev-list', '--count', `origin/${BRANCH}..HEAD`]) || '0', 10);
+
+    if (behind > 0) {
+      info(`本地落后远程 ${behind} 个提交，执行 git pull --rebase`);
+      if (!gitRun(['pull', '--rebase', 'origin', BRANCH])) {
+        handleRebaseFailure();
+      }
+      ok('rebase 成功');
+    } else if (ahead === 0 && behind === 0) {
+      warn('本地与远程无差异');
+    } else {
+      ok(`本地领先远程 ${ahead} 个提交`);
+    }
+  }
+
+  // ============ 推送 ============
   info('git branch -M main');
   gitRun(['branch', '-M', 'main']);
 
   info('git push -u origin main -v');
-  gitRun(['push', '-u', 'origin', 'main', '-v']);
+  if (gitRun(['push', '-u', 'origin', 'main', '-v'])) {
+    ok('推送完成！');
+    return;
+  }
+
+  // push 被拒 → 尝试自动 rebase 后重试
+  warn('push 被拒，尝试自动 pull --rebase 后重试...');
+  if (!gitRun(['pull', '--rebase', 'origin', 'main'])) {
+    handleRebaseFailure();
+  }
+
+  info('重试 git push -u origin main -v');
+  if (!gitRun(['push', '-u', 'origin', 'main', '-v'])) {
+    err('推送仍然失败，请手动排查。');
+    process.exit(1);
+  }
 
   ok('推送完成！');
 }
