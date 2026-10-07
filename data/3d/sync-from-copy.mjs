@@ -99,8 +99,11 @@ function hasCommand(cmd) {
   return spawnSync(which, [cmd], { encoding: 'utf8' }).status === 0;
 }
 
+// 显示路径：仓库内的用相对路径，仓库外的用绝对路径
 function rel(p) {
-  return path.relative(REPO_ROOT, p).split(path.sep).join('/');
+  const r = path.relative(REPO_ROOT, p);
+  if (r.startsWith('..') || path.isAbsolute(r)) return p;
+  return r.split(path.sep).join('/');
 }
 
 function doCopy(src, dst) {
@@ -221,7 +224,6 @@ function fetchUpstream(branch, tmpDir) {
     return;
   }
 
-  // 回退：逐个文件用 git show（慢但兼容）
   log('  [注意] 系统无 tar 命令，使用逐文件提取（可能较慢）');
   const files = git(['ls-tree', '-r', '--name-only', branch])
     .split('\n').map(l => l.trim()).filter(Boolean);
@@ -237,19 +239,24 @@ function fetchUpstream(branch, tmpDir) {
 }
 
 // ---------- 补丁 ----------
-function applyPatches(r, file) {
-  if (r === 'vite.config.js') {
-    let content = fs.readFileSync(file, 'utf8');
-    if (content.includes('base:')) return;
-    log("    ↳ 补丁：vite.config.js 增加 base: './'");
-    if (DRY_RUN) return;
-    const anchor = 'defineConfig({';
-    const idx = content.indexOf(anchor);
-    if (idx < 0) return;
-    const insertAt = idx + anchor.length;
-    content = content.slice(0, insertAt) + "base:'./'," + content.slice(insertAt);
-    fs.writeFileSync(file, content);
-  }
+// 用上游文件判断是否需要补丁；实跑时把补丁结果写到 backupFile
+function applyPatches(r, upstreamFile, backupFile) {
+  if (r !== 'vite.config.js') return;
+
+  let content;
+  try { content = fs.readFileSync(upstreamFile, 'utf8'); } catch { return; }
+  if (content.includes('base:')) return;
+
+  log("    ↳ 补丁：vite.config.js 增加 base: './'");
+  if (DRY_RUN) return;
+
+  const anchor = 'defineConfig({';
+  const idx = content.indexOf(anchor);
+  if (idx < 0) return;
+  const patched = content.slice(0, idx + anchor.length)
+    + "base:'./',"
+    + content.slice(idx + anchor.length);
+  fs.writeFileSync(backupFile, patched);
 }
 
 // ---------- .gitignore 同步 ----------
@@ -274,6 +281,16 @@ function syncGitignore(upstreamAbs) {
     converted.push(out);
   }
 
+  // 去重：去掉尾部斜杠后比较，保留首次出现的
+  const seen = new Set();
+  const unique = [];
+  for (const line of converted) {
+    const key = line.replace(/\/+$/, '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(line);
+  }
+
   const rootContent = fs.readFileSync(ROOT_GITIGNORE_ABS, 'utf8');
   if (!rootContent.includes(CONFIG.GITIGNORE_BLOCK_BEGIN)) {
     log(`  [跳过] 根 .gitignore 缺少标记区 ${CONFIG.GITIGNORE_BLOCK_BEGIN}`);
@@ -282,7 +299,7 @@ function syncGitignore(upstreamAbs) {
 
   if (DRY_RUN) {
     log(`  [dry] 将用以下内容替换 ${CONFIG.ROOT_GITIGNORE} 的 3d-auto-sync 区块（已排除：${[...skip].join('|')}）：`);
-    for (const l of converted) log('    ' + l);
+    for (const l of unique) log('    ' + l);
     return;
   }
 
@@ -291,7 +308,7 @@ function syncGitignore(upstreamAbs) {
   let inBlock = false;
   for (const line of lines) {
     if (line.trim() === CONFIG.GITIGNORE_BLOCK_BEGIN) {
-      result.push(line, ...converted);
+      result.push(line, ...unique);
       inBlock = true;
       continue;
     }
@@ -340,7 +357,7 @@ function runSync(upstreamAbs) {
       const backupFile = path.join(BACKUP_ABS, r + '.upstream');
       doCopy(srcFile, backupFile);
       log(`  [保留-本地有改动] ${r}`);
-      applyPatches(r, backupFile);
+      applyPatches(r, srcFile, backupFile);
       kept++;
     } else {
       doCopy(srcFile, dstFile);
@@ -386,25 +403,21 @@ function runSync(upstreamAbs) {
 
 // ---------- 主入口 ----------
 (async () => {
-  // 1. 分支检查
   const current = git(['branch', '--show-current']);
   if (current !== 'main') {
     console.error(`❌ 请在 main 分支运行（当前：${current}）`);
     process.exit(1);
   }
 
-  // 2. 工作区检查
   if (git(['status', '--porcelain']) !== '') {
     console.error('❌ 工作区有未提交改动，请先提交或 git stash');
     process.exit(1);
   }
 
-  // 3. fetch
   log('→ 拉取远端分支信息');
   const fr = spawnSync('git', ['fetch', '--prune', 'origin'], { cwd: REPO_ROOT, stdio: 'inherit' });
   if (fr.status !== 0) { console.error('❌ git fetch 失败'); process.exit(1); }
 
-  // 4. 选择分支
   let branch;
   if (BRANCH_ARG) {
     branch = BRANCH_ARG;
@@ -415,7 +428,6 @@ function runSync(upstreamAbs) {
     branch = await selectBranch();
   }
 
-  // 5. 临时目录 + 同步
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-3d-'));
   try {
     log(`→ 检出 ${branch} 到临时目录`);
