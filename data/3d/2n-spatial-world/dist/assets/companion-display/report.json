@@ -1,0 +1,296 @@
+[
+  {
+    "kind": "garden",
+    "name": "rose",
+    "source_sha256": "a241b9f43e8aee6aad3472e34eed74b2b9403cdfd37fe99d72c19a42859cd591",
+    "source_triangles": 189660,
+    "ground_triangles": 8059,
+    "display_triangles": 32000,
+    "display_bytes": 1695368,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9952,
+      "three-quarter": 0.9948,
+      "side": 0.9958,
+      "top": 0.997,
+      "back": 0.9955,
+      "back-three-quarter": 0.9955
+    }
+  },
+  {
+    "kind": "garden",
+    "name": "clover",
+    "source_sha256": "1541411884b2b135b5525596138513d0a6bf9b3f83a905525458fd161355e4eb",
+    "source_triangles": 188828,
+    "ground_triangles": 9440,
+    "display_triangles": 31999,
+    "display_bytes": 2189508,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9937,
+      "three-quarter": 0.9924,
+      "side": 0.9907,
+      "top": 0.9957,
+      "back": 0.9937,
+      "back-three-quarter": 0.9937
+    }
+  },
+  {
+    "kind": "garden",
+    "name": "goldenleaf",
+    "source_sha256": "f882801b20e3a9cd080175f1cb36bde27379d130a450b1eb73fa86a5a5cfddbf",
+    "source_triangles": 196362,
+    "ground_triangles": 9327,
+    "display_triangles": 32000,
+    "display_bytes": 2123884,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9933,
+      "three-quarter": 0.9959,
+      "side": 0.993,
+      "top": 0.9922,
+      "back": 0.9934,
+      "back-three-quarter": 0.996
+    }
+  },
+  {
+    "kind": "desert",
+    "name": "cactus",
+    "source_sha256": "58eec18bf406413d62540843d3bffdd95d834f2647f06c459804db006573d5ce",
+    "source_triangles": 184924,
+    "ground_triangles": 6934,
+    "display_triangles": 32000,
+    "display_bytes": 2352568,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9974,
+      "three-quarter": 0.9961,
+      "side": 0.9974,
+      "top": 0.9946,
+      "back": 0.9974,
+      "back-three-quarter": 0.9958
+    }
+  },
+  {
+    "kind": "desert",
+    "name": "sand",
+    "source_sha256": "0770b98ebc091451a37e396004cf83dd26d2d2b519bcf4a92862bcb8342db78e",
+    "source_triangles": 198190,
+    "ground_triangles": 7432,
+    "display_triangles": 31999,
+    "display_bytes": 2174552,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9969,
+      "three-quarter": 0.9954,
+      "side": 0.9925,
+      "top": 0.9903,
+      "back": 0.9969,
+      "back-three-quarter": 0.9945
+    }
+  },
+  {
+    "kind": "desert",
+    "name": "iris",
+    "source_sha256": "2824bc6da487afd9737be3cc6c629e86f91bfdd16fee8949a1152d2ef823d117",
+    "source_triangles": 99874,
+    "ground_triangles": 4494,
+    "display_triangles": 31999,
+    "display_bytes": 1912952,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9966,
+      "three-quarter": 0.9965,
+      "side": 0.9965,
+      "top": 0.9962,
+      "back": 0.9966,
+      "back-three-quarter": 0.9961
+    }
+  },
+  {
+    "kind": "ocean",
+    "name": "pearl",
+    "source_sha256": "8f13ae47bd4197e5c9b8f6dd4dafd67f989f2aa243a49a57feadb3dfb43ac16f",
+    "source_triangles": 98654,
+    "ground_triangles": 7892,
+    "display_triangles": 32000,
+    "display_bytes": 1871120,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9969,
+      "three-quarter": 0.9973,
+      "side": 0.9965,
+      "top": 0.9959,
+      "back": 0.9969,
+      "back-three-quarter": 0.9968
+    }
+  },
+  {
+    "kind": "ocean",
+    "name": "shell",
+    "source_sha256": "96063d3445f6218aaa427815e96830028a743b2be5c121f3aeb07324b3d4bc06",
+    "source_triangles": 92886,
+    "ground_triangles": 7430,
+    "display_triangles": 32000,
+    "display_bytes": 2141696,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9941,
+      "three-quarter": 0.9951,
+      "side": 0.9934,
+      "top": 0.9913,
+      "back": 0.9939,
+      "back-three-quarter": 0.996
+    }
+  },
+  {
+    "kind": "ocean",
+    "name": "starfish",
+    "source_sha256": "5b94bc838bdff3ba2caa6ec50c0ecff8564d287859136ba20e3a0247f4aecc1d",
+    "source_triangles": 98500,
+    "ground_triangles": 7880,
+    "display_triangles": 32000,
+    "display_bytes": 1469848,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9957,
+      "three-quarter": 0.997,
+      "side": 0.998,
+      "top": 0.9975,
+      "back": 0.9958,
+      "back-three-quarter": 0.9962
+    }
+  },
+  {
+    "kind": "jungle",
+    "name": "peas",
+    "source_sha256": "526512642cd3ec961f743c585f61b2f66711ce7e718f508e4f6e48ef7ade6a43",
+    "source_triangles": 95652,
+    "ground_triangles": 7652,
+    "display_triangles": 31999,
+    "display_bytes": 2021544,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9937,
+      "three-quarter": 0.996,
+      "side": 0.9963,
+      "top": 0.9937,
+      "back": 0.9938,
+      "back-three-quarter": 0.9952
+    }
+  },
+  {
+    "kind": "jungle",
+    "name": "tomato",
+    "source_sha256": "9d8d051c23cf009a104191fa6dc7618c46ee0e2571d589c85565a7975549bc05",
+    "source_triangles": 98508,
+    "ground_triangles": 7880,
+    "display_triangles": 32000,
+    "display_bytes": 2401868,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9973,
+      "three-quarter": 0.9974,
+      "side": 0.9969,
+      "top": 0.9972,
+      "back": 0.9973,
+      "back-three-quarter": 0.997
+    }
+  },
+  {
+    "kind": "jungle",
+    "name": "compass",
+    "source_sha256": "1573254ef36f6545ee34f74be4c849b9c1a58692ed0393bb3235e5b4a5c9ecc4",
+    "source_triangles": 90340,
+    "ground_triangles": 7227,
+    "display_triangles": 31999,
+    "display_bytes": 2443780,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9968,
+      "three-quarter": 0.9972,
+      "side": 0.993,
+      "top": 0.9925,
+      "back": 0.9969,
+      "back-three-quarter": 0.9967
+    }
+  },
+  {
+    "kind": "hell",
+    "name": "darkmark",
+    "source_sha256": "0ebb3990009cc1a3532827239bd153a9f85a412d84060c06a315ffef01273cef",
+    "source_triangles": 89804,
+    "ground_triangles": 7184,
+    "display_triangles": 31999,
+    "display_bytes": 2169592,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9944,
+      "three-quarter": 0.9948,
+      "side": 0.9947,
+      "top": 0.9957,
+      "back": 0.9945,
+      "back-three-quarter": 0.9949
+    }
+  },
+  {
+    "kind": "hell",
+    "name": "corruption",
+    "source_sha256": "479eed1a12684142690677fa717685acaaf373a64c2ef265d94630afdd0eabf8",
+    "source_triangles": 95148,
+    "ground_triangles": 7611,
+    "display_triangles": 31998,
+    "display_bytes": 2035640,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "silhouette_iou": {
+      "front": 0.9941,
+      "three-quarter": 0.9969,
+      "side": 0.9981,
+      "top": 0.9996,
+      "back": 0.9943,
+      "back-three-quarter": 0.9961
+    }
+  }
+]
