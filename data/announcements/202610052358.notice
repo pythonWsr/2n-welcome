@@ -1,0 +1,13 @@
+{
+  head: '转发',
+  title: '转自 Free Supers',
+  summary: '反 leecher 奖赏；同时禁止将开队消息向外搬运。',
+  time: '2026-10-05',
+  stamp: 'informal',
+  author: ['Char', 'flowerwsr'],
+
+  main1: '=== 防渗透奖赏 ===',
+  main2: '如果提供 leecher 同伙向本群外转开队消息，或者隐瞒游戏名偷窃，确切情报奖励 10 元。',
+  main3: '=== 外传限制 ===',
+  main4: 'Char 以后不允许把开队消息往外搬了，需要获取的可以自己去加群。'
+}
