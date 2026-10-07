@@ -1,0 +1,11 @@
+# Courtyard follow-up fixes
+
+Approved by user: execute previously proposed order. Spec: docs/superpowers/specs/2026-10-04-courtyard-fixes.md. Base: Sitesv43/source34f7cbc26244463f855fe79316c2e9a9f14dd586.
+
+## Global Constraints
+
+Preserve HD models, fonts, textures, five biomes/Garden, seven flowers, content order and biographies, existing people animation trajectories apart from approved terrain clearance translation. Keep depth testing; do not paint names through ground. No main, Pages or old Llhleo/2n operations. Same route drives camera/text/petals. Autoplay default off, old150seconds and per-window reading times preserved. Manual native scrolling, no forced snap/no jump. Restore reverse entry and resize semantics. No browser acceptance claim without real evidence.
+
+## Task 1: Correct the three coupled boundaries in order
+
+Read spec. Implement terrain clearance first, chapter text handoff second, manual progress mapping last. Write meaningful RED then GREEN regressions for each cause before its fix. Inspect rendered terrain triangulation/region bounds and existing tests before choosing clearance. Preserve all existing source files outside bounded changes; can add shared utilities. Test zero member,95 members, narrow responsive subwindows, entry/reverse continuity, transitions and ending. Confirm complete glyph/petal bounds, camera clearance, and terrain line-of-sight across dense samples (not merely anchor heights). Shared elevation must move camera/target/text/environment consistently and avoid changing old world. Text mutual exclusion must hold actual gallery spatial-opacity path too, forward/reverse/manual/autoplay. Manual mapping follows path distance with smooth local speed and small reading drift; do not change route animation or autoplay timing. Forward/inverse mapping must integrate seek, autoplay toggle/manual interruption, resize and delayed metrics without jumps; preserve historical pre-people mapping. Avoid repeated per-frame whole-route allocation in newly added mapping. Run full node --test test/*.test.js tests/*.test.js, npm run build and diff-check once after final changes. Report changed paths, behavior, RED/GREEN evidence, limitations and commit source/tests only. Root owns plan/spec/progress/release docs. No external operations or subagents.

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "darkmark",
+    "source_sha256": "0ebb3990009cc1a3532827239bd153a9f85a412d84060c06a315ffef01273cef",
+    "source_bytes": 6640856,
+    "source_triangles": 89804,
+    "web_bytes": 428372,
+    "web_triangles": 7184,
+    "web_vertices": 8112,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9873,
+      "three-quarter": 0.9889,
+      "side": 0.9937,
+      "top": 0.9922,
+      "back": 0.9871,
+      "back-three-quarter": 0.9889
+    }
+  },
+  {
+    "name": "corruption",
+    "source_sha256": "479eed1a12684142690677fa717685acaaf373a64c2ef265d94630afdd0eabf8",
+    "source_bytes": 6005192,
+    "source_triangles": 95148,
+    "web_bytes": 376568,
+    "web_triangles": 7611,
+    "web_vertices": 6729,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9889,
+      "three-quarter": 0.992,
+      "side": 0.9958,
+      "top": 0.9989,
+      "back": 0.989,
+      "back-three-quarter": 0.9909
+    }
+  }
+]

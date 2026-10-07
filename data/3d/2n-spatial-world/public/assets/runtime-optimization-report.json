@@ -1,0 +1,218 @@
+[
+  {
+    "name": "clover",
+    "source_sha256": "7f68fff2bee783c3172af4c5feb10a091cb3afe77967ba1c65053c86b3b3b70d",
+    "source_bytes": 1710848,
+    "source_triangles": 37765,
+    "web_bytes": 472236,
+    "web_triangles": 9440,
+    "web_vertices": 7099,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9925,
+      "three-quarter": 0.9924,
+      "side": 0.9902,
+      "top": 0.9931,
+      "back": 0.9925,
+      "back-three-quarter": 0.9891
+    }
+  },
+  {
+    "name": "glass",
+    "source_sha256": "a0c68c3596bd87578cf880478498ed941a4318937551e6c94149230934f93145",
+    "source_bytes": 1854064,
+    "source_triangles": 38745,
+    "web_bytes": 1854064,
+    "web_triangles": 38745,
+    "web_vertices": 40334,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 1.0,
+      "three-quarter": 1.0,
+      "side": 1.0,
+      "top": 1.0,
+      "back": 1.0,
+      "back-three-quarter": 1.0
+    },
+    "retained_previous": true,
+    "candidate_silhouette_iou": {
+      "front": 0.9884,
+      "three-quarter": 0.9849,
+      "side": 0.9915,
+      "top": 0.9897,
+      "back": 0.9883,
+      "back-three-quarter": 0.9888
+    }
+  },
+  {
+    "name": "goldenleaf",
+    "source_sha256": "8a29c4ca026c739f09f1af92a4072eb30fa78a8f434e0f3a7b2b4a9a9606366b",
+    "source_bytes": 1773612,
+    "source_triangles": 37308,
+    "web_bytes": 476820,
+    "web_triangles": 9327,
+    "web_vertices": 8853,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.993,
+      "three-quarter": 0.9932,
+      "side": 0.9884,
+      "top": 0.987,
+      "back": 0.9931,
+      "back-three-quarter": 0.9927
+    }
+  },
+  {
+    "name": "leaf",
+    "source_sha256": "fe7ee2404646b8ea3ceaa542ac7f8d02c7dd964c3a4eafa7fccc92f885d814aa",
+    "source_bytes": 1256928,
+    "source_triangles": 32538,
+    "web_bytes": 379136,
+    "web_triangles": 8134,
+    "web_vertices": 6246,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.993,
+      "three-quarter": 0.9889,
+      "side": 0.9923,
+      "top": 0.9909,
+      "back": 0.9928,
+      "back-three-quarter": 0.9902
+    }
+  },
+  {
+    "name": "rock",
+    "source_sha256": "911d11f4d273f2b92f97fb3d65719d7cbe7e89bb765cce93a0342cc4d7f8c171",
+    "source_bytes": 1388588,
+    "source_triangles": 31769,
+    "web_bytes": 319572,
+    "web_triangles": 7942,
+    "web_vertices": 5490,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9928,
+      "three-quarter": 0.9917,
+      "side": 0.9931,
+      "top": 0.9948,
+      "back": 0.9929,
+      "back-three-quarter": 0.9927
+    }
+  },
+  {
+    "name": "rose",
+    "source_sha256": "5356cd60216ad03baedf9dcad876da5b3131907c95bfba0015f381abe583608b",
+    "source_bytes": 1427968,
+    "source_triangles": 32242,
+    "web_bytes": 361100,
+    "web_triangles": 8059,
+    "web_vertices": 7056,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9942,
+      "three-quarter": 0.9932,
+      "side": 0.992,
+      "top": 0.9963,
+      "back": 0.9939,
+      "back-three-quarter": 0.9935
+    }
+  },
+  {
+    "name": "cactus",
+    "source_sha256": "c49a9acbe99917eed1a681da343d31b762ab27d103e0907c373ffd0dc0f36098",
+    "source_bytes": 1364800,
+    "source_triangles": 27738,
+    "web_bytes": 397344,
+    "web_triangles": 6934,
+    "web_vertices": 6384,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9945,
+      "three-quarter": 0.9932,
+      "side": 0.9923,
+      "top": 0.9891,
+      "back": 0.9946,
+      "back-three-quarter": 0.9912
+    }
+  },
+  {
+    "name": "iris",
+    "source_sha256": "72f0759381c9bb445b2f69c573a27fdc15a437fb322099186c47b42355f412d2",
+    "source_bytes": 805696,
+    "source_triangles": 17977,
+    "web_bytes": 236000,
+    "web_triangles": 4494,
+    "web_vertices": 3578,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9947,
+      "three-quarter": 0.9942,
+      "side": 0.9944,
+      "top": 0.994,
+      "back": 0.9948,
+      "back-three-quarter": 0.995
+    }
+  },
+  {
+    "name": "pincer",
+    "source_sha256": "7616eba7d335daa2230be9ef587b0dac075435413c77912b8ab43de37d02d980",
+    "source_bytes": 758560,
+    "source_triangles": 17736,
+    "web_bytes": 218640,
+    "web_triangles": 4433,
+    "web_vertices": 4020,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9901,
+      "three-quarter": 0.9893,
+      "side": 0.9912,
+      "top": 0.9929,
+      "back": 0.99,
+      "back-three-quarter": 0.9865
+    }
+  },
+  {
+    "name": "sand",
+    "source_sha256": "aa1a7e7c5a2de1c00973645b13b4c27aad1e38ec101273ee556657b67dbfb2c0",
+    "source_bytes": 1343060,
+    "source_triangles": 29728,
+    "web_bytes": 384196,
+    "web_triangles": 7432,
+    "web_vertices": 6123,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 0.9943,
+      "three-quarter": 0.9929,
+      "side": 0.9931,
+      "top": 0.9914,
+      "back": 0.9942,
+      "back-three-quarter": 0.991
+    }
+  },
+  {
+    "name": "stick",
+    "source_sha256": "c7b3fb522e6f659c9bcf9af5d5c6a027f86491b6f100c1c2643de6dd2d2b4556",
+    "source_bytes": 944476,
+    "source_triangles": 19550,
+    "web_bytes": 944476,
+    "web_triangles": 19550,
+    "web_vertices": 18566,
+    "reduction": 0.75,
+    "silhouette_iou": {
+      "front": 1.0,
+      "three-quarter": 1.0,
+      "side": 1.0,
+      "top": 1.0,
+      "back": 1.0,
+      "back-three-quarter": 1.0
+    },
+    "retained_previous": true,
+    "candidate_silhouette_iou": {
+      "front": 0.9949,
+      "three-quarter": 0.9909,
+      "side": 0.9842,
+      "top": 0.9823,
+      "back": 0.9946,
+      "back-three-quarter": 0.9917
+    }
+  }
+]

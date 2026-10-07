@@ -16,3 +16,12 @@ NOTICE
 5. We would like to thank Github@Llhleo (Florr.io@Llhleo) for providing the HTML code of the start page.
    The original code files are stored in the ./data/start/dist directory (assets excluded), while the modified code is stored in ./data/start/2n.
    Original website: https://llhleo.github.io/2n/
+
+6. We would like to thank Github@Llhleo (Florr.io@Llhleo) for providing the source code and assets of the 3D spatial world website.
+   The files are stored in the ./data/3d/2n-spatial-world directory.
+   Local modifications applied to the original code are as follows:
+     - vite.config.js: added `base: './'` so that the build output can be served from a nested subpath.
+     - .gitignore: removed the `dist/` rule so that the build output can be committed.
+     - Removed the inherited .github/workflows/pages.yml, replaced by a new workflow in the repository root (see .github/workflows/build-3d.yml).
+     - Added ./data/3d/index.html as an iframe wrapper, and registered the "3d" tab in ./data/tabs.json.
+   Original website: https://llhleo.github.io/2n-spatial-world/

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c1110">
+  <title>2n — Garden Art Study</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0c1110}
+    canvas{display:block;width:100%;height:var(--scene-height,100lvh);touch-action:none}
+    #status{position:fixed;left:18px;bottom:24px;color:#cbd3c4;font:13px/1.5 system-ui;letter-spacing:.02em;max-width:80vw}
+    #status:empty{display:none}
+  </style>
+</head>
+<body>
+  <canvas id="study" aria-label="花园 3D 美术样板镜头"></canvas><p id="status" role="status"></p>
+  <script type="module" src="./shot.js"></script>
+</body>
+</html>

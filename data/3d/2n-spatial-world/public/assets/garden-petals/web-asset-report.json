@@ -1,0 +1,98 @@
+[
+  {
+    "name": "glass",
+    "source_sha256": "c365bb1bac225eac53153a6de5ed231fbe4f0c5e09b4aaf44332fc47ee9de6f7",
+    "source_bytes": 9575532,
+    "source_triangles": 193732,
+    "web_bytes": 1854064,
+    "web_triangles": 38745,
+    "web_vertices": 40334,
+    "reduction": 0.8,
+    "silhouette_iou": {
+      "front": 0.9976,
+      "three-quarter": 0.9958,
+      "side": 0.995,
+      "top": 0.9958
+    }
+  },
+  {
+    "name": "leaf",
+    "source_sha256": "0d2a1f7459175cb2938623cb6621925f27f26129532ecc8ddfd546e48d13bb7e",
+    "source_bytes": 7395896,
+    "source_triangles": 180772,
+    "web_bytes": 1256928,
+    "web_triangles": 32538,
+    "web_vertices": 24530,
+    "reduction": 0.82,
+    "silhouette_iou": {
+      "front": 0.995,
+      "three-quarter": 0.9939,
+      "side": 0.9904,
+      "top": 0.9946
+    }
+  },
+  {
+    "name": "rose",
+    "source_sha256": "25fa727f99e81d463c6320a4f78c467e0b09084db4f215b81be4dcc002d89aee",
+    "source_bytes": 6846748,
+    "source_triangles": 189660,
+    "web_bytes": 1427968,
+    "web_triangles": 32242,
+    "web_vertices": 31337,
+    "reduction": 0.83,
+    "silhouette_iou": {
+      "front": 0.9951,
+      "three-quarter": 0.9948,
+      "side": 0.9955,
+      "top": 0.9971
+    }
+  },
+  {
+    "name": "clover",
+    "source_sha256": "4f74eb85d6307b6741107318ff5bdd4d2bf14f57c1fd5d88a76df6a4f4185e15",
+    "source_bytes": 8340440,
+    "source_triangles": 188828,
+    "web_bytes": 1710848,
+    "web_triangles": 37765,
+    "web_vertices": 35188,
+    "reduction": 0.8,
+    "silhouette_iou": {
+      "front": 0.9939,
+      "three-quarter": 0.9923,
+      "side": 0.9908,
+      "top": 0.9955
+    }
+  },
+  {
+    "name": "rock",
+    "source_sha256": "85a6bd3024c073e3ceb845bbd9a7ef7e459af3da86a4a3b6cdc7c984c45cb141",
+    "source_bytes": 7556400,
+    "source_triangles": 186877,
+    "web_bytes": 1388588,
+    "web_triangles": 31769,
+    "web_vertices": 29976,
+    "reduction": 0.83,
+    "silhouette_iou": {
+      "front": 0.995,
+      "three-quarter": 0.994,
+      "side": 0.9953,
+      "top": 0.9957
+    }
+  },
+  {
+    "name": "goldenleaf",
+    "source_sha256": "54249714255716a95203cd25cba5ddaaf08d1a19dfffde5845d1a07d698668fc",
+    "source_bytes": 8381964,
+    "source_triangles": 196362,
+    "web_bytes": 1773612,
+    "web_triangles": 37308,
+    "web_vertices": 38889,
+    "reduction": 0.81,
+    "silhouette_iou": {
+      "front": 0.9935,
+      "three-quarter": 0.9962,
+      "side": 0.9941,
+      "top": 0.9925
+    }
+  }
+]

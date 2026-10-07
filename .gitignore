@@ -85,6 +85,14 @@ local.properties
 captures/
 
 # ==========================================
+# 3D 项目（data/3d/2n-spatial-world/）
+# 此区块由 data/3d/sync-from-copy.sh 自动维护，请勿手动编辑
+# ==========================================
+# BEGIN 3d-auto-sync
+
+# END 3d-auto-sync
+
+# ==========================================
 # 编辑器 / IDE
 # ==========================================
 .vscode/
@@ -149,11 +157,13 @@ __pycache__/
 .venv/
 venv/
 
-# 通用构建
-build/
-dist/
-out/
-target/
+# 通用构建（仅根目录）
+/build/
+/dist/
+/out/
+/target/
+
+# 注意：data/3d/2n-spatial-world/dist/ 需要提交，见该子目录的 .gitignore
 
 # ==========================================
 # 环境变量 / 密钥（强烈建议保留）

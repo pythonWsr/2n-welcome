@@ -1,34 +1,10 @@
 {
   "tabs": [
-    {
-      "id": "home",
-      "title": "首页",
-      "folder": "data/start",
-      "entry": "index.html"
-    },
-    {
-      "id": "announcements",
-      "title": "通知",
-      "folder": "data/announcements",
-      "entry": "index.html"
-    },
-    {
-      "id": "surveys",
-      "title": "问卷",
-      "folder": "data/surveys",
-      "entry": "index.html"
-    },
-    {
-      "id": "join",
-      "title": "加入",
-      "folder": "data/join",
-      "entry": "index.html"
-    },
-    {
-      "id": "about",
-      "title": "关于",
-      "folder": "data/about",
-      "entry": "index.wiki"
-    }
+    { "id": "home",          "title": "首页",   "folder": "data/start",         "entry": "index.html" },
+    { "id": "3d",            "title": "3D首页", "folder": "data/3d",            "entry": "index.html" },
+    { "id": "announcements", "title": "通知",   "folder": "data/announcements", "entry": "index.html" },
+    { "id": "surveys",       "title": "问卷",   "folder": "data/surveys",       "entry": "index.html" },
+    { "id": "join",          "title": "加入",   "folder": "data/join",          "entry": "index.html" },
+    { "id": "about",         "title": "关于",   "folder": "data/about",         "entry": "index.wiki" }
   ]
 }

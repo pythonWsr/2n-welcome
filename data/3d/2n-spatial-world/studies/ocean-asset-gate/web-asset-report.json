@@ -1,0 +1,128 @@
+[
+  {
+    "name": "pearl",
+    "source_sha256": "8f13ae47bd4197e5c9b8f6dd4dafd67f989f2aa243a49a57feadb3dfb43ac16f",
+    "source_bytes": 5312008,
+    "source_triangles": 98654,
+    "web_bytes": 391340,
+    "web_triangles": 7892,
+    "web_vertices": 7887,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9946,
+      "three-quarter": 0.9938,
+      "side": 0.9944,
+      "top": 0.9927,
+      "back": 0.9947,
+      "back-three-quarter": 0.9941
+    }
+  },
+  {
+    "name": "shell",
+    "source_sha256": "96063d3445f6218aaa427815e96830028a743b2be5c121f3aeb07324b3d4bc06",
+    "source_bytes": 6078140,
+    "source_triangles": 92886,
+    "web_bytes": 392092,
+    "web_triangles": 7430,
+    "web_vertices": 7205,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9902,
+      "three-quarter": 0.9917,
+      "side": 0.9921,
+      "top": 0.9874,
+      "back": 0.9902,
+      "back-three-quarter": 0.9928
+    }
+  },
+  {
+    "name": "starfish",
+    "source_sha256": "5b94bc838bdff3ba2caa6ec50c0ecff8564d287859136ba20e3a0247f4aecc1d",
+    "source_bytes": 5120440,
+    "source_triangles": 98500,
+    "web_bytes": 328092,
+    "web_triangles": 7880,
+    "web_vertices": 5546,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9947,
+      "three-quarter": 0.994,
+      "side": 0.9941,
+      "top": 0.9925,
+      "back": 0.9946,
+      "back-three-quarter": 0.9936
+    }
+  },
+  {
+    "name": "compass",
+    "source_sha256": "1573254ef36f6545ee34f74be4c849b9c1a58692ed0393bb3235e5b4a5c9ecc4",
+    "source_bytes": 7976660,
+    "source_triangles": 90340,
+    "web_bytes": 441296,
+    "web_triangles": 7227,
+    "web_vertices": 7095,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.995,
+      "three-quarter": 0.994,
+      "side": 0.9879,
+      "top": 0.9853,
+      "back": 0.995,
+      "back-three-quarter": 0.9938
+    }
+  },
+  {
+    "name": "bur",
+    "source_sha256": "1e66d42dca5bddb4c23867316adecf5fd8a84b0f3d5f04bee011248a76d88dbd",
+    "source_bytes": 7145208,
+    "source_triangles": 88741,
+    "web_bytes": 398324,
+    "web_triangles": 7099,
+    "web_vertices": 7414,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9915,
+      "three-quarter": 0.9924,
+      "side": 0.9927,
+      "top": 0.9916,
+      "back": 0.9915,
+      "back-three-quarter": 0.9917
+    }
+  },
+  {
+    "name": "peas",
+    "source_sha256": "526512642cd3ec961f743c585f61b2f66711ce7e718f508e4f6e48ef7ade6a43",
+    "source_bytes": 5717220,
+    "source_triangles": 95652,
+    "web_bytes": 372812,
+    "web_triangles": 7652,
+    "web_vertices": 6542,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9898,
+      "three-quarter": 0.9939,
+      "side": 0.995,
+      "top": 0.9906,
+      "back": 0.9898,
+      "back-three-quarter": 0.9935
+    }
+  },
+  {
+    "name": "tomato",
+    "source_sha256": "9d8d051c23cf009a104191fa6dc7618c46ee0e2571d589c85565a7975549bc05",
+    "source_bytes": 7754652,
+    "source_triangles": 98508,
+    "web_bytes": 418752,
+    "web_triangles": 7880,
+    "web_vertices": 6470,
+    "reduction": 0.92,
+    "silhouette_iou": {
+      "front": 0.9939,
+      "three-quarter": 0.9941,
+      "side": 0.9943,
+      "top": 0.9953,
+      "back": 0.994,
+      "back-three-quarter": 0.993
+    }
+  }
+]
