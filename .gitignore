@@ -89,7 +89,12 @@ captures/
 # 此区块由 data/3d/sync-from-copy.sh 自动维护，请勿手动编辑
 # ==========================================
 # BEGIN 3d-auto-sync
-
+/data/3d/2n-spatial-world/node_modules/
+/data/3d/2n-spatial-world/public/assets/model-transport/
+/data/3d/2n-spatial-world/.DS_Store
+/data/3d/2n-spatial-world/__pycache__/
+/data/3d/2n-spatial-world/.worktrees/
+/data/3d/2n-spatial-world/.superpowers/
 # END 3d-auto-sync
 
 # ==========================================
