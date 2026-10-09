@@ -15,10 +15,20 @@
 //   7. 上游 .gitignore 的规则（除 GITIGNORE_SKIP_RULES）→ 加前缀后写入
 //      根 .gitignore 的自动区块
 //
+// 提取前检查：
+//   选定分支后，先验证上游和本地目标目录是同一个项目。检查项：
+//     a) 顶层关键标志全部存在（src/public/content/scripts/
+//        package.json/vite.config.js）
+//     b) package.json 能被解析，且 name 字段严格等于
+//        STRUCTURE_IDENTITY_NAME
+//   任一失败 → 拒绝执行，除非同时指定 --branch=... 和 -f/--force。
+//   这样可避免误把错误的 copy 分支同步到本地，破坏项目结构。
+//
 // 用法：
 //   node data/3d/sync-from-copy.mjs
 //   node data/3d/sync-from-copy.mjs --dry-run
 //   node data/3d/sync-from-copy.mjs --branch=origin/copy/xxx
+//   node data/3d/sync-from-copy.mjs --branch=origin/copy/xxx --force
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,6 +49,21 @@ const CONFIG = {
   GITIGNORE_BLOCK_END: '# END 3d-auto-sync',
   GITIGNORE_PATH_PREFIX: '/data/3d/2n-spatial-world/',
   GITIGNORE_SKIP_RULES: ['dist/', 'dist'],
+
+  // 结构身份检查
+  STRUCTURE_MARKERS: [
+    'src',
+    'public',
+    'content',
+    'scripts',
+    'package.json',
+    'vite.config.js',
+  ],
+  STRUCTURE_IDENTITY_NAME: '2n-spatial-world',
+
+  // 差异比例阈值（仅作警告，不阻断）
+  STRUCTURE_DIFF_WARN: 0.5,
+
   LOCALLY_MODIFIED: ['vite.config.js'],
   LOCALLY_DELETED: [
     '.github/workflows/pages.yml',
@@ -66,11 +91,16 @@ const ROOT_GITIGNORE_ABS = path.resolve(REPO_ROOT, CONFIG.ROOT_GITIGNORE);
 // ---------- CLI ----------
 let DRY_RUN = false;
 let BRANCH_ARG = '';
+let FORCE = false;
 for (const arg of process.argv.slice(2)) {
   if (arg === '--dry-run') DRY_RUN = true;
+  else if (arg === '-f' || arg === '--force') FORCE = true;
   else if (arg.startsWith('--branch=')) BRANCH_ARG = arg.slice('--branch='.length);
   else if (arg === '-h' || arg === '--help') {
-    console.log('用法：node sync-from-copy.mjs [--dry-run] [--branch=<name>]');
+    console.log('用法：node sync-from-copy.mjs [--dry-run] [--branch=<name>] [-f|--force]');
+    console.log('  --dry-run        只显示将要做什么，不实际改动');
+    console.log('  --branch=<name>  直接指定上游分支，跳过交互选择');
+    console.log('  -f, --force      仅与 --branch 同时使用时，跳过结构检查');
     process.exit(0);
   } else {
     console.error(`未知参数：${arg}`);
@@ -99,7 +129,6 @@ function hasCommand(cmd) {
   return spawnSync(which, [cmd], { encoding: 'utf8' }).status === 0;
 }
 
-// 显示路径：仓库内的用相对路径，仓库外的用绝对路径
 function rel(p) {
   const r = path.relative(REPO_ROOT, p);
   if (r.startsWith('..') || path.isAbsolute(r)) return p;
@@ -107,13 +136,13 @@ function rel(p) {
 }
 
 function doCopy(src, dst) {
-  if (DRY_RUN) { log(`  [dry] cp ${rel(src)} → ${rel(dst)}`); return; }
+  if (DRY_RUN) { log(`  [dry] cp ${rel(src)} -> ${rel(dst)}`); return; }
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.copyFileSync(src, dst);
 }
 
 function doMove(src, dst) {
-  if (DRY_RUN) { log(`  [dry] mv ${rel(src)} → ${rel(dst)}`); return; }
+  if (DRY_RUN) { log(`  [dry] mv ${rel(src)} -> ${rel(dst)}`); return; }
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   try {
     fs.renameSync(src, dst);
@@ -190,11 +219,11 @@ function prompt(question) {
 async function selectBranch() {
   const branches = listCopyBranches();
   if (branches.length === 0) {
-    console.error(`❌ 未找到任何 ${CONFIG.COPY_BRANCH_PREFIX}* 分支`);
+    console.error(`[ERROR] 未找到任何 ${CONFIG.COPY_BRANCH_PREFIX}* 分支`);
     process.exit(1);
   }
   if (branches.length === 1) {
-    log(`→ 使用分支：${branches[0]}`);
+    log(`[LOG] 使用分支：${branches[0]}`);
     return branches[0];
   }
   log('发现多个候选分支，请选择：');
@@ -202,11 +231,11 @@ async function selectBranch() {
   const ans = (await prompt('输入序号：')).trim();
   const idx = parseInt(ans, 10);
   if (!Number.isInteger(idx) || idx < 1 || idx > branches.length) {
-    console.error('❌ 无效选择');
+    console.error('[ERROR] 无效选择');
     process.exit(1);
   }
   const chosen = branches[idx - 1];
-  log(`→ 使用分支：${chosen}`);
+  log(`[LOG] 使用分支：${chosen}`);
   return chosen;
 }
 
@@ -238,8 +267,109 @@ function fetchUpstream(branch, tmpDir) {
   }
 }
 
+// ---------- 提取前结构检查 ----------
+function listTopEntries(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+      .map(e => e.name)
+      .filter(n => !isExcluded(n))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+// 检查单个目录是否通过了身份验证
+// 返回 { ok, missingMarkers, identityName, identityError }
+function checkIdentity(dir) {
+  const result = { ok: false, missingMarkers: [], identityName: null, identityError: null };
+
+  if (!fs.existsSync(dir)) {
+    result.identityError = '目录不存在';
+    return result;
+  }
+
+  // 1) 关键标志
+  for (const m of CONFIG.STRUCTURE_MARKERS) {
+    if (!fs.existsSync(path.join(dir, m))) {
+      result.missingMarkers.push(m);
+    }
+  }
+
+  // 2) package.json 身份
+  const pkgPath = path.join(dir, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      result.identityName = pkg.name || null;
+      if (pkg.name !== CONFIG.STRUCTURE_IDENTITY_NAME) {
+        result.identityError = `package.json 的 name 是 "${pkg.name}"，期望 "${CONFIG.STRUCTURE_IDENTITY_NAME}"`;
+      }
+    } catch (e) {
+      result.identityError = `package.json 解析失败：${e.message}`;
+    }
+  }
+
+  result.ok =
+    result.missingMarkers.length === 0 &&
+    !result.identityError;
+
+  return result;
+}
+
+// 结构差异比例（仅作警告）
+function computeDiffRatio(upstreamAbs, localAbs) {
+  const upEntries = listTopEntries(upstreamAbs);
+  const loEntries = listTopEntries(localAbs);
+  if (upEntries.length === 0 && loEntries.length === 0) return { ratio: 0, onlyUp: [], onlyLo: [] };
+
+  const upSet = new Set(upEntries);
+  const loSet = new Set(loEntries);
+  const onlyUp = upEntries.filter(x => !loSet.has(x));
+  const onlyLo = loEntries.filter(x => !upSet.has(x));
+  const total = new Set([...upEntries, ...loEntries]).size;
+
+  return {
+    ratio: (onlyUp.length + onlyLo.length) / Math.max(1, total),
+    onlyUp,
+    onlyLo,
+  };
+}
+
+function printIdentityFailure(upCheck, loCheck, branch) {
+  console.error('[ERROR] 结构检查失败：身份验证未通过，已拒绝执行。');
+  console.error('');
+
+  const show = (label, r) => {
+    console.error(`  ${label}:`);
+    if (r.missingMarkers.length) {
+      console.error(`    - 缺少关键标志: ${r.missingMarkers.join(', ')}`);
+    }
+    if (r.identityError) {
+      console.error(`    - ${r.identityError}`);
+    }
+    if (!r.missingMarkers.length && !r.identityError) {
+      console.error('    - 通过');
+    }
+  };
+
+  show('上游', upCheck);
+  console.error('');
+  show('本地', loCheck);
+  console.error('');
+
+  console.error('  这通常意味着:');
+  console.error('    1) 上游分支不是 2n-spatial-world 项目（可能选错了分支）；');
+  console.error('    2) 本地目录被大幅改动过，或首次同步未完成。');
+  console.error('');
+  console.error('  如果确认要覆盖，请直接指定分支名并加 --force：');
+  console.error(`    node data/3d/sync-from-copy.mjs --branch=${branch} --force`);
+  console.error('');
+  console.error('  或先用 --dry-run 查看将要做出的改动：');
+  console.error(`    node data/3d/sync-from-copy.mjs --branch=${branch} --dry-run`);
+}
+
 // ---------- 补丁 ----------
-// 用上游文件判断是否需要补丁；实跑时把补丁结果写到 backupFile
 function applyPatches(r, upstreamFile, backupFile) {
   if (r !== 'vite.config.js') return;
 
@@ -247,7 +377,7 @@ function applyPatches(r, upstreamFile, backupFile) {
   try { content = fs.readFileSync(upstreamFile, 'utf8'); } catch { return; }
   if (content.includes('base:')) return;
 
-  log("    ↳ 补丁：vite.config.js 增加 base: './'");
+  log("    >> 补丁：vite.config.js 增加 base: './'");
   if (DRY_RUN) return;
 
   const anchor = 'defineConfig({';
@@ -281,7 +411,6 @@ function syncGitignore(upstreamAbs) {
     converted.push(out);
   }
 
-  // 去重：去掉尾部斜杠后比较，保留首次出现的
   const seen = new Set();
   const unique = [];
   for (const line of converted) {
@@ -332,7 +461,6 @@ function runSync(upstreamAbs) {
 
   let added = 0, updated = 0, kept = 0, skipped = 0, archived = 0;
 
-  // 1. 上游 → 本地
   for (const { abs: srcFile, rel: r } of walkFiles(upstreamAbs)) {
     if (isExcluded(r)) continue;
 
@@ -366,7 +494,6 @@ function runSync(upstreamAbs) {
     }
   }
 
-  // 2. 上游已删 → 归档本地
   for (const { abs: localFile, rel: r } of walkFiles(LOCAL_TARGET_ABS)) {
     if (isExcluded(r)) continue;
     if (isLocallyModified(r)) continue;
@@ -377,17 +504,15 @@ function runSync(upstreamAbs) {
     if (!fs.existsSync(upstreamFile)) {
       const dstFile = path.join(historyTarget, r);
       doMove(localFile, dstFile);
-      log(`  [归档-上游已删] ${r} → ${CONFIG.HISTORY_DIR}/${ts}/${r}`);
+      log(`  [归档-上游已删] ${r} -> ${CONFIG.HISTORY_DIR}/${ts}/${r}`);
       archived++;
     }
   }
 
-  // 3. .gitignore
   syncGitignore(upstreamAbs);
 
-  // 汇总
   log('');
-  log('──── 汇总 ────');
+  log('---- 汇总 ----');
   log(`  新增             : ${added}`);
   log(`  更新             : ${updated}`);
   log(`  保留（本地有改动）: ${kept}`);
@@ -405,40 +530,62 @@ function runSync(upstreamAbs) {
 (async () => {
   const current = git(['branch', '--show-current']);
   if (current !== 'main') {
-    console.error(`❌ 请在 main 分支运行（当前：${current}）`);
+    console.error(`[ERROR] 请在 main 分支运行（当前：${current}）`);
     process.exit(1);
   }
 
   if (git(['status', '--porcelain']) !== '') {
-    console.error('❌ 工作区有未提交改动，请先提交或 git stash');
+    console.error('[ERROR] 工作区有未提交改动，请先提交或 git stash');
     process.exit(1);
   }
 
-  log('→ 拉取远端分支信息');
+  log('[LOG] 拉取远端分支信息');
   const fr = spawnSync('git', ['fetch', '--prune', 'origin'], { cwd: REPO_ROOT, stdio: 'inherit' });
-  if (fr.status !== 0) { console.error('❌ git fetch 失败'); process.exit(1); }
+  if (fr.status !== 0) { console.error('[ERROR] git fetch 失败'); process.exit(1); }
 
   let branch;
   if (BRANCH_ARG) {
     branch = BRANCH_ARG;
     const r = spawnSync('git', ['rev-parse', '--verify', branch], { cwd: REPO_ROOT });
-    if (r.status !== 0) { console.error(`❌ 分支不存在：${branch}`); process.exit(1); }
-    log(`→ 使用分支：${branch}`);
+    if (r.status !== 0) { console.error(`[ERROR] 分支不存在：${branch}`); process.exit(1); }
+    log(`[LOG] 使用分支：${branch}`);
   } else {
     branch = await selectBranch();
   }
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-3d-'));
   try {
-    log(`→ 检出 ${branch} 到临时目录`);
+    log(`[LOG] 检出 ${branch} 到临时目录`);
     fetchUpstream(branch, tmpDir);
 
     const upstreamAbs = CONFIG.COPY_SOURCE_PATH
       ? path.join(tmpDir, CONFIG.COPY_SOURCE_PATH)
       : tmpDir;
     if (!fs.existsSync(upstreamAbs)) {
-      console.error(`❌ 上游里没有目录：${CONFIG.COPY_SOURCE_PATH}`);
+      console.error(`[ERROR] 上游里没有目录：${CONFIG.COPY_SOURCE_PATH}`);
       process.exit(1);
+    }
+
+    // ---------- 提取前结构检查 ----------
+    const skipCheck = BRANCH_ARG && FORCE;
+    if (!skipCheck) {
+      const upCheck = checkIdentity(upstreamAbs);
+      const loCheck = checkIdentity(LOCAL_TARGET_ABS);
+
+      if (!upCheck.ok || !loCheck.ok) {
+        printIdentityFailure(upCheck, loCheck, branch);
+        process.exit(1);
+      }
+
+      // 通过检查后，附加差异比例警告
+      const diff = computeDiffRatio(upstreamAbs, LOCAL_TARGET_ABS);
+      const pct = (diff.ratio * 100).toFixed(1);
+      log(`  [结构检查] 通过（关键标志齐全，身份匹配；差异比例 ${pct}%）`);
+      if (diff.ratio > CONFIG.STRUCTURE_DIFF_WARN) {
+        console.warn('  [WARN] 差异比例偏高，同步后请务必检查结果');
+      }
+    } else {
+      log('  [结构检查] 已跳过（--branch 与 --force 同时指定）');
     }
 
     runSync(upstreamAbs);
@@ -446,6 +593,6 @@ function runSync(upstreamAbs) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 })().catch(err => {
-  console.error('❌', err.message);
+  console.error('[ERROR]', err.message);
   process.exit(1);
 });

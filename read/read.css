@@ -542,3 +542,203 @@ body {
   .wiki-code-body { padding: 12px 14px; }
   .wiki-code-header { padding: 7px 12px; }
 }
+
+/* ---------- LaTeX 公式 ---------- */
+.latex-placeholder {
+  display: inline;
+}
+
+.latex-placeholder:not(.latex-rendered):not(.latex-failed) {
+  display: inline-block;
+  min-width: 1em;
+  min-height: 1em;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+}
+
+.latex-error {
+  color: #cc0000;
+  border-bottom: 1px dashed #cc0000;
+  cursor: help;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.9em;
+  padding: 0 2px;
+}
+
+.latex-failed { display: inline; }
+
+.katex { color: inherit; }
+
+/* ---------- Base64 ---------- */
+.wiki-base64 {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+.wiki-base64[data-mode="decode"] {
+  background: rgba(0, 0, 0, 0.03);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.wiki-base64-error {
+  color: #cc0000;
+  border-bottom: 1px dashed #cc0000;
+  cursor: help;
+}
+
+/* ---------- 折叠 ---------- */
+.wiki-fold {
+  margin: 12px 0;
+  position: relative;
+  text-indent: 0;
+}
+
+/* 折叠体内的段落保留 read 页面原本的首行缩进 */
+.wiki-fold .notice-paragraph > p {
+  text-indent: 2em;
+}
+
+/* common / table 折叠体 */
+.wiki-fold-common .wiki-fold-body,
+.wiki-fold-table .wiki-fold-body {
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.wiki-fold-common[data-state="fold"] .wiki-fold-body,
+.wiki-fold-table[data-state="fold"] .wiki-fold-body {
+  max-height: calc(var(--fold-lines) * 1.7em);
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+
+.wiki-fold-common[data-state="unfold"] .wiki-fold-body,
+.wiki-fold-table[data-state="unfold"] .wiki-fold-body {
+  max-height: none;
+  -webkit-mask-image: none;
+          mask-image: none;
+}
+
+/* table 折叠时隐藏超出 N 行的行 */
+.wiki-fold-table[data-state="fold"] .wiki-fold-row-overflow {
+  display: none;
+}
+
+/* title 折叠 */
+.wiki-fold-title-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.wiki-fold-title-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.17em;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+.wiki-fold-title[data-state="fold"] .wiki-fold-title-text {
+  display: -webkit-box;
+  -webkit-line-clamp: var(--fold-lines);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wiki-fold-title[data-state="unfold"] .wiki-fold-title-text {
+  display: block;
+}
+
+.wiki-fold-title[data-state="fold"] .wiki-fold-body { display: none; }
+.wiki-fold-title[data-state="unfold"] .wiki-fold-body {
+  display: block;
+  margin-top: 8px;
+}
+
+/* 按钮 */
+.wiki-fold-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.wiki-fold-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.wiki-fold-btn:hover { background: rgba(0, 0, 0, 0.06); }
+
+.wiki-fold-btn::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  transition: transform 0.2s;
+}
+
+.wiki-fold-common .wiki-fold-btn::before,
+.wiki-fold-table .wiki-fold-btn::before {
+  border-width: 8px 6px 0 6px;
+  border-color: currentColor transparent transparent transparent;
+}
+
+.wiki-fold-common[data-state="unfold"] .wiki-fold-btn::before,
+.wiki-fold-table[data-state="unfold"] .wiki-fold-btn::before {
+  transform: rotate(180deg);
+}
+
+/* title 按钮：朝右 / 朝下 */
+.wiki-fold-btn-title {
+  width: 28px;
+  height: 28px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.wiki-fold-title[data-state="fold"] .wiki-fold-btn-title::before {
+  border-width: 6px 0 6px 8px;
+  border-color: transparent transparent transparent currentColor;
+}
+
+.wiki-fold-title[data-state="unfold"] .wiki-fold-btn-title::before {
+  border-width: 8px 6px 0 6px;
+  border-color: currentColor transparent transparent transparent;
+}
+
+/* ---------- 深色模式 ---------- */
+@media (prefers-color-scheme: dark) {
+  .latex-placeholder:not(.latex-rendered):not(.latex-failed) {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .latex-error {
+    color: #ef4444;
+    border-bottom-color: #ef4444;
+  }
+
+  .wiki-base64[data-mode="decode"] {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .wiki-base64-error {
+    color: #ef4444;
+    border-bottom-color: #ef4444;
+  }
+
+  .wiki-fold-btn:hover { background: rgba(255, 255, 255, 0.08); }
+}

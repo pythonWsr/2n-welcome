@@ -1,19 +1,42 @@
-// main/wikiParser.js – 支持自定义模块的 MediaWiki 风格解析器
-// 支持：标题、段落、列表、粗体、斜体、内部链接、外部链接、代码块、模块调用、安全 span/table 标签
-// 特殊处理：
-//   - {{code|lang|"""代码"""}} 作为块级元素，保留换行
-//   - 多行块级模块（如 {{table|...}}）
-//   - 多行 HTML 块（table/div/ul 等）
-//   - <br> 后紧跟 * 或 # 时按列表解析
-import { moduleMap } from '../module/index.js';
-import { renderCodeBlock } from '../module/code.js';
+// main/wikiParser.js
+//
+// ═══════════════════════════════════════════════════════════════
+//  MediaWiki 风格解析器（template 版）
+// ═══════════════════════════════════════════════════════════════
+//
+//  支持：
+//    标题            == 标题 ==  /  === 标题 ===
+//    段落            空行分隔
+//    无序列表        * 项
+//    有序列表        # 项
+//    粗体            '''text'''
+//    斜体            ''text''
+//    粗斜体          '''''text'''''
+//    内部链接        [[页面|显示]]
+//    外部链接        [https://example.com 文本]
+//    裸 URL          自动链接
+//    行内 HTML       <br>、<span class/style>、<table...> 等安全标签
+//    代码块          ``` 围栏 / 4 空格缩进 / {{code|lang|"""..."""}}
+//    块级模板        {{table|...}}、{{media|...}}、{{fold|...}}
+//    行内模板        {{color|...}}、{{latex|...}}、{{base64|...}}
+//
+//  模板定义见 ../template/index.js
+//
+// ═══════════════════════════════════════════════════════════════
 
+import { templateMap } from '../template/index.js';
+import { renderCodeBlock } from '../template/code.js';
+import { renderLatex } from '../template/latex.js';
+import { renderBase64 } from '../template/base64.js';
+import { renderFold } from '../template/fold.js';
+
+// ─────────────────────────────────────────────────────────────
+//  公共入口
+// ─────────────────────────────────────────────────────────────
 export function parseWiki(text) {
   if (!text) return '';
 
-  // ---------- 预处理：<br> 紧跟 * 或 # 时，替换为真实换行 ----------
-  // 效果：'* A<br>* B<br>* C' → 三个独立列表项
-  // 普通换行（'line1<br>line2'）不受影响
+  // <br> 紧跟 * 或 # 时，替换为真实换行（让列表识别生效）
   text = text.replace(/<br\s*\/?>\s*(?=[*#]\s)/gi, '\n');
 
   const lines = text.split('\n');
@@ -28,7 +51,6 @@ export function parseWiki(text) {
       currentParagraph = [];
     }
   };
-
   const flushCodeBlock = () => {
     if (codeLines.length > 0) {
       blocks.push({ type: 'code', content: codeLines.join('\n') });
@@ -36,7 +58,10 @@ export function parseWiki(text) {
     }
   };
 
-  const HTML_BLOCK_TAGS = ['table', 'div', 'section', 'article', 'figure', 'ul', 'ol', 'dl', 'blockquote', 'pre', 'aside', 'header', 'footer', 'nav', 'main'];
+  const HTML_BLOCK_TAGS = [
+    'table', 'div', 'section', 'article', 'figure', 'ul', 'ol', 'dl',
+    'blockquote', 'pre', 'aside', 'header', 'footer', 'nav', 'main'
+  ];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -60,7 +85,7 @@ export function parseWiki(text) {
       if (inCodeBlock) { flushCodeBlock(); inCodeBlock = false; }
     }
 
-    // ---------- {{code|lang|"""..."""}} 多行代码模块 ----------
+    // ---------- {{code|lang|"""..."""}} 多行 ----------
     const codeStart = line.match(/^\s*\{\{code\|([^|]+)\|"""(.*)$/);
     if (codeStart && !line.includes('"""}}')) {
       flushParagraph();
@@ -81,7 +106,7 @@ export function parseWiki(text) {
       continue;
     }
 
-    // ---------- 单行完整代码模块 ----------
+    // ---------- {{code|lang|"""..."""}} 单行 ----------
     const singleCode = line.match(/^\s*\{\{code\|([^|]+)\|"""([\s\S]*?)"""\}\}\s*$/);
     if (singleCode) {
       flushParagraph();
@@ -89,52 +114,31 @@ export function parseWiki(text) {
       continue;
     }
 
-    // ---------- 通用块级模块（支持多行） ----------
-    const blockModStart = line.match(/^\s*\{\{([a-zA-Z0-9_]+)\|/);
-    if (blockModStart) {
-      const modName = blockModStart[1];
-      const modDef = moduleMap[modName];
+    // ---------- 块级模板（平衡计数） ----------
+    const blockModMatch = line.match(/^\s*\{\{([a-zA-Z0-9_]+)\|/);
+    if (blockModMatch) {
+      const modName = blockModMatch[1];
+      const modDef = templateMap[modName];
       if (modDef && modDef.isBlock) {
-        // 单行完整？
-        const singleRe = new RegExp('^\\s*\\{\\{' + modName + '\\|([\\s\\S]*?)\\}\\}\\s*$');
-        const singleMatch = line.match(singleRe);
-        if (singleMatch) {
+        const collected = collectUntilBalanced(lines, i);
+        if (collected) {
+          i = collected.endLine;
           flushParagraph();
-          const raw = singleMatch[1];
-          const html = modDef.rawParams
-            ? modDef.render(raw)
-            : modDef.render(raw.split('|').map(p => p.trim()));
+          const html = dispatchBlock(modName, collected.text);
           if (html) blocks.push({ type: 'raw', html });
-          continue;
-        }
-        // 多行：累积到找到 }}
-        const parts = [line];
-        let i2 = i;
-        let closed = line.includes('}}');
-        while (!closed && i2 + 1 < lines.length) {
-          i2++;
-          parts.push(lines[i2]);
-          if (lines[i2].includes('}}')) closed = true;
-        }
-        if (closed) {
-          const joined = parts.join('\n');
-          const m = joined.match(new RegExp('^\\s*\\{\\{' + modName + '\\|([\\s\\S]*?)\\}\\}\\s*$'));
-          if (m) {
-            flushParagraph();
-            const raw = m[1];
-            const html = modDef.rawParams
-              ? modDef.render(raw)
-              : modDef.render(raw.split('|').map(p => p.trim()));
-            if (html) blocks.push({ type: 'raw', html });
-            i = i2;
-            continue;
+          // 同一行 fold 之后若还有文字，作为新行继续处理
+          if (collected.rest.trim()) {
+            currentParagraph.push(collected.rest);
           }
+          continue;
         }
       }
     }
 
     // ---------- 多行 HTML 块 ----------
-    const htmlStart = line.match(new RegExp('^\\s*<(' + HTML_BLOCK_TAGS.join('|') + ')\\b', 'i'));
+    const htmlStart = line.match(
+      new RegExp('^\\s*<(' + HTML_BLOCK_TAGS.join('|') + ')\\b', 'i')
+    );
     if (htmlStart) {
       const tag = htmlStart[1].toLowerCase();
       const closeRe = new RegExp('</' + tag + '\\s*>', 'i');
@@ -179,7 +183,7 @@ export function parseWiki(text) {
       continue;
     }
 
-    // ---------- 普通文本行 ----------
+    // ---------- 普通文本 ----------
     currentParagraph.push(line);
   }
 
@@ -189,6 +193,108 @@ export function parseWiki(text) {
   return blocks.map(block => renderBlock(block)).join('');
 }
 
+// ─────────────────────────────────────────────────────────────
+//  块级模板的平衡计数收集
+// ─────────────────────────────────────────────────────────────
+// 从 lines[startLine] 开始，收集所有行直到 {{...}} 平衡。
+// 返回 { text, rest, endLine } 或 null（未闭合）。
+function collectUntilBalanced(lines, startLine) {
+  let acc = lines[startLine];
+  let startPos = acc.indexOf('{{');
+  if (startPos === -1) return null;
+
+  let endPos = findMatchingClose(acc, startPos);
+  let endLine = startLine;
+  while (endPos === -1 && endLine + 1 < lines.length) {
+    endLine++;
+    acc += '\n' + lines[endLine];
+    endPos = findMatchingClose(acc, startPos);
+  }
+  if (endPos === -1) return null;
+
+  return {
+    text: acc.slice(startPos, endPos),
+    rest: acc.slice(endPos),
+    endLine,
+  };
+}
+
+// 从 text[start] 处的 '{{' 开始，找到与之匹配的 '}}' 结束位置（不含）
+function findMatchingClose(text, start) {
+  if (text[start] !== '{' || text[start + 1] !== '{') return -1;
+  let depth = 0;
+  let i = start;
+  while (i < text.length - 1) {
+    const c = text[i], n = text[i + 1];
+    if (c === '{' && n === '{') { depth++; i += 2; continue; }
+    if (c === '}' && n === '}') {
+      depth--;
+      if (depth === 0) return i + 2;
+      i += 2;
+      continue;
+    }
+    i++;
+  }
+  return -1;
+}
+
+// 顶层分割：只在不处于 {{...}} 内的位置按 sep 切
+function splitTop(text, sep) {
+  const parts = [];
+  let current = '';
+  let depth = 0;
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '{' && text[i + 1] === '{') {
+      depth++; current += '{{'; i += 2; continue;
+    }
+    if (text[i] === '}' && text[i + 1] === '}') {
+      depth--; current += '}}'; i += 2; continue;
+    }
+    if (depth === 0 && text[i] === sep) {
+      parts.push(current); current = ''; i++; continue;
+    }
+    current += text[i]; i++;
+  }
+  parts.push(current);
+  return parts;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  块级模板分发
+// ─────────────────────────────────────────────────────────────
+// tmplText 形如 "{{name|param1|param2|...}}"
+function dispatchBlock(name, tmplText) {
+  const inner = tmplText.slice(2, -2); // 去掉 {{ }}
+  const firstPipe = inner.indexOf('|');
+  if (firstPipe === -1) return '';
+  const paramStr = inner.slice(firstPipe + 1);
+
+  // fold：需要递归解析内容
+  if (name === 'fold') {
+    const parts = splitTop(paramStr, '|');
+    if (parts.length < 4) return '';
+    const type = parts[0].trim();
+    const num = parts[1].trim();
+    const state = parts[2].trim();
+    const content = parts.slice(3).join('|');
+    const innerHtml = parseWiki(content);
+    return renderFold(type, num, state, innerHtml);
+  }
+
+  // 其他块级模板：查 templateMap
+  const modDef = templateMap[name];
+  if (!modDef || !modDef.isBlock) return '';
+
+  if (modDef.rawParams) {
+    return modDef.render(paramStr) || '';
+  }
+  return modDef.render(paramStr.split('|').map(p => p.trim())) || '';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  块级渲染
+// ─────────────────────────────────────────────────────────────
 function renderBlock(block) {
   switch (block.type) {
     case 'paragraph': {
@@ -225,64 +331,103 @@ function renderList(block) {
   return `<${tag} style="padding-left:${paddingLeft}px;"><li>${renderInline(block.content)}</li></${tag}>`;
 }
 
+// ─────────────────────────────────────────────────────────────
+//  行内渲染
+// ─────────────────────────────────────────────────────────────
 function renderInline(text) {
   let escaped = escapeHTML(text);
 
+  // <br>
   escaped = escaped.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
-  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'span'));
-  escaped = escaped.replace(/&lt;\/span&gt;/gi, '</span>');
-  escaped = escaped.replace(/&lt;table(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'table'));
-  escaped = escaped.replace(/&lt;\/table&gt;/gi, '</table>');
-  escaped = escaped.replace(/&lt;thead(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'thead'));
-  escaped = escaped.replace(/&lt;\/thead&gt;/gi, '</thead>');
-  escaped = escaped.replace(/&lt;tbody(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'tbody'));
-  escaped = escaped.replace(/&lt;\/tbody&gt;/gi, '</tbody>');
-  escaped = escaped.replace(/&lt;tr(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'tr'));
-  escaped = escaped.replace(/&lt;\/tr&gt;/gi, '</tr>');
-  escaped = escaped.replace(/&lt;th(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'th'));
-  escaped = escaped.replace(/&lt;\/th&gt;/gi, '</th>');
-  escaped = escaped.replace(/&lt;td(\s+[^&]*?)?&gt;/gi, (m, attrs) => safeTagReplacement(attrs, 'td'));
-  escaped = escaped.replace(/&lt;\/td&gt;/gi, '</td>');
 
+  // <span>
+  escaped = escaped.replace(/&lt;span(\s+[^&]*?)?&gt;/gi, (m, a) => safeTagReplacement(a, 'span'));
+  escaped = escaped.replace(/&lt;\/span&gt;/gi, '</span>');
+
+  // 表格相关标签
+  const tags = ['table','thead','tbody','tr','th','td'];
+  for (const t of tags) {
+    const re = new RegExp('&lt;' + t + '(\\s+[^&]*?)?&gt;', 'gi');
+    escaped = escaped.replace(re, (m, a) => safeTagReplacement(a, t));
+    escaped = escaped.replace(new RegExp('&lt;/' + t + '&gt;', 'gi'), `</${t}>`);
+  }
+
+  // 内联代码模板
   escaped = escaped.replace(
     /\{\{code\|([^|]+)\|"""([\s\S]*?)"""\}\}/g,
-    (match, lang, codeContent) => renderCodeBlock(lang, codeContent)
+    (m, lang, codeContent) => renderCodeBlock(lang, codeContent)
   );
 
+  // latex 模板
+  escaped = escaped.replace(
+    /\{\{latex\|(strict|loose)\|([\s\S]*?)\}\}/g,
+    (m, mode, formula) => {
+      const raw = formula
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+      return renderLatex(mode, raw);
+    }
+  );
+
+  // base64 模板
+  escaped = escaped.replace(
+    /\{\{base64\|(encode|decode)\|([\s\S]*?)\}\}/g,
+    (m, mode, content) => {
+      const raw = content
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+      return renderBase64(mode, raw);
+    }
+  );
+
+  // 粗斜体、粗体、斜体
   escaped = escaped.replace(/'''''(.*?)'''''/g, '<strong><em>$1</em></strong>');
   escaped = escaped.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
   escaped = escaped.replace(/''(.*?)''/g, '<em>$1</em>');
 
-  escaped = escaped.replace(/\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}/g, (match, moduleName, paramStr) => {
-    const moduleDef = moduleMap[moduleName];
-    if (!moduleDef || moduleDef.isBlock) return match;
-    return moduleDef.render(paramStr.split('|').map(p => p.trim()));
+  // 通用行内模板（如 color）
+  escaped = escaped.replace(/\{\{([a-zA-Z0-9_]+)\|(.+?)\}\}/g, (m, name, paramStr) => {
+    const modDef = templateMap[name];
+    if (!modDef || modDef.isBlock) return m;
+    return modDef.render(paramStr.split('|').map(p => p.trim()));
   });
 
-  escaped = escaped.replace(/\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]/g, (match, page, display) => {
+  // 内部链接
+  escaped = escaped.replace(/\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]/g, (m, page, display) => {
     const target = page.trim();
     const text = display ? display.trim() : target;
     return `<a href="#" data-wiki-page="${target}">${escapeHTML(text)}</a>`;
   });
 
-  escaped = escaped.replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]+)\]/g, (match, url, text) => {
+  // 外部链接
+  escaped = escaped.replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]+)\]/g, (m, url, text) => {
     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHTML(text)}</a>`;
   });
 
-  escaped = escaped.replace(/(?<!["'>])(https?:\/\/[^\s<]+)/g, (match) => {
-    return `<a href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+  // 裸 URL
+  escaped = escaped.replace(/(?<!["'>])(https?:\/\/[^\s<]+)/g, (m) => {
+    return `<a href="${m}" target="_blank" rel="noopener noreferrer">${m}</a>`;
   });
 
   return escaped;
 }
 
+// ─────────────────────────────────────────────────────────────
+//  工具
+// ─────────────────────────────────────────────────────────────
 function safeTagReplacement(attrs, tagName) {
   if (!attrs) return `<${tagName}>`;
   const safeAttrs = [];
   const classMatch = attrs.match(/class\s*=\s*"([^"]*)"/i);
   const styleMatch = attrs.match(/style\s*=\s*"([^"]*)"/i);
-  if (classMatch && !/[<>]/.test(classMatch[1])) safeAttrs.push(`class="${classMatch[1]}"`);
-  if (styleMatch && !/[<>]/.test(styleMatch[1])) safeAttrs.push(`style="${styleMatch[1]}"`);
+  if (classMatch && !/[<>]/.test(classMatch[1])) {
+    safeAttrs.push(`class="${classMatch[1]}"`);
+  }
+  if (styleMatch && !/[<>]/.test(styleMatch[1])) {
+    safeAttrs.push(`style="${styleMatch[1]}"`);
+  }
   return safeAttrs.length ? `<${tagName} ${safeAttrs.join(' ')}>` : `<${tagName}>`;
 }
 
@@ -291,4 +436,5 @@ function escapeHTML(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+  // 注意：不转义双引号，避免影响标签属性还原
 }
