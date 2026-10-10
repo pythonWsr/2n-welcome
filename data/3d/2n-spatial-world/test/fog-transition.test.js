@@ -33,3 +33,19 @@ test('each fog bank fades smoothly before and through the camera',()=>{
   }
   assert.ok(largestStep<.001);assert.equal(fogLayerOpacity(20,.14,.3),0);
 });
+
+test('replaying Hero after Hell restores the original fog colour and density',async()=>{
+ const T=await import('three');const {atmosphere}=await import('../src/atmosphere.js');
+ const {preparedWorld}=await import('../tests/support/prepared-world.js');
+ const previousPixel=globalThis.devicePixelRatio;globalThis.devicePixelRatio=1;
+ try{
+  const scene=new T.Scene(),rig=atmosphere(scene,true),world=await preparedWorld(scene,true),camera=new T.PerspectiveCamera();
+  camera.position.set(-8,-22,380);rig.update(camera,0);world.update(camera,0);
+  const initialColour=scene.fog.color.clone(),initialDensity=scene.fog.density;
+  camera.position.set(1390,40,0);rig.update(camera,1);world.update(camera,1);
+  assert.ok(!scene.fog.color.equals(initialColour));
+  camera.position.set(-8,-22,380);rig.update(camera,0);world.update(camera,0);
+  assert.ok(scene.fog.color.equals(initialColour),'Hell fog tint must not contaminate replayed silver sculpture');
+  assert.equal(scene.fog.density,initialDensity);
+ }finally{globalThis.devicePixelRatio=previousPixel;}
+});
