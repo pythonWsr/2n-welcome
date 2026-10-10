@@ -59,6 +59,9 @@ export function atmosphere(scene, mobile) {
   });
   const focus=new T.Vector3(4,8,0);
   return {update(camera,progress){
+    // Regional updates may tint this shared fog. Start every frame from the
+    // original Hero air before the world applies its current regional palette.
+    scene.fog.color.set(0x11151a);
     const distance=camera.position.distanceTo(focus);
     scene.fog.density=fogDensity(distance,progress);
     for(const layer of layers){

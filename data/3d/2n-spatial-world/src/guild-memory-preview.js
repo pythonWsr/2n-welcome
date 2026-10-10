@@ -1,7 +1,8 @@
 import * as T from 'three';
 import {memoryEntryProgress} from './guild-memory-entry.js';
+import {sampleNext} from './guild-next-route.js';
 import {sampleMemoryStory} from './guild-memory-layout.js';
-export function renderMemoryPreview({scene,renderer,camera,memory,history,entryPose,departureGroups=[],index,progress,viewport,dt=0,showText=false,reducedMotion=false,updateEnvironment=null}){
+export function renderMemoryPreview({scene,renderer,camera,memory,history,nextView=null,nextT,entryPose,departureGroups=[],index,progress,viewport,dt=0,showText=false,reducedMotion=false,updateEnvironment=null}){
  const visibility=scene.children.map(object=>[object,object.visible]);
  const original={fog:scene.fog,background:scene.background,position:camera.position.clone(),rotation:camera.quaternion.clone(),up:camera.up.clone()};
  try{
@@ -11,10 +12,11 @@ export function renderMemoryPreview({scene,renderer,camera,memory,history,entryP
    // The map/world roots stay where they are and remain renderable while the
    // camera departs. Only the live member chain is replaced by its captured copy.
    if(object===memory.group)object.visible=true;
-   else if(object.name==='opening-monument'||departureGroups.includes(object)||object===history?.group)object.visible=false;
+   else if(object.name==='opening-monument'||departureGroups.includes(object)||object===history?.group||object===nextView?.group)object.visible=false;
    else object.visible=value;
   });
   const state=Number.isFinite(progress)?sampleMemoryStory(progress):{eventIndex:index,eventOpacity:1};
+  if(Number.isFinite(nextT)){Object.assign(state,sampleNext(nextT));state.eventOpacity*=state.historyOpacity;}
   memory.setPreview(state.eventIndex);memory.update({...state,entryPose,entryBlend,showText,reducedMotion},camera,dt);
   // Environment uses the camera that is actually rendered, not the member pose.
   updateEnvironment?.(camera);
@@ -26,7 +28,9 @@ export function renderMemoryPreview({scene,renderer,camera,memory,history,entryP
   // Leaving terrain is produced solely by camera motion, never by map fading.
   scene.fog=original.fog;scene.background=original.background;
   if(showText&&history)history.update({...state,target:memory.shot.target},camera,viewport);
-  memory.updateTextOcclusion?.(camera,showText?history?.readingBounds:null,state.memoryPhase??index??0);
+  if(nextView)nextView.update({...state,target:memory.shot.target},camera,viewport);
+  const readingBounds=state.nextOpacity>0?nextView?.readingBounds:showText?history?.readingBounds:null;
+  memory.updateTextOcclusion?.(camera,readingBounds,state.memoryPhase??index??0);
   renderer.render(scene,camera);
  }finally{
   visibility.forEach(([object,value])=>{object.visible=value;});

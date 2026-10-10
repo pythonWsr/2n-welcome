@@ -2,6 +2,8 @@ import {petalBreath} from './petal-breath.js';
 import * as T from 'three';
 import {Text} from 'troika-three-text';
 import {loadPetal} from './petal-loader.js';
+import {petalFrontQuaternion} from './petal-fronts.js';
+import {petalDisplayTexture} from './petal-display-texture.js';
 import {flowerPose,flowerReveal,readingPoint,readingQuaternion,lookbackPose,setReadingAspect,FLOWER_SPECS} from './lookback.js';
 import {sampleCourtyard,courtyardEnvironment,chapterHandoff} from './people-courtyard.js';
 const selected=FLOWER_SPECS.map(([kind,name])=>kind+':'+name);
@@ -70,8 +72,9 @@ export function createCompanionship(scene){
   const ratio=Math.max(nativeSize.x,nativeSize.y,nativeSize.z)/Math.max(size.x,size.y,size.z);
   geometry.translate(-center.x,-center.y,-center.z);geometry.scale(ratio,ratio,ratio);geometry.translate(batch.center.x,batch.center.y,batch.center.z);geometry.computeBoundingBox();
   batch.mesh.material.dispose();batch.mesh.geometry=geometry;batch.mesh.material=source.material.clone();
-  const dimensions=geometry.boundingBox.getSize(size),normal=dimensions.y<Math.min(dimensions.x,dimensions.z)?new T.Vector3(0,1,0):dimensions.x<dimensions.z?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
-  batch.face.setFromUnitVectors(normal,new T.Vector3(0,0,1));
+  batch.mesh.material.map=petalDisplayTexture(batch.mesh.material.map);
+  const dimensions=geometry.boundingBox.getSize(size);
+  batch.face.copy(petalFrontQuaternion(name,dimensions));
   batch.finalScale.setScalar(FLOWER_SPECS[batch.index][3]/Math.max(dimensions.x,dimensions.y,dimensions.z));
   if(batch.extras){batch.extras.geometry=batch.mesh.geometry;batch.extras.material=batch.mesh.material;}
   batch.displayOwned=true;previous=NaN;
@@ -178,6 +181,6 @@ export function createCompanionship(scene){
  }
  return {get displayPrepared(){return displayAssets.size;},group,install,installDisplay,update,captureChain,resize(aspect){layoutScale=setReadingAspect(aspect);for(const label of labels)label.scale.setScalar(layoutScale);previous=NaN;},capture(){for(const asset of assets.values())install(asset.source,asset.kind,asset.name);if(batches.size!==14)throw new Error('起飞花瓣尚未准备完整');},get ready(){return prepared&&batches.size===14;},async prepare(onPrepared=()=>{},onDisplay=()=>{}){
   if(prepared)return;
-  await Promise.all([...labels.map(text=>prepareWorldText(text)),...FLOWER_SPECS.map(async([kind,name])=>{const source=await loadPetal(`${import.meta.env?.BASE_URL||'/'}assets/companion-display/${name}.glb`,100);onPrepared(source);installDisplay(source,kind,name);onDisplay(source,kind,name);})]);prepared=true;
+  await Promise.all([...labels.map(text=>prepareWorldText(text)),...FLOWER_SPECS.map(async([kind,name])=>{const source=await loadPetal(`${import.meta.env?.BASE_URL||'/'}assets/companion-display/${name}.glb`,100);source.material.map=petalDisplayTexture(source.material.map);onPrepared(source);installDisplay(source,kind,name);onDisplay(source,kind,name);})]);prepared=true;
  },dispose(){for(const {mesh,extras,displayOwned} of batches.values()){mesh.material.dispose();if(displayOwned)mesh.geometry.dispose();mesh.dispose();extras?.dispose();}for(const label of labels)label.dispose();}};
 }

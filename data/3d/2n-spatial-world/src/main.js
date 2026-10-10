@@ -1,3 +1,4 @@
+import './loading-log.js';
 import {limitManualHistoryEntry,manualHistoryEntryEnd} from './manual-history-entry.js';
 import {cancelPendingModelLoads} from './petal-loader.js';
 import {preparePeopleDistance} from './people-distance.js';
@@ -8,6 +9,7 @@ import {RETURN_START,STORY_UNITS} from './lookback.js';
 import {TOTAL_UNITS,LEGACY_TOTAL_UNITS,PEOPLE_UNITS,autoplayDuration,autoplayToScroll,scrollToAutoplay,capturePeoplePosition,restorePeoplePosition,scrollToStory,storyToScroll,chapterAt,sampleStoryPose} from './people-story.js';
 import {createPeopleGallery} from './people-gallery.js';
 import peopleData from '../content/people.json';
+import {createNextView} from './guild-next-view.js';
 import {createHistoryView} from './guild-history-view.js';
 import {createMemoryScene} from './guild-memory-scene.js';
 import {renderMemoryPreview} from './guild-memory-preview.js';
@@ -50,11 +52,12 @@ if (renderer) {
     ['相遇','延续','繁盛','文案'].forEach((title,index)=>{const button=document.createElement('button');button.type='button';button.textContent=title;button.setAttribute('aria-pressed',String(index===3?memoryText:index===0));button.addEventListener('click',event=>{event.stopPropagation();if(index===3){memoryText=!memoryText;button.setAttribute('aria-pressed',String(memoryText));}else{memoryIndex=index;scrollTo({top:[.14,.52,.86][index]*viewport().range,behavior:'smooth'});[...memoryControls.querySelectorAll('button')].slice(0,3).forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));}});memoryControls.append(button);});
     document.body.append(memoryControls);
   }
+  const nextView=createNextView();scene.add(nextView.group);
   let history=null,historyPreparing=false,historyError=null;
   if(!historyRecords.errors.length){history=createHistoryView(historyRecords.events);scene.add(history.group);}else historyError=new Error(historyRecords.errors.join(' '));
   async function prepareHistory(){
     if(!history||historyPreparing)return;historyPreparing=true;historyError=null;
-    try{await history.prepare();}catch(error){historyError=error;}finally{historyPreparing=false;}
+    try{await Promise.all([history.prepare(),nextView.prepare()]);}catch(error){historyError=error;}finally{historyPreparing=false;}
   }
   createLighting(scene, renderer);
   createRevealLight(scene);
@@ -148,6 +151,8 @@ if (renderer) {
     camera.aspect=next.width/next.height;camera.updateProjectionMatrix();
     companionship.resize(camera.aspect);
     history?.resize(next);
+    const safeStyle=globalThis.getComputedStyle?.(document.documentElement);
+    nextView.resize({...next,safeLeft:parseFloat(safeStyle?.getPropertyValue('--next-safe-left'))||0,safeRight:parseFloat(safeStyle?.getPropertyValue('--next-safe-right'))||0});
     if(gpuReady)void prepareHistory();
     let nextScroll=retained;
     if(people){
@@ -229,9 +234,10 @@ if (renderer) {
     const portrait=view.width<view.height;
     const returnProgress=chapter.returnT,peopleProgress=chapter.peopleT;
     const state=sampleStoryPose(progress,camera,portrait,peopleRoute);
-    const closing=chapter.chapter==='history';
+    const inNext=chapter.chapter==='next',closing=chapter.chapter==='history'||inNext;
+    nextView.group.visible=false;
     if(history){history.group.visible=false;if(closing)history.update(state,camera,view);}
-    if(gpuReady&&history&&!history.ready&&!historyPreparing&&!historyError)void prepareHistory();
+    if(gpuReady&&history&&(!history.ready||!nextView.ready)&&!historyPreparing&&!historyError)void prepareHistory();
     atmosphereRig.update(camera,heroProgress);
     if(heroProgress>.72)world.prepare();
     world.update(camera,worldProgress);
@@ -249,7 +255,8 @@ if (renderer) {
       });
       people.group.visible=people.group.visible&&state.peopleOpacity>0;
     }
-    replayButton.hidden=introLocked||!closing||!state.replayVisible;
+    const nextButtons=inNext&&state.buttonsVisible&&nextView.ready;
+    replayButton.hidden=introLocked||!nextButtons;
     flowers.group.visible=heroProgress>=.98;
     flowers.update(camera,reduced.matches?0:dt);
     const readingPixelRatio=Math.min(devicePixelRatio,(memoryPreview||closing)?2.5:returnProgress>.95?2:1.5);
@@ -261,7 +268,7 @@ if (renderer) {
     arrival.setAttribute('aria-hidden',String(text<.5));
     canvas.dataset.progress=progress.toFixed(3);
     canvas.dataset.camera=JSON.stringify(state.position);
-    canvas.dataset.biome=closing?'history':chapter.chapter==='people'?'people':progress>=RETURN_START?'lookback':progress>JUNGLE_END?'hell':progress>OCEAN_END?'jungle':progress>DESERT_END?'ocean':worldProgress<.76?'garden':'desert-threshold';
+    canvas.dataset.biome=inNext?'next':closing?'history':chapter.chapter==='people'?'people':progress>=RETURN_START?'lookback':progress>JUNGLE_END?'hell':progress>OCEAN_END?'jungle':progress>DESERT_END?'ocean':worldProgress<.76?'garden':'desert-threshold';
     canvas.dataset.returnProgress=returnProgress.toFixed(3);
     canvas.dataset.peopleProgress=peopleProgress.toFixed(3);
     canvas.dataset.historyProgress=chapter.historyT.toFixed(3);
@@ -272,7 +279,7 @@ if (renderer) {
     canvas.dataset.desertPetals=world.desertPetalStatus;
     const counts=world.loading.counts;
     loading.hidden=!introLocked;
-    autoplayButton.hidden=introLocked;
+    autoplayButton.hidden=introLocked||inNext;
     autoplayButton.setAttribute('aria-pressed',String(player.playing));
     autoplayButton.textContent=player.playing?'暂停播放':'自动播放';
     if(!introLocked&&!buttonShown){buttonShown=true;revealButton();}
@@ -287,8 +294,9 @@ if (renderer) {
     const peopleText=galleryFailed?'人物文字暂未准备好，可继续滑动或重试':'正在准备人物文字，可继续滑动';
     if(peopleText!==lastPeopleText){peopleStatus.querySelector('span').textContent=peopleText;lastPeopleText=peopleText;}
     peopleRetry.hidden=!galleryFailed;peopleRetry.disabled=peoplePreparing;
-    historyStatus.hidden=introLocked||!closing||!!history?.ready;
-    historyStatus.querySelector('span').textContent=historyError?'历史文字暂未准备好，可重试':'正在准备公会历史，可继续滑动';
+    const readingReady=inNext?nextView.ready:!!history?.ready;
+    historyStatus.hidden=introLocked||!closing||readingReady;
+    historyStatus.querySelector('span').textContent=historyError?'文字暂未准备好，可重试':inNext?'正在准备结尾文字，可继续滑动':'正在准备公会历史，可继续滑动';
     historyRetry.hidden=!historyError;historyRetry.disabled=historyPreparing;
     if(memoryPreview&&!introLocked){
       memoryControls.hidden=false;autoplayButton.hidden=true;replayButton.hidden=true;arrival.style.opacity=0;peopleStatus.hidden=true;
@@ -296,7 +304,7 @@ if (renderer) {
       renderMemoryPreview({scene,renderer,camera,memory,history,index:memoryIndex,progress:scrollProgress(scrollY,view.range),viewport:view,dt,reducedMotion:reduced.matches,showText:memoryText});
       canvas.dataset.biome='memory-preview';canvas.dataset.memoryStage=String(memoryIndex);
     }else if(closing&&memory.assetCount===14){
-      renderMemoryPreview({scene,renderer,camera,memory,history,entryPose:state.entryPose,departureGroups:[companionship.group],progress:chapter.historyT,viewport:view,dt,reducedMotion:reduced.matches,showText:true,updateEnvironment:renderCamera=>{atmosphereRig.update(renderCamera,heroProgress);world.update(renderCamera,worldProgress);if(scene.fog)scene.fog.density=.0015;}});
+      renderMemoryPreview({scene,renderer,camera,memory,history,nextView,nextT:inNext?chapter.nextT:undefined,entryPose:state.entryPose,departureGroups:[companionship.group],progress:chapter.historyT,viewport:view,dt,reducedMotion:reduced.matches,showText:true,updateEnvironment:renderCamera=>{atmosphereRig.update(renderCamera,heroProgress);world.update(renderCamera,worldProgress);if(scene.fog)scene.fog.density=.0015;}});
     }else renderer.render(scene, camera);
   }
   renderer.setAnimationLoop(frame);

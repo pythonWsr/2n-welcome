@@ -1,3 +1,4 @@
+import {loadingDiagnostics} from './loading-diagnostics.js';
 // Shared bounded queue: avoid duplicate Golden Leaf downloads and unbounded
 // GLB/image decoding on Safari. Failed entries may be retried explicitly.
 import {fetchAssetBytes} from './asset-transport.js';
@@ -37,9 +38,9 @@ export function loadModelScene(url,priority=0){
  const near=url.includes('companion-display')||url.includes('map-flowers');
  const parse=async bytes=>decodeModel(async()=>{
   const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');await later();let timer;
-  try{return (await Promise.race([new GLTFLoader().parseAsync(bytes,''),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Model decoding timed out')),90000);})])).scene;}finally{clearTimeout(timer);}
+  try{const result=(await Promise.race([new GLTFLoader().parseAsync(bytes,''),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Model decoding timed out')),90000);})])).scene;loadingDiagnostics.record({kind:'decode',url});return result;}finally{clearTimeout(timer);}
  },priority);
- const fetchBytes=async()=>{for(let attempt=0;attempt<(near?1:2);attempt++){try{return near?await fetchAssetBytes(url):await fetchPetalBytes(url);}catch(error){if(near||attempt===1)throw error;await later();}}};
+ const fetchBytes=async()=>{for(let attempt=0;attempt<(near?1:2);attempt++){try{return await fetchAssetBytes(url);}catch(error){if(near||attempt===1)throw error;await later();}}};
  const promise=near?displayPipeline(fetchBytes,parse,priority):pipeline(fetchBytes,parse,priority);
  sceneCache.set(url,promise);promise.catch(()=>sceneCache.delete(url));return promise;
 }

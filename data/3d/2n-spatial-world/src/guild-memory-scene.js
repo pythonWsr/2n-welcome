@@ -1,11 +1,16 @@
 import * as T from 'three';
 import {applyMemoryEntry,memoryEntryFrame} from './guild-memory-entry.js';
+import {sampleNext} from './guild-next-route.js';
+import {nextPoint,nextCamera,nextArcFrame} from './guild-next-motion.js';
 import {createMemoryLayout,memoryPoint} from './guild-memory-layout.js';
+import {petalFrontQuaternion} from './petal-fronts.js';
+import {petalDisplayTexture} from './petal-display-texture.js';
 
 export function createMemoryScene({mobile=true}={}){
  const group=new T.Group();group.name='guild-memory-corridor';group.visible=false;
  const entrySources=new Map();let entryView=null,terrainVisible=false,lightBlend=1;
- const pools=new Map(),owned=[],sources=new Map();let layout=null,preview=0,time=0,spin=0,disposed=false;
+ let activeTarget=null;
+ const pools=new Map(),owned=[],sources=new Map();let layout=null,preview=0,time=0,spin=0,disposed=false,arcCache=null;
  const matrix=new T.Matrix4(),rotation=new T.Quaternion(),scale=new T.Vector3(),point=new T.Vector3(),center=new T.Vector3();
  const palette=[0xe8e4cb,0xb43b48,0xe4d1a0];
  const ambient=new T.AmbientLight(0xffffff,1.15);group.add(ambient);
@@ -27,8 +32,7 @@ export function createMemoryScene({mobile=true}={}){
   source.geometry.computeBoundingSphere();source.geometry.computeBoundingBox();
   const sphere=source.geometry.boundingSphere,dimensions=source.geometry.boundingBox.getSize(new T.Vector3());
   if(!sphere||!Number.isFinite(sphere.radius)||sphere.radius<=0)return;
-  const normal=dimensions.y<Math.min(dimensions.x,dimensions.z)?new T.Vector3(0,1,0):dimensions.x<dimensions.z?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
-  sources.set(id,{source,center:sphere.center.clone(),factor:2.2/sphere.radius,face:new T.Quaternion().setFromUnitVectors(normal,new T.Vector3(0,0,1))});
+  sources.set(id,{source,center:sphere.center.clone(),factor:2.2/sphere.radius,face:petalFrontQuaternion(name,dimensions)});
   layout=null;
  }
  function prepare(){
@@ -42,6 +46,7 @@ export function createMemoryScene({mobile=true}={}){
   for(const [id,asset] of sources){
    const anchors=layout.anchors.filter(a=>a.key===id);if(!anchors.length)continue;
    const material=(entrySources.get(anchors[0].id)?.material||asset.source.material).clone();material.fog=entrySources.size?entrySources.get(anchors[0].id)?.material.fog!==false:false;const geometry=asset.source.geometry.clone(),alpha=new T.InstancedBufferAttribute(new Float32Array(anchors.length).fill(1),1);alpha.setUsage(T.DynamicDrawUsage);geometry.setAttribute('memoryAlpha',alpha);
+   material.map=petalDisplayTexture(material.map);
    material.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float memoryAlpha; varying float vMemoryAlpha;').replace('#include <begin_vertex>','#include <begin_vertex>\nvMemoryAlpha=memoryAlpha;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying float vMemoryAlpha;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a *= vMemoryAlpha;');};material.customProgramCacheKey=()=> 'memory-instance-alpha-v1';
    const mesh=new T.InstancedMesh(geometry,material,anchors.length);mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.name=`memory-${id}`;mesh.userData.anchorIds=anchors.map(a=>a.id);group.add(mesh);pools.set(id,{...asset,mesh,material,anchors,nativeTransparent:material.transparent,nativeDepthWrite:material.depthWrite});
   }
@@ -84,7 +89,14 @@ export function createMemoryScene({mobile=true}={}){
   const elapsed=Math.min(.05,Math.max(0,dt));
   spin+=elapsed*.28*eased(phase)*(1-eased(phase-1))*(state?.reducedMotion?0:1);
   dustMaterial.uniforms.time.value=time;
-  camera.position.fromArray(layout.shots[from].position).lerp(new T.Vector3().fromArray(layout.shots[from+1].position),blend);camera.up.set(0,1,0);camera.lookAt(...shot.target);camera.updateMatrixWorld();
+  camera.position.fromArray(layout.shots[from].position).lerp(new T.Vector3().fromArray(layout.shots[from+1].position),blend);camera.up.set(0,1,0);
+  const expandedPose={position:camera.position.toArray(),target:shot.target};
+  const nextPose=Number.isFinite(state?.nextT)?nextCamera(expandedPose,state.nextT):null;
+  const arcKey=nextPose?JSON.stringify([expandedPose,camera.aspect,camera.fov]):null;
+  if(nextPose&&(!arcCache||arcCache.layout!==layout||arcCache.key!==arcKey))arcCache={layout,key:arcKey,frame:nextArcFrame(expandedPose,{aspect:camera.aspect,fov:camera.fov,anchors:layout.anchors})};
+  const arcFrame=nextPose?arcCache.frame:null;
+  const nextOpening=nextPose?sampleNext(state.nextT).opening:0;
+  activeTarget=nextPose?.target||shot.target;if(nextPose)camera.position.fromArray(nextPose.position);camera.lookAt(...activeTarget);camera.updateMatrixWorld();
   const color=new T.Color(palette[from]).lerp(new T.Color(palette[from+1]),blend);
   dustMaterial.uniforms.color.value.copy(color);
   for(const child of group.children)if(child.material?.uniforms?.color)child.material.uniforms.color.value.copy(color);
@@ -106,6 +118,7 @@ export function createMemoryScene({mobile=true}={}){
     const radial=point.clone().sub(new T.Vector3(0,0,-14));
     if(radial.lengthSq()>0)point.addScaledVector(radial.normalize(),motion*eased(phase)*(1-expand)*.35*Math.sin(time*(.78+a.u*.3)+a.u*6+a.branch*1.7));
     point.y+=motion*expand*(bob(a)-meanBob);
+    if(Number.isFinite(state?.nextT))point.fromArray(nextPoint(a,point.toArray(),state.nextT,arcFrame,{time,reducedMotion:state?.reducedMotion}));
     locations.set(a.id,point.clone());
   }
   // Bounded, deterministic separation prevents petals crossing during the morph.
@@ -154,11 +167,13 @@ export function createMemoryScene({mobile=true}={}){
       rotation.slerp(tracked,1-travel);scale.lerp(start.scale,1-travel);}
 
     }
+    if(nextOpening&&!state?.reducedMotion)rotation.multiply(new T.Quaternion().setFromEuler(new T.Euler(.12*Math.sin(time*.14+a.longitude)*nextOpening,.18*Math.sin(time*.17+a.u*11)*nextOpening,.09*Math.sin(time*.11+a.branch+a.u*7)*nextOpening)));
     matrix.compose(point,rotation,scale);matrix.multiply(new T.Matrix4().makeTranslation(-pool.center.x,-pool.center.y,-pool.center.z));pool.mesh.setMatrixAt(count++,matrix);
    }
    pool.mesh.count=count;pool.mesh.instanceMatrix.needsUpdate=true;
   }
   applyMemoryEntry(camera,group,state?.entryPose,state?.entryBlend??1);
+  if(nextPose){camera.lookAt(new T.Vector3(...activeTarget).applyMatrix4(group.matrix));camera.updateMatrixWorld();}
   // Dust is a view-volume layer during both flight and reading, so the camera
   // never leaves it behind in the destination space. Petal and beam roots stay fixed.
   dust.matrix.copy(group.matrix).invert().multiply(camera.matrixWorld).multiply(new T.Matrix4().makeScale(camera.aspect,1,1));
@@ -173,7 +188,9 @@ export function createMemoryScene({mobile=true}={}){
   }
   for(const pool of pools.values()){
    const enabled=weight>0,transparent=enabled||pool.nativeTransparent;if(pool.material.transparent!==transparent){pool.material.transparent=transparent;pool.material.needsUpdate=true;}
-   pool.material.depthWrite=enabled?false:pool.nativeDepthWrite;pool.mesh.renderOrder=enabled?3:0;
+   // Per-instance text fading must retain self-occlusion of the solid GLB.
+   // Disabling depth writes exposes hidden atlas faces even on alpha=1 petals.
+   pool.material.depthWrite=pool.nativeDepthWrite;pool.mesh.renderOrder=enabled?3:0;
    const alpha=pool.mesh.geometry.getAttribute('memoryAlpha'),sphere=pool.mesh.geometry.boundingSphere;
    for(let i=0;i<pool.mesh.count;i++){
     pool.mesh.getMatrixAt(i,matrix);matrix.premultiply(pool.mesh.matrixWorld);
@@ -185,5 +202,5 @@ export function createMemoryScene({mobile=true}={}){
    }alpha.needsUpdate=true;
   }
  }
- return {group,install,prepare,captureEntry,setPreview,update,updateTextOcclusion,setTerrainVisible(visible){terrainVisible=visible;ambient.intensity=1.15*lightBlend*(visible?0:1);key.intensity=2.8*lightBlend*(visible?0:1);fill.intensity=1.2*lightBlend*(visible?0:1);},get assetCount(){return sources.size;},get instanceCount(){return layout?.anchors.length||0;},dustCount,get shot(){const shot=layout?.shots[preview];return shot?{...shot,target:new T.Vector3(...shot.target).applyMatrix4(group.matrix).toArray()}:null;},dispose(){if(disposed)return;disposed=true;for(const pool of pools.values()){pool.mesh.dispose();pool.mesh.geometry.dispose();pool.material.dispose();}for(const item of owned)item.dispose();group.clear();sources.clear();pools.clear();}};
+ return {group,install,prepare,captureEntry,setPreview,update,updateTextOcclusion,setTerrainVisible(visible){terrainVisible=visible;ambient.intensity=1.15*lightBlend*(visible?0:1);key.intensity=2.8*lightBlend*(visible?0:1);fill.intensity=1.2*lightBlend*(visible?0:1);},get assetCount(){return sources.size;},get instanceCount(){return layout?.anchors.length||0;},dustCount,get shot(){const shot=layout?.shots[preview];return shot?{...shot,target:new T.Vector3(...(activeTarget||shot.target)).applyMatrix4(group.matrix).toArray()}:null;},dispose(){if(disposed)return;disposed=true;for(const pool of pools.values()){pool.mesh.dispose();pool.mesh.geometry.dispose();pool.material.dispose();}for(const item of owned)item.dispose();group.clear();sources.clear();pools.clear();}};
 }
