@@ -1,0 +1,31 @@
+# Re-run for the release audit; ancestor-only deletion remains unchanged.
+name: Clean merged development branches
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cleanup-merged-branches.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const preserved = new Set(['main', 'perf/free-mirrors-2026-10-07']);
+            const prs = await github.paginate(github.rest.pulls.list, {owner, repo, state: 'open', per_page: 100});
+            for (const pr of prs) if (pr.head.repo?.full_name === `${owner}/${repo}`) preserved.add(pr.head.ref);
+            const branches = await github.paginate(github.rest.repos.listBranches, {owner, repo, per_page: 100});
+            for (const branch of branches) {
+              if (preserved.has(branch.name) || branch.protected) { core.info(`Kept ${branch.name}: deployment, PR or protection`); continue; }
+              const {data: comparison} = await github.rest.repos.compareCommitsWithBasehead({owner, repo, basehead: `main...${branch.commit.sha}`});
+              if (!['behind', 'identical'].includes(comparison.status)) { core.info(`Kept ${branch.name}: unmerged work`); continue; }
+              const {data: current} = await github.rest.git.getRef({owner, repo, ref: `heads/${branch.name}`});
+              if (current.object.sha !== branch.commit.sha) { core.warning(`Kept moved branch ${branch.name}`); continue; }
+              await github.rest.git.deleteRef({owner, repo, ref: `heads/${branch.name}`});
+              core.notice(`Deleted merged branch ${branch.name} at ${branch.commit.sha}; commits retained in main`);
+            }

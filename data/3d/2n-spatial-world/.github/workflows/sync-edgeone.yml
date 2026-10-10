@@ -1,0 +1,24 @@
+name: Sync EdgeOne production source
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: edgeone-source
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const {data: main} = await github.rest.git.getRef({owner, repo, ref: 'heads/main'});
+            const branch = 'perf/free-mirrors-2026-10-07';
+            const {data: mirror} = await github.rest.git.getRef({owner, repo, ref: `heads/${branch}`});
+            if (mirror.object.sha === main.object.sha) return;
+            await github.rest.git.updateRef({owner, repo, ref: `heads/${branch}`, sha: main.object.sha, force: false});
+            core.notice(`EdgeOne source synced to ${main.object.sha}; production build is verified separately.`);
