@@ -95,6 +95,7 @@ captures/
 /data/3d/2n-spatial-world/__pycache__/
 /data/3d/2n-spatial-world/.worktrees/
 /data/3d/2n-spatial-world/.superpowers/
+/data/3d/2n-spatial-world/public/release.json
 # END 3d-auto-sync
 
 # ==========================================
