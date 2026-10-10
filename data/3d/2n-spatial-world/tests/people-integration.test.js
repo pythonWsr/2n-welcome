@@ -54,7 +54,7 @@ test('direct ending seek, reverse drag and portrait/landscape resize are absolut
  requireApi();
  const cam=camera(),end=api.scrollToStory(1);
  near(api.chapterAt(end).peopleT,1);
- assert.equal(api.chapterAt(end).chapter,'history');
+ assert.equal(api.chapterAt(end).chapter,'next');
  const before=api.sampleStoryPose(api.scrollToStory(.88),cam,true);
  api.sampleStoryPose(end,cam,true);
  assert.deepEqual(api.sampleStoryPose(api.scrollToStory(.88),cam,true),before);
@@ -81,7 +81,8 @@ test('paced autoplay preserves old speed and inverts every route reading window'
   near(seconds,route.stations[w.stationIndex].readSeconds);
  }
  for(let i=0;i<=1000;i++)near(api.scrollToAutoplay(api.autoplayToScroll(i/1000,route),route),i/1000);
- near(api.autoplayToScroll(player.advance(route.seconds+36),route),1);assert.equal(player.playing,false);
+ near(api.autoplayToScroll(player.advance(route.seconds+36),route),api.NEXT_START_UNITS/api.TOTAL_UNITS);assert.equal(player.playing,true);
+ near(api.autoplayToScroll(player.advance(16),route),1);assert.equal(player.playing,false);
 });
 
 test('semantic remap retains original member inside changed subwindow numbering',()=>{
@@ -95,7 +96,7 @@ test('semantic remap retains original member inside changed subwindow numbering'
 // The GPU/text boundary is replaced; the actual entry script and scheduler run.
 // This catches adding people to the original ready gate or seeking on retry.
 function entry({constructionError=false,preparationError=false,reduced=false,late=false,galleryFactory,data=fixture,openingFailure=false,historyFailure=false,preview=false}={}){
- const events=new Map(),elements=new Map(),calls={distancePrepared:[],distanceCancelled:[],prepare:0,historyPrepare:0,memory:[],people:[],companion:[],scroll:[],render:0,shots:[],routes:[]};
+ const events=new Map(),elements=new Map(),calls={distancePrepared:[],distanceCancelled:[],prepare:0,historyPrepare:0,next:[],captures:0,memory:[],people:[],companion:[],scroll:[],render:0,shots:[],routes:[]};
  const element=id=>{
   if(!elements.has(id))elements.set(id,{hidden:false,dataset:{},style:{},classList:{add(){},remove(){}},textContent:'',setAttribute(){},querySelector(){return element(id+'-span');},addEventListener(type,fn){events.set(id+':'+type,fn);}});
   return elements.get(id);
@@ -103,7 +104,7 @@ function entry({constructionError=false,preparationError=false,reduced=false,lat
  let complete;
  let frame,resize,oldReady=false,now=0,scrollY=0,currentReduced=reduced;
  const resource=()=>({group:new THREE.Group(),ready:true,prepare:async()=>{},update(){},resize(){},capture(){},install(){},prepared:7,displayPrepared:14});
- const companion=resource();companion.captureChain=()=>[];let openingAttempts=0;companion.prepare=async()=>{openingAttempts++;if(openingFailure&&openingAttempts===1)throw new Error('network interrupted');};companion.update=(...args)=>calls.companion.push(args);
+ const companion=resource();companion.captureChain=()=>{calls.captures++;return [];};let openingAttempts=0;companion.prepare=async()=>{openingAttempts++;if(openingFailure&&openingAttempts===1)throw new Error('network interrupted');};companion.update=(...args)=>calls.companion.push(args);
  const gallery=galleryFactory?galleryFactory():resource();
  if(!galleryFactory){gallery.ready=false;gallery.error=null;
  gallery.glyphMetrics={members:[]};
@@ -116,7 +117,7 @@ function entry({constructionError=false,preparationError=false,reduced=false,lat
  const view={width:414,height:896,range:api.TOTAL_UNITS*896};
  class Renderer{setClearColor(){}setPixelRatio(v){this.ratio=v;}getPixelRatio(){return this.ratio;}setSize(){}initTexture(){}render(scene,cam){calls.render++;calls.shots.push(cam.position.toArray());calls.routes.push(gallery.route);}setAnimationLoop(fn){frame=fn;}}
  const context={limitManualHistoryEntry,manualHistoryEntryEnd,renderMemoryPreview,createMemoryScene:()=>({group:new THREE.Group(),assetCount:14,setPreview(){},update(state,camera){calls.memory.push(state);camera.position.set(0,0,100);},shot:{target:[0,0,0]},install(){}}),URLSearchParams,location:{search:preview?'?historyPreview=1':''},...api,THREE:{...THREE,WebGLRenderer:Renderer},oceanPose,createAutoplay,junglePose,hellPose,lookbackPose,RETURN_START:27.2/28,RETURN_UNITS:28,STORY_UNITS:55.2,pose,gardenPose,scrollProgress,
-  createMonument,normalizeHistory,historyData,createHistoryView(){const h=resource();h.ready=false;h.readingBounds=new THREE.Box3();h.prepare=async()=>{calls.historyPrepare++;if(historyFailure&&calls.historyPrepare===1)throw new Error('font unavailable');h.ready=true;};return h;},createLighting(){},createRevealLight(){},atmosphere:()=>({update(){}}),createBiomes:()=>world,createCompanionship:()=>companion,createMapFlowers:resource,createRegionNames:resource,
+  createNextView(){const view=resource();view.readingBounds=new THREE.Box3();view.update=state=>calls.next.push(state);return view;},createMonument,normalizeHistory,historyData,createHistoryView(){const h=resource();h.ready=false;h.readingBounds=new THREE.Box3();h.prepare=async()=>{calls.historyPrepare++;if(historyFailure&&calls.historyPrepare===1)throw new Error('font unavailable');h.ready=true;};return h;},createLighting(){},createRevealLight(){},atmosphere:()=>({update(){}}),createBiomes:()=>world,createCompanionship:()=>companion,createMapFlowers:resource,createRegionNames:resource,
   cancelPendingModelLoads(){},createLoadingIntro:()=>({update:({allReady})=>({locked:!allReady,speed:1})}),attachIntroInput(){},allBiomesReady:()=>oldReady,warmBiomeResources:async()=>{},prepareBiomePetals:async()=>{},
   createPeopleRoute,resizeCourtyard,peopleData:data,createPeopleGallery(data,route){if(!galleryFactory)gallery.route=route||createPeopleRoute(data);if(constructionError)throw new Error('invalid record');return gallery;},
   preparePeopleDistance(route){calls.distancePrepared.push(route);return ()=>calls.distanceCancelled.push(route);},
@@ -139,15 +140,17 @@ test('ready memory petals can show preview despite an unrelated opening resource
 test('history survives orientation change, reversed seeks and five replays without rebuilding resources',async()=>{
  const app=entry({reduced:true});await app.settle();app.open();app.tick();
  app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});
- app.seek(.995);app.tick();
+ app.seek(api.storyToScroll((api.NEXT_START_UNITS-.05)/28,app.gallery.route));app.tick();
  assert.equal(app.elements.get('world').dataset.biome,'history');
  const t=Number(app.elements.get('world').dataset.historyProgress),prepared=app.calls.prepare;
  app.resize();app.tick();assert.equal(Number(app.elements.get('world').dataset.historyProgress),t);
- assert.equal(app.elements.get('replay').hidden,false);
+ assert.equal(app.elements.get('replay').hidden,true);
+ app.seek(1);app.tick();assert.equal(app.elements.get('replay').hidden,false);
  for(let i=0;i<5;i++){
   app.events.get('replay:click')({stopPropagation(){}});app.tick();
   assert.equal(app.elements.get('world').dataset.progress,'0.000');assert.equal(app.elements.get('replay').hidden,true);
-  app.seek(.995);app.tick();assert.equal(app.elements.get('replay').hidden,false);
+  app.seek(api.storyToScroll((api.NEXT_START_UNITS-.05)/28,app.gallery.route));app.tick();assert.equal(app.elements.get('replay').hidden,true);
+  app.seek(1);app.tick();assert.equal(app.elements.get('replay').hidden,false);
  }
  assert.equal(app.calls.prepare,prepared);
  app.seek(.85);app.tick();assert.equal(app.elements.get('replay').hidden,true);
@@ -156,7 +159,7 @@ test('history survives orientation change, reversed seeks and five replays witho
 
 test('history and replay remain available when people font preparation failed',async()=>{
  const app=entry({reduced:true,preparationError:true});await app.settle();app.open();app.tick();
- app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});app.seek(1);app.tick();
+ app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});app.seek(api.storyToScroll(api.NEXT_START_UNITS/28,app.gallery.route));app.tick();
  assert.equal(app.elements.get('world').dataset.biome,'history');
  assert.equal(app.elements.get('people-status').hidden,true);
  app.events.get('replay:click')({stopPropagation(){}});app.tick();assert.equal(app.elements.get('world').dataset.progress,'0.000');
@@ -171,7 +174,7 @@ test('people font failure cannot lock original opening; retry and resize do not 
  app.open();app.tick();
  assert.equal(app.elements.get('world').dataset.loadingIntro,'false');
  app.events.get('pointerdown')({target:{closest:()=>false}});
- app.seek(.92);for(let i=0;i<180;i++)app.tick();
+ app.seek(api.storyToScroll((api.LEGACY_TOTAL_UNITS-1)/28,app.gallery.route));for(let i=0;i<180;i++)app.tick();
  assert.equal(app.elements.get('world').dataset.biome,'people');
  const before=Number(app.elements.get('world').dataset.progress);
  app.events.get('retry-people:click')({stopPropagation(){}});await app.settle();
@@ -203,7 +206,7 @@ test('invalid people content preserves the original scene and intro',async()=>{
 test('reduced motion reaches appended ending while gallery and companion receive no drift time',async()=>{
  requireApi();
  const app=entry({reduced:true});await app.settle();app.open();app.tick();
- assert.equal(app.elements.get('world').dataset.biome,'history');
+ assert.equal(app.elements.get('world').dataset.biome,'next');
  assert.equal(app.elements.get('world').dataset.peopleProgress,'1.000');
  const companion=app.calls.companion.at(-1),gallery=app.calls.people.at(-1);
  near(companion[0],1);near(companion[1],0);near(companion[2],1);
@@ -332,7 +335,7 @@ test('entry applies manual distance inverse, and play/pause retain the rendered 
  for(const scroll of [.81,.91,.99,.87]){
   app.seek(scroll);app.tick();const route=app.calls.routes.at(-1);
   const expected=api.sampleStoryPose(api.scrollToStory(scroll,route),camera(),true,route);
-  const displayed=app.elements.get('world').dataset.biome==='history'?[0,0,100]:expected.position;
+  const displayed=['history','next'].includes(app.elements.get('world').dataset.biome)?[0,0,100]:expected.position;
   app.calls.shots.at(-1).forEach((v,i)=>near(v,displayed[i]));
   const t=app.calls.companion.at(-1)[2];
   app.events.get('autoplay:click')({stopPropagation(){}});app.tick();
@@ -371,7 +374,7 @@ test('opening failure retry button starts a fresh settled preparation without re
 
  test('history failure retries in place while preceding world remains unlocked',async()=>{
  const app=entry({reduced:true,historyFailure:true});await app.settle();app.open();app.tick();
- app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});app.seek(1);app.tick();
+ app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});app.seek(api.storyToScroll(api.NEXT_START_UNITS/28,app.gallery.route));app.tick();
  assert.equal(app.elements.get('world').dataset.loadingIntro,'false');assert.equal(app.elements.get('history-status').hidden,false);
  const before=app.elements.get('world').dataset.progress;app.events.get('retry-history:click')({stopPropagation(){}});await app.settle();app.tick();
  assert.equal(app.calls.historyPrepare,2);assert.equal(app.elements.get('history-status').hidden,true);assert.equal(app.elements.get('world').dataset.progress,before);
@@ -395,3 +398,28 @@ test('manual fling lands on first history text and clears the old far scroll tar
  assert.equal(app.elements.get('world').dataset.biome,'history');const t=Number(app.elements.get('world').dataset.historyProgress);assert.ok(t>=.21&&t<=.24,`must land at first text instead of distant target (${t})`);
  app.seek(api.storyToScroll((api.LEGACY_TOTAL_UNITS+6.4*.55)/28,app.gallery.route));for(let i=0;i<160;i++)app.tick();assert.ok(Number(app.elements.get('world').dataset.historyProgress)>.5,'new manual scroll can continue after landing');
 });
+
+ test('next ending has only replay and hides autoplay, while replay restores normal controls',async()=>{
+ const app=entry({reduced:true});app.open();await app.settle();app.tick();await app.settle();for(let i=0;i<10;i++)app.tick();
+ assert.equal(app.elements.get('world').dataset.biome,'next');
+ assert.equal(app.calls.memory.at(-1).nextT,1);assert.equal(app.calls.next.at(-1).nextOpacity,1);
+ assert.equal(app.elements.get('replay').hidden,false);
+ assert.equal(app.elements.get('autoplay').hidden,true);
+ assert.equal(app.events.has('return-world:click'),false);
+ const captures=app.calls.captures;for(let i=0;i<5;i++)app.tick();assert.equal(app.calls.captures,captures);
+ app.events.get('replay:click')({stopPropagation(){}});app.tick();
+ assert.equal(app.elements.get('world').dataset.progress,'0.000');assert.equal(app.elements.get('autoplay').hidden,false);
+ });
+ test('next ending replay resets progress and keeps controls out of the takeover gesture',async()=>{
+ const app=entry({reduced:true});app.open();await app.settle();app.tick();await app.settle();app.tick();
+ app.events.get('replay:click')({stopPropagation(){}});app.tick();assert.equal(app.calls.scroll.at(-1),0);assert.equal(app.elements.get('replay').hidden,true);
+ });
+
+ test('replay appears only after the final ending, and reverse scrolling hides it again',async()=>{
+ const app=entry({reduced:true});await app.settle();app.open();app.tick();await app.settle();app.tick();
+ app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});
+ for(const nextT of [0,.5,14/16,15.99/16,1,.9,1]){
+  app.seek(api.storyToScroll((api.NEXT_START_UNITS+3.2*nextT)/28,app.gallery.route));app.tick();
+  assert.equal(app.elements.get('replay').hidden,nextT!==1,`replay visibility at nextT=${nextT}`);
+ }
+ });

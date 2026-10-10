@@ -1,3 +1,23 @@
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';import {createMemoryScene} from '../src/guild-memory-scene.js';
+test('history reading and final breathing retain solid petal surface depth writes',()=>{
+ const memory=createMemoryScene(),source=new T.Mesh(new T.BoxGeometry(2,2,2),new T.MeshStandardMaterial());
+ memory.install(source,'a','b');
+ const camera=new T.PerspectiveCamera(48,414/896,.2,2400),bounds=new T.Box3(new T.Vector3(-8,-8,0),new T.Vector3(8,8,0));
+ for(const state of [{eventIndex:2,memoryPhase:2},{eventIndex:2,memoryPhase:2,nextT:1}]){
+  for(const time of [0,1.5,3,6]){
+   memory.update(state,camera,time);camera.position.set(0,0,100);camera.lookAt(0,0,0);camera.updateMatrixWorld();
+   const mesh=memory.group.children.find(x=>x.isInstancedMesh);
+   mesh.setMatrixAt(0,new T.Matrix4().makeTranslation(0,0,20));mesh.setMatrixAt(1,new T.Matrix4().makeTranslation(40,0,20));
+   for(const phase of [1,2,2,1,2]){
+    memory.updateTextOcclusion(camera,bounds,phase);
+    assert.equal(mesh.material.depthWrite,true,'text visibility must not let hidden surface triangles overwrite the front');
+    assert.equal(mesh.material.depthTest,true);
+    assert.equal(mesh.geometry.getAttribute('memoryAlpha').getX(1),1,'off-text petals stay opaque');
+    assert.ok(Math.abs(mesh.geometry.getAttribute('memoryAlpha').getX(0)-(phase===2?.7:1))<.001);
+   }
+  }
+ }
+ assert.equal(source.material.depthWrite,true);memory.dispose();
+});
 test('third-stage opacity follows live front overlap rather than petal identity',()=>{const memory=createMemoryScene(),source=new T.Mesh(new T.BoxGeometry(2,2,2),new T.MeshStandardMaterial());memory.install(source,'a','b');const camera=new T.PerspectiveCamera(48,414/896,.2,2400);memory.update({eventIndex:2,memoryPhase:2},camera,0);camera.position.set(0,0,100);camera.lookAt(0,0,0);camera.updateMatrixWorld();const mesh=memory.group.children.find(x=>x.isInstancedMesh),bounds=new T.Box3(new T.Vector3(-8,-8,0),new T.Vector3(8,8,0));mesh.setMatrixAt(0,new T.Matrix4().makeTranslation(0,0,20));mesh.setMatrixAt(1,new T.Matrix4().makeTranslation(40,0,20));mesh.setMatrixAt(2,new T.Matrix4().makeTranslation(0,0,-20));
  memory.updateTextOcclusion?.(camera,bounds,2);let a=mesh.geometry.getAttribute('memoryAlpha');assert.ok(a,'per-instance opacity is required');assert.ok(Math.abs(a.getX(0)-.7)<.001);assert.equal(a.getX(1),1);assert.equal(a.getX(2),1,'behind text remains opaque');mesh.setMatrixAt(0,new T.Matrix4().makeTranslation(40,0,20));mesh.setMatrixAt(1,new T.Matrix4().makeTranslation(0,0,20));memory.updateTextOcclusion(camera,bounds,2);assert.equal(a.getX(0),1);assert.ok(Math.abs(a.getX(1)-.7)<.001);memory.updateTextOcclusion(camera,bounds,1);assert.equal(a.getX(1),1,'earlier chapters recover original opacity');assert.equal(source.material.transparent,false);assert.equal(source.geometry.getAttribute('memoryAlpha'),undefined);memory.dispose();});

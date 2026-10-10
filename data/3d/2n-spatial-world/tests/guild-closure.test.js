@@ -17,7 +17,7 @@ test('closure clears names before revealing the mark and is reversible',()=>{
 });
 test('history replacement adds thirty-six seconds without changing earlier absolute camera poses',()=>{
  const route=createPeopleRoute({leaders:[],members:['one','two','three']});
- assert.equal(story.autoplayDuration(route),150+route.seconds+36);
+ assert.equal(story.autoplayDuration(route),150+route.seconds+36+16);
  assert.equal(story.chapterAt((55.2+36+1.5)/28).chapter,'history');
  assert.equal(story.chapterAt((55.2+36+1.5)/28).historyT,1.5/6.4);
  const camera=new T.PerspectiveCamera(48,414/896,.2,2400);
