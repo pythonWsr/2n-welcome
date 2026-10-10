@@ -1,0 +1,7 @@
+/assets/*
+  Access-Control-Allow-Origin: *
+/assets/model-transport/*
+  Cache-Control: public, max-age=31536000, immutable
+/release.json
+  Cache-Control: no-cache
+  Access-Control-Allow-Origin: *
