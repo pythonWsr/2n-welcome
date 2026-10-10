@@ -1,21 +1,10 @@
-# 文档索引
+# 文档入口
 
-## 先看这些
+- [当前状态](../PROJECT_STATUS.md) · [接续开发](../CODEX_HANDOFF.md)
+- [托管、五家竞速与自动更新](deployment/hosting-and-updates.md)
+- [本轮main发布与整理](2026-10-10-main-release.md)
+- [文字出现后的模型深度修正](2026-10-10-petal-depth-write.md)
+- [立体开放弧](2026-10-10-spatial-crescent-implementation.md)
+- [仓库规则](REPOSITORY_GUIDE.md) · [人物编辑规则](../content/README.md)
 
-| 文件 | 用途 |
-| --- | --- |
-| [README](../README.md) | 项目简介、本地运行、目录结构与当前分支说明 |
-| [分支说明](../BRANCHES.md) | 复制分支的范围与目标仓库边界 |
-| [Pages 配置说明](../PAGES.md) | 继承的发布工作流及需核实的设置 |
-| [人物内容规则](../content/README.md) | 编辑公会成员与故事内容时的约定 |
-| [仓库维护指南](REPOSITORY_GUIDE.md) | 文件职责、历史资料与清理原则 |
-
-## 设计与实现记录
-
-日期命名的记录、`reviews/`、`plans/`、`superpowers/` 和 `archive/` 保存源项目当时的设计、实现、发布及审核过程，供追溯使用。它们提到的旧分支、Sites 版本、发布状态、测试结果和后续事项不一定适用于本复制分支。请以根目录 `README.md` 和 `PAGES.md` 为本分支入口。
-
-`resource-sources/` 保存资源来源和核对资料；修改模型或资源前先查对应记录及代码引用。
-
-## 维护方式
-
-更新当前分支说明时，优先修改根目录 `README.md`、`BRANCHES.md` 或 `PAGES.md`；需要记录阶段性决定时，新增简短、带日期的说明，并标明适用分支。不要把历史交接文档误当作当前状态，也不要因日期较早就删除仍被代码引用的模型、字体、场景资源、内容、测试或研究材料。
+2026-10-03至10-10的设计、审核、历史部署记录按日期保留，不能作为当前版本号或发布限制。旧入口全文位于 archive/2026-10-10-before-main/。resource-sources/保留Florr原始获取说明；只接入PETAL，不接入MOB。
