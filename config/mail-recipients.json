@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "recipients": [
+    {
+      "id": "20180333",
+      "email": "244754233@qq.com",
+      "default": true
+    }
+  ]
+}
