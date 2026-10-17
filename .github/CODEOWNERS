@@ -1,0 +1,11 @@
+# 保护 CODEOWNERS 自身
+/.github/CODEOWNERS @pythonWsr
+
+# 保护收件人配置
+/config/mail-recipients.json @pythonWsr
+
+# 保护所有 workflow，防止 Secrets 被改
+/.github/workflows/ @pythonWsr
+
+# 保护能直接 push main / force push 的脚本
+/2nUpdate.mjs @pythonWsr
