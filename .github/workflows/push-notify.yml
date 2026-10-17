@@ -60,6 +60,7 @@ jobs:
             RANGE="$BEFORE $AFTER"
             echo "Force push 检测：diff $BEFORE..$AFTER"
           elif git rev-parse HEAD~1 >/dev/null 2>&1; then
+            # 针对 PR 合并，HEAD~1 就是 PR 合并前的状态，这段 diff 正好是整个 PR 的改动
             RANGE="HEAD~1 HEAD"
           else
             RANGE="--cached"
@@ -133,13 +134,16 @@ jobs:
 
             const droppedShas = new Set();
 
+            // 1. 识别 2nUpdate.mjs -r 产生的标准 Revert 消息
             for (const c of commits) {
               const msg = c.message || '';
-              for (const m of msg.matchAll(/This reverts commit ([0-9a-f]{7,40})\./g)) {
+              // 捕获形如 "This reverts commit xxxxxxxx." 的文本
+              for (const m of msg.matchAll(/This reverts commit ([0-9a-f]{7,40})\./gi)) {
                 droppedShas.add(m[1].toLowerCase());
               }
             }
 
+            // 2. 防御性检测（虽然 Ruleset 禁止直接 force push main，但保留用于手动 bypass 回退的场景）
             const zero = '0000000000000000000000000000000000000000';
             if (forced && before && before !== zero && after) {
               try {
@@ -240,13 +244,20 @@ jobs:
 
             let commitLines;
             if (commits.length > 0) {
-              commitLines = commits
-                .map(c => `${c.id}  ${(c.message || '').split('\n')[0]}`)
-                .join('\n');
+              // 【关键适配】如果是 2nUpdate.mjs 产生的 Squash Merge，提交通常带有 "(#123)" 后缀
+              commitLines = commits.map(c => {
+                const firstLine = (c.message || '').split('\n')[0];
+                const prMatch = firstLine.match(/\(#(\d+)\)$/);
+                let suffix = '';
+                if (prMatch) {
+                  suffix = ` [PR #${prMatch[1]}](https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${prMatch[1]})`;
+                }
+                return `- \`${c.id.substring(0,7)}\` ${firstLine}${suffix}`;
+              }).join('\n');
             } else if (forced && before && after) {
               commitLines = `(force push) ${before.slice(0,7)} → ${after.slice(0,7)}`;
             } else {
-              commitLines = `${headSha}`;
+              commitLines = `\`${headSha}\``;
             }
 
             const staleSection = closedCount > 0
