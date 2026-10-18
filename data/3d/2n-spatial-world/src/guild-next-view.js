@@ -1,10 +1,10 @@
 import * as T from 'three';
 import {Text} from 'troika-three-text';
 export const NEXT_COPY=['下一程，仍然同行','五境里留下的足迹，还会继续延伸。','2n'];
-export function createNextView(){
+export function createNextView({particleEnding=false}={}){
  const group=new T.Group();group.name='guild-next-message';group.visible=false;
  const readingBounds=new T.Box3();let viewport={width:414,height:896},revision=0,prepared=false,disposed=false,inflight=null;
- const texts=NEXT_COPY.map((content,i)=>{
+ const texts=(particleEnding?NEXT_COPY.slice(0,2):NEXT_COPY).map((content,i)=>{
   const text=new Text();text.text=content;text.anchorX='left';text.anchorY='bottom';text.fontSize=1;text.lineHeight=1.55;text.whiteSpace='normal';text.overflowWrap='break-word';text.color=i===1?0xc8cbbc:0xf4f0df;text.strokeWidth=0;text.sdfGlyphSize=256;text.gpuAccelerateSDF=false;text.renderOrder=2;
   Object.assign(text.material,{transparent:true,depthWrite:true,depthTest:true,fog:false,toneMapped:false,opacity:0});group.add(text);return text;
  });
@@ -28,8 +28,8 @@ export function createNextView(){
  function update(state,camera,next){
   readingBounds.makeEmpty();group.visible=prepared&&!disposed&&(state?.nextOpacity||0)>0;if(!group.visible)return;
   camera.updateMatrixWorld();const origin=new T.Vector3(...state.target),depth=camera.position.distanceTo(origin),half=depth*Math.tan(T.MathUtils.degToRad(camera.fov/2)),unit=half*2/next.height;
-  const total=texts.reduce((sum,text)=>sum+(text.userData.ink.maxY-text.userData.ink.minY)*text.userData.pixels,0)+32;
-  const fit=Math.min(1,next.height*.4/total);let cursor=total*fit/2;
+  const total=texts.reduce((sum,text)=>sum+(text.userData.ink.maxY-text.userData.ink.minY)*text.userData.pixels,0)+16*(texts.length-1);
+  const fit=Math.min(1,next.height*.4/total);let cursor=total*fit/2-next.height*.25;
   for(const text of texts){const b=text.userData.ink,scale=text.userData.pixels*fit*unit,height=(b.maxY-b.minY)*text.userData.pixels*fit;
    text.quaternion.copy(camera.quaternion);text.scale.setScalar(scale);text.position.copy(origin).add(new T.Vector3(-half*camera.aspect+(32+(viewport.safeLeft||0))*unit-b.minX*scale,(cursor-height/2)*unit-(b.minY+b.maxY)/2*scale,0).applyQuaternion(camera.quaternion));cursor-=height+16*fit;
    text.material.opacity=state.nextOpacity;text.updateMatrixWorld(true);

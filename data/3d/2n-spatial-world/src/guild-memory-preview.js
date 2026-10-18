@@ -2,7 +2,7 @@ import * as T from 'three';
 import {memoryEntryProgress} from './guild-memory-entry.js';
 import {sampleNext} from './guild-next-route.js';
 import {sampleMemoryStory} from './guild-memory-layout.js';
-export function renderMemoryPreview({scene,renderer,camera,memory,history,nextView=null,nextT,entryPose,departureGroups=[],index,progress,viewport,dt=0,showText=false,reducedMotion=false,updateEnvironment=null}){
+export function renderMemoryPreview({scene,renderer,camera,memory,history,nextView=null,nextT,particleEnding=false,entryPose,departureGroups=[],index,progress,viewport,dt=0,showText=false,reducedMotion=false,updateEnvironment=null}){
  const visibility=scene.children.map(object=>[object,object.visible]);
  const original={fog:scene.fog,background:scene.background,position:camera.position.clone(),rotation:camera.quaternion.clone(),up:camera.up.clone()};
  try{
@@ -16,7 +16,7 @@ export function renderMemoryPreview({scene,renderer,camera,memory,history,nextVi
    else object.visible=value;
   });
   const state=Number.isFinite(progress)?sampleMemoryStory(progress):{eventIndex:index,eventOpacity:1};
-  if(Number.isFinite(nextT)){Object.assign(state,sampleNext(nextT));state.eventOpacity*=state.historyOpacity;}
+  if(Number.isFinite(nextT)){Object.assign(state,sampleNext(nextT,{particleEnding}));state.eventOpacity*=state.historyOpacity;}
   memory.setPreview(state.eventIndex);memory.update({...state,entryPose,entryBlend,showText,reducedMotion},camera,dt);
   // Environment uses the camera that is actually rendered, not the member pose.
   updateEnvironment?.(camera);

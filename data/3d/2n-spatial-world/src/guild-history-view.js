@@ -26,7 +26,7 @@ export function createHistoryView(events,route){
   const gap=12;let total=gap*2;for(const text of card.children){const b=text.userData.ink;total+=(b.maxY-b.minY)*text.userData.pixels;}
   const fit=Math.min(1,next.height*.35/total),origin=new T.Vector3(...state.target);let cursor=total*fit/2;
   for(const text of card.children){const b=text.userData.ink,scale=text.userData.pixels*fit*unit,height=(b.maxY-b.minY)*text.userData.pixels*fit;
-   text.quaternion.copy(camera.quaternion);text.scale.setScalar(scale);text.position.copy(origin).add(new T.Vector3(-half*camera.aspect*(1-64/next.width)-b.minX*scale,(cursor-height/2)*unit-(b.minY+b.maxY)/2*scale,0).applyQuaternion(camera.quaternion));cursor-=height+gap*fit;text.material.opacity=state.eventOpacity;text.material.depthWrite=(state.memoryPhase??0)>1;text.visible=true;text.updateMatrixWorld(true);
+   text.quaternion.copy(camera.quaternion);text.scale.setScalar(scale);text.position.copy(origin).add(new T.Vector3(-half*camera.aspect*(1-64/next.width)-b.minX*scale,(cursor-height/2)*unit-(b.minY+b.maxY)/2*scale,0).applyQuaternion(camera.quaternion));cursor-=height+gap*fit;text.material.opacity=state.eventOpacity;text.material.depthWrite=(state.memoryPhase??0)>1&&!(state.particleEnding&&state.nextT>0);text.visible=true;text.updateMatrixWorld(true);
    for(const x of [b.minX,b.maxX])for(const y of [b.minY,b.maxY])readingBounds.expandByPoint(new T.Vector3(x,y,0).applyMatrix4(text.matrixWorld));
   }
   shade.position.copy(origin).add(new T.Vector3(0,0,-.35).applyQuaternion(camera.quaternion));shade.quaternion.copy(camera.quaternion);shade.scale.set(half*camera.aspect*1.85,half*.9,1);shade.material.uniforms.opacity.value=.22*state.eventOpacity;
