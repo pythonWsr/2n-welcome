@@ -1,0 +1,25 @@
+{
+  "base": "2a8ce13",
+  "fixtures": [
+    {
+      "aspect": 0.46,
+      "hashes": [
+        "252af81966a2378b55f4b573217984e16ab9a75faee6b2f86f06c17ac3fed2c4",
+        "a459ea1253244fb341bcec753815acb92d8b4dbaa43eb33df698ba040f26708b",
+        "4d91597da1e1fa12fa466f91c9a5ee3987b005d751f046df9db0e87df003ff68",
+        "eb3c7c123dcc2ed9757c1610b320db62e429865727ed8bd2984b06f66becdb98",
+        "434f6c4b1650e29a0765385613baf03268f635239526be43e592cd4a503a2fbe"
+      ]
+    },
+    {
+      "aspect": 1.8,
+      "hashes": [
+        "082091fa0f4abbafb9c2c1c6d4687504b2e42ce0882a9ef0fe52aab1f67ae9c5",
+        "bb16d4ddfb90d317e823733c9eb7b6604294b3f7110c54a902c55d9db013f6bd",
+        "94cfdb77cfe559479de55c70a3bf51a1f2aa5e2e4a90d04f0e9ec44c16790266",
+        "51cc8e4a94ac6a5602235de312e13ca2d708cdf32f984dc49b37d38c6ef0bbeb",
+        "cc1bfe1835c540a5e3f1a02a73c670c10687d4f611605d81393bb4543e7151b6"
+      ]
+    }
+  ]
+}
