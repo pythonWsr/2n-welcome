@@ -2,9 +2,10 @@
 // 2nUpdate.mjs
 //
 // 用法：
-//   node 2nUpdate.mjs [-c|--check] [--fetch-only] [--commit-only] [-m "提交信息"] [--allow-empty] [-r|--revert [sha]] [--wait <分钟>]
+//   node 2nUpdate.mjs [--ssh-add] [-c|--check] [--fetch-only] [--commit-only] [-m "提交信息"] [--allow-empty] [-r|--revert [sha]] [--wait <分钟>]
 //
 // 选项：
+//   --ssh-add           自动启动 ssh-agent 并加载默认密钥（免除后续重复输密码）
 //   -c, --check         仅检测当前改动是否涉及受保护文件及落后状态，不执行提交
 //   --fetch-only        仅拉取远程最新状态并显示分支差异，不修改文件
 //   --commit-only       仅在本地执行提交，不切换分支、不推送、不创建 PR
@@ -30,6 +31,7 @@ const PROTECTED_PATTERNS = [
   '2nUpdate.mjs'
 ];
 
+let SSH_ADD = false;
 let CHECK_ONLY = false;
 let FETCH_ONLY = false;
 let COMMIT_ONLY = false;
@@ -42,7 +44,8 @@ let WAIT_MINUTES = 10;
 const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
-  if (a === '-c' || a === '--check') CHECK_ONLY = true;
+  if (a === '--ssh-add') SSH_ADD = true;
+  else if (a === '-c' || a === '--check') CHECK_ONLY = true;
   else if (a === '--fetch-only') FETCH_ONLY = true;
   else if (a === '--commit-only') COMMIT_ONLY = true;
   else if (a === '--allow-empty') ALLOW_EMPTY = true;
@@ -57,7 +60,7 @@ for (let i = 0; i < args.length; i++) {
   } else if (a === '--wait') {
     if (i + 1 < args.length) { WAIT_MINUTES = parseInt(args[i + 1], 10) || 10; i++; }
   } else if (a === '-h' || a === '--help') {
-    console.log(`用法: node 2nUpdate.mjs [-c] [--fetch-only] [--commit-only] [-m "msg"] [--allow-empty] [-r [sha]] [--wait <分钟>]`);
+    console.log(`用法: node 2nUpdate.mjs [--ssh-add] [-c] [--fetch-only] [--commit-only] [-m "msg"] [--allow-empty] [-r [sha]] [--wait <分钟>]`);
     process.exit(0);
   }
 }
@@ -116,8 +119,65 @@ function checkProtected(files) {
   return files.filter(f => PROTECTED_PATTERNS.some(p => f === p || f.startsWith(p)));
 }
 
+// ---- SSH 密钥加载 ----
+function setupSshAgent() {
+  // 检查当前环境是否已经加载了密钥（返回 0 表示已加载）
+  const check = spawnSync('ssh-add', ['-l'], { stdio: 'ignore' });
+  if (check.status === 0) {
+    ok('SSH agent 已加载密钥，跳过设置。');
+    return;
+  }
+
+  info('正在启动 SSH agent...');
+  const agentRes = spawnSync('ssh-agent', ['-s'], { encoding: 'utf8' });
+  if (agentRes.status !== 0) {
+    warn('启动 ssh-agent 失败，请确认系统已安装 ssh-agent。');
+    return;
+  }
+
+  // 解析并注入环境变量到当前 Node 进程
+  const sockMatch = /SSH_AUTH_SOCK=([^;]+)/.exec(agentRes.stdout);
+  const pidMatch = /SSH_AGENT_PID=([^;]+)/.exec(agentRes.stdout);
+  
+  if (sockMatch && pidMatch) {
+    process.env.SSH_AUTH_SOCK = sockMatch[1];
+    process.env.SSH_AGENT_PID = pidMatch[1];
+  } else {
+    warn('解析 ssh-agent 输出失败。');
+    return;
+  }
+
+  // 寻找默认密钥
+  const home = process.env.HOME || process.env.USERPROFILE;
+  const possibleKeys = [
+    path.join(home, '.ssh', 'id_ed25519'),
+    path.join(home, '.ssh', 'id_rsa'),
+    path.join(home, '.ssh', 'id_ecdsa')
+  ];
+  
+  const keyToLoad = possibleKeys.find(k => fs.existsSync(k));
+  
+  if (keyToLoad) {
+    info(`正在加载 SSH 密钥: ${keyToLoad}`);
+    // 使用 inherit 让终端接管，弹出输入密码提示
+    const addRes = spawnSync('ssh-add', [keyToLoad], { stdio: 'inherit' });
+    if (addRes.status === 0) {
+      ok('SSH 密钥加载成功，后续操作将免密执行。');
+    } else {
+      warn('SSH 密钥加载失败，后续 git 操作可能需要手动输入密码。');
+    }
+  } else {
+    warn('未在 ~/.ssh/ 目录下找到默认密钥 (id_ed25519/id_rsa)。');
+  }
+}
+
 // ---- 主流程 ----
 async function main() {
+  // 如果带有 --ssh-add 参数，优先处理密钥加载
+  if (SSH_ADD) {
+    setupSshAgent();
+  }
+
   const currentBranch = gitCapture(['branch', '--show-current']);
   
   // ============ 模式：仅拉取并查看差异 (--fetch-only) ============
@@ -295,7 +355,7 @@ async function main() {
   await handleMergeAndWait(prUrl, targetBranch);
 }
 
-// ---- 核心流程：等待 PR 合并及智能退出 (已修复强制合并) ----
+// ---- 核心流程：等待 PR 合并及智能退出 ----
 async function handleMergeAndWait(prUrl, branch) {
   info('尝试设置 Auto-merge (Squash)...');
   const mergeRes = gh(['pr', 'merge', prUrl, '--auto', '--squash', '--delete-branch']);
