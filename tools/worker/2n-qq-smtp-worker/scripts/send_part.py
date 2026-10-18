@@ -19,7 +19,12 @@ def request_worker(endpoint: str, payload: dict) -> dict:
     request = urllib.request.Request(
         url,
         json.dumps(payload, separators=(',', ':')).encode(),
-        {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+        # 这里增加了 User-Agent，防止 Cloudflare WAF 拦截返回 403
+        {
+            'Authorization': 'Bearer ' + token, 
+            'Content-Type': 'application/json',
+            'User-Agent': '2n-sync-client/1.0'
+        },
         method='POST',
     )
     try:
