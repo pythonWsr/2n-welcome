@@ -23,6 +23,19 @@ test('HD companion copies use the same safe sampler before story departure',()=>
  const rig=createCompanionship(scene),display=textured(),original=atlas(display);rig.install(ground,'garden','rose');rig.installDisplay(display,'garden','rose');
  try{const map=rig.group.getObjectByName('companion-garden:rose').material.map;assert.equal(map.minFilter,T.LinearFilter);assert.equal(map.generateMipmaps,false);assert.equal(map.image,original.image);assert.notEqual(map,original);assert.equal(original.generateMipmaps,true);}finally{rig.dispose();}
 });
+test('the moving ending rose uses minification filtering while other atlases and legacy remain isolated',()=>{
+ const rose=textured(),iris=textured(),original=atlas(rose),memory=createMemoryScene(),camera=new T.PerspectiveCamera(48,.46,.2,2400);memory.install(rose,'garden','rose');memory.install(iris,'desert','iris');
+ try{
+  memory.update({eventIndex:2,memoryPhase:2,nextT:1,particleEnding:true},camera,0);
+  const mesh=memory.group.getObjectByName('memory-garden:rose'),map=mesh.material.map;
+  assert.equal(map.minFilter,T.LinearMipmapLinearFilter,'small moving rose needs a prefiltered footprint');assert.equal(map.generateMipmaps,true);
+  assert.equal(map.image,original.image,'the original HD pixels are retained');assert.equal(map.flipY,original.flipY);
+  assert.equal(memory.group.getObjectByName('memory-desert:iris').material.map.minFilter,T.LinearFilter,'fragmented atlases retain their reviewed sampler');
+  memory.update({eventIndex:2,memoryPhase:2,nextT:1,particleEnding:false},camera,0);
+  assert.equal(mesh.material.map.minFilter,T.LinearFilter,'legacy rendering keeps its prior atlas policy');
+  assert.equal(original.minFilter,T.LinearMipmapLinearFilter,'the shared source remains unchanged');
+ }finally{memory.dispose();rose.geometry.dispose();rose.material.dispose();iris.geometry.dispose();iris.material.dispose();}
+});
 test('the reviewed Compass needle face is also used before entering history',async()=>{
  const {readingQuaternion}=await import('../src/lookback.js');
  const scene=new T.Scene(),root=new T.Group();root.name='florr-jungle';scene.add(root);

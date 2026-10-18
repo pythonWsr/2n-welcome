@@ -8,14 +8,14 @@ import {junglePose} from './jungle-production.js';
 import {hellPose} from './hell-production.js';
 import {sampleCourtyard} from './people-courtyard.js';
 import {HISTORY_UNITS,HISTORY_SECONDS,sampleHistoryForData,historyTimeToDistance,historyDistanceToTime} from './guild-history-route.js';
-import {NEXT_SECONDS,NEXT_UNITS,sampleNext} from './guild-next-route.js';
+import {NEXT_SECONDS,PARTICLE_ENDING_SECONDS,NEXT_UNITS,sampleNext} from './guild-next-route.js';
 import historyData from '../content/history.json' with {type:'json'};
 
 export const LEGACY_TOTAL_UNITS=STORY_UNITS+PEOPLE_UNITS;
 export const NEXT_START_UNITS=LEGACY_TOTAL_UNITS+HISTORY_UNITS;
 export const TOTAL_UNITS=NEXT_START_UNITS+NEXT_UNITS;
 export {PEOPLE_UNITS};
-export const autoplayDuration=route=>150+(route?.seconds||0)+HISTORY_SECONDS+NEXT_SECONDS;
+export const autoplayDuration=(route,particleEnding=false)=>150+(route?.seconds||0)+HISTORY_SECONDS+(particleEnding?PARTICLE_ENDING_SECONDS:NEXT_SECONDS);
 const clamp=t=>Math.max(0,Math.min(1,t));
 // Keep the historical absolute coordinate: one progress unit is 28 scroll units.
 export function scrollToStory(t,route){
@@ -32,19 +32,21 @@ export function storyToScroll(p,route){
 }
 
 // The player stores time only; scroll remains the historical physical coordinate.
-export function autoplayToScroll(fraction,route){
- const seconds=clamp(fraction)*autoplayDuration(route);
+export function autoplayToScroll(fraction,route,particleEnding=false){
+ const endingSeconds=particleEnding?PARTICLE_ENDING_SECONDS:NEXT_SECONDS;
+ const seconds=clamp(fraction)*autoplayDuration(route,particleEnding);
  const before=150+(route?.seconds||0);
- if(seconds>=before+HISTORY_SECONDS)return (NEXT_START_UNITS+NEXT_UNITS*clamp((seconds-before-HISTORY_SECONDS)/NEXT_SECONDS))/TOTAL_UNITS;
+ if(seconds>=before+HISTORY_SECONDS)return (NEXT_START_UNITS+NEXT_UNITS*clamp((seconds-before-HISTORY_SECONDS)/endingSeconds))/TOTAL_UNITS;
  if(seconds>=before)return storyToScroll((LEGACY_TOTAL_UNITS+HISTORY_UNITS*clamp((seconds-before)/HISTORY_SECONDS))/28,route);
  return seconds<=150 ? seconds/150*STORY_UNITS/TOTAL_UNITS
   : storyToScroll((STORY_UNITS+PEOPLE_UNITS*clamp((seconds-150)/(route?.seconds||1)))/28,route);
 }
-export function scrollToAutoplay(scroll,route){
+export function scrollToAutoplay(scroll,route,particleEnding=false){
+ const endingSeconds=particleEnding?PARTICLE_ENDING_SECONDS:NEXT_SECONDS,duration=autoplayDuration(route,particleEnding);
  const units=scrollToStory(scroll,route)*28;
- if(units>=NEXT_START_UNITS)return (150+(route?.seconds||0)+HISTORY_SECONDS+(units-NEXT_START_UNITS)/NEXT_UNITS*NEXT_SECONDS)/autoplayDuration(route);
- if(units>=LEGACY_TOTAL_UNITS)return (150+(route?.seconds||0)+(units-LEGACY_TOTAL_UNITS)/HISTORY_UNITS*HISTORY_SECONDS)/autoplayDuration(route);
- return (units<=STORY_UNITS ? units/STORY_UNITS*150 : 150+(units-STORY_UNITS)/PEOPLE_UNITS*(route?.seconds||0))/autoplayDuration(route);
+ if(units>=NEXT_START_UNITS)return (150+(route?.seconds||0)+HISTORY_SECONDS+(units-NEXT_START_UNITS)/NEXT_UNITS*endingSeconds)/duration;
+ if(units>=LEGACY_TOTAL_UNITS)return (150+(route?.seconds||0)+(units-LEGACY_TOTAL_UNITS)/HISTORY_UNITS*HISTORY_SECONDS)/duration;
+ return (units<=STORY_UNITS ? units/STORY_UNITS*150 : 150+(units-STORY_UNITS)/PEOPLE_UNITS*(route?.seconds||0))/duration;
 }
 export function capturePeoplePosition(route,t){
  const index=route.windows.findIndex(w=>t>=w.start&&(t<w.end||w.end===1));
@@ -70,12 +72,12 @@ export function chapterAt(progress){
 }
 
 /** Absolute sampling on the existing camera; no readiness or viewport history. */
-export function sampleStoryPose(progress,camera,portrait,route){
+export function sampleStoryPose(progress,camera,portrait,route,particleEnding=false){
  const {chapter,peopleT,historyT,nextT,returnT,heroT,worldT}=chapterAt(progress);
  if(chapter==='history'||chapter==='next'){
   const entry=route?sampleCourtyard(route,1,camera.aspect):lookbackPose(1,camera);
   const state={...sampleHistoryForData(historyData,{...entry,up:entry.up||[0,1,0]},historyT,camera.aspect),entryPose:{...entry,up:entry.up||[0,1,0]}};
-  if(chapter==='next')Object.assign(state,sampleNext(nextT),{replayVisible:false});
+  if(chapter==='next')Object.assign(state,sampleNext(nextT,{particleEnding}),{replayVisible:false});
   camera.position.fromArray(state.position);camera.up.fromArray(state.up);camera.lookAt(...state.target);return state;
  }
  if(chapter==='people')return peoplePose(peopleT,camera,camera.aspect,route);

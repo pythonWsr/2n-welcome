@@ -1,16 +1,19 @@
 import * as T from 'three';
 import {applyMemoryEntry,memoryEntryFrame} from './guild-memory-entry.js';
-import {sampleNext} from './guild-next-route.js';
-import {nextPoint,nextCamera,nextArcFrame} from './guild-next-motion.js';
+import {sampleNext,nextSmooth,PARTICLE_PETALS_ARRIVED} from './guild-next-route.js';
+import {endingCamera,endingPetalPose,endingPetalPoint,endingFrame,createEndingParticles,endingPetalFrame} from './guild-ending-particles.js';
+import {createEndingFrames} from './guild-ending-frames.js';
 import {createMemoryLayout,memoryPoint} from './guild-memory-layout.js';
 import {petalFrontQuaternion} from './petal-fronts.js';
 import {petalDisplayTexture} from './petal-display-texture.js';
 
-export function createMemoryScene({mobile=true}={}){
+export function createMemoryScene({mobile=true,renderer}={}){
  const group=new T.Group();group.name='guild-memory-corridor';group.visible=false;
+ let ending=createEndingParticles({renderer});
+ const dimensions=createEndingFrames();group.add(dimensions.group,ending.occluder);
  const entrySources=new Map();let entryView=null,terrainVisible=false,lightBlend=1;
- let activeTarget=null;
- const pools=new Map(),owned=[],sources=new Map();let layout=null,preview=0,time=0,spin=0,disposed=false,arcCache=null;
+ let activeTarget=null,particleLayer=false;
+ const pools=new Map(),owned=[],sources=new Map();let layout=null,preview=0,time=0,spin=0,disposed=false,endingCache=null,endingOrigin=null,orbitTime=0,lastEndingT=0;
  const matrix=new T.Matrix4(),rotation=new T.Quaternion(),scale=new T.Vector3(),point=new T.Vector3(),center=new T.Vector3();
  const palette=[0xe8e4cb,0xb43b48,0xe4d1a0];
  const ambient=new T.AmbientLight(0xffffff,1.15);group.add(ambient);
@@ -21,7 +24,7 @@ export function createMemoryScene({mobile=true}={}){
  for(let i=0;i<dustCount;i++){const depth=45+random()*145,half=depth*Math.tan(Math.PI*24/180);positions.set([(random()-.5)*2.2*half,(random()-.5)*2.2*half,-depth],i*3);brightness[i]=.4+random()*.5;}
  const dustGeometry=new T.BufferGeometry();dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));dustGeometry.setAttribute('aLight',new T.BufferAttribute(brightness,1));
  const dustMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{color:{value:new T.Color(palette[0])},time:{value:0}},vertexShader:'uniform float time;attribute float aLight;varying float lit;void main(){vec3 drift=position+vec3(sin(time*.13+position.z*.07)*.5,sin(time*.18+position.x*.1)*.8,0.);vec4 p=modelViewMatrix*vec4(drift,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(220./max(1.,-p.z),1.,4.);lit=aLight;}',fragmentShader:'uniform vec3 color;varying float lit;void main(){float a=1.-smoothstep(.08,.5,length(gl_PointCoord-.5));gl_FragColor=vec4(color,a*lit*.75);}'});
- const dust=new T.Points(dustGeometry,dustMaterial);dust.name="memory-dust";dust.matrixAutoUpdate=false;dust.frustumCulled=false;group.add(dust);owned.push(dustGeometry,dustMaterial);
+ const dust=new T.Points(dustGeometry,dustMaterial);dust.name="memory-dust";dust.matrixAutoUpdate=false;dust.frustumCulled=false;group.add(dust);owned.push(dustGeometry,dustMaterial);group.add(ending.points);
  for(let i=0;i<3;i++){
   const geometry=new T.PlaneGeometry(16,190),material=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,uniforms:{color:{value:new T.Color(palette[0])}},vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 v;uniform vec3 color;void main(){float edge=pow(max(0.,1.-abs(v.x-.5)*2.),3.);float end=smoothstep(0.,.2,v.y)*(1.-smoothstep(.7,1.,v.y));gl_FragColor=vec4(color,edge*end*.028);}'});
   const beam=new T.Mesh(geometry,material);beam.position.set(-35+i*35,5,-60-i*15);beam.rotation.z=-.45;group.add(beam);owned.push(geometry,material);
@@ -32,7 +35,7 @@ export function createMemoryScene({mobile=true}={}){
   source.geometry.computeBoundingSphere();source.geometry.computeBoundingBox();
   const sphere=source.geometry.boundingSphere,dimensions=source.geometry.boundingBox.getSize(new T.Vector3());
   if(!sphere||!Number.isFinite(sphere.radius)||sphere.radius<=0)return;
-  sources.set(id,{source,center:sphere.center.clone(),factor:2.2/sphere.radius,face:petalFrontQuaternion(name,dimensions)});
+  sources.set(id,{source,name,center:sphere.center.clone(),factor:2.2/sphere.radius,face:petalFrontQuaternion(name,dimensions)});
   layout=null;
  }
  function prepare(){
@@ -46,12 +49,14 @@ export function createMemoryScene({mobile=true}={}){
   for(const [id,asset] of sources){
    const anchors=layout.anchors.filter(a=>a.key===id);if(!anchors.length)continue;
    const material=(entrySources.get(anchors[0].id)?.material||asset.source.material).clone();material.fog=entrySources.size?entrySources.get(anchors[0].id)?.material.fog!==false:false;const geometry=asset.source.geometry.clone(),alpha=new T.InstancedBufferAttribute(new Float32Array(anchors.length).fill(1),1);alpha.setUsage(T.DynamicDrawUsage);geometry.setAttribute('memoryAlpha',alpha);
-   material.map=petalDisplayTexture(material.map);
+   const sourceMap=material.map,displayMap=petalDisplayTexture(sourceMap),stableMap=asset.name==='rose'?petalDisplayTexture(sourceMap,{mipmaps:true}):displayMap;
+   material.map=displayMap;
    material.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float memoryAlpha; varying float vMemoryAlpha;').replace('#include <begin_vertex>','#include <begin_vertex>\nvMemoryAlpha=memoryAlpha;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying float vMemoryAlpha;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a *= vMemoryAlpha;');};material.customProgramCacheKey=()=> 'memory-instance-alpha-v1';
-   const mesh=new T.InstancedMesh(geometry,material,anchors.length);mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.name=`memory-${id}`;mesh.userData.anchorIds=anchors.map(a=>a.id);group.add(mesh);pools.set(id,{...asset,mesh,material,anchors,nativeTransparent:material.transparent,nativeDepthWrite:material.depthWrite});
+   const mesh=new T.InstancedMesh(geometry,material,anchors.length);mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.name=`memory-${id}`;mesh.userData.anchorIds=anchors.map(a=>a.id);group.add(mesh);pools.set(id,{...asset,mesh,material,anchors,displayMap,stableMap,nativeTransparent:material.transparent,nativeDepthWrite:material.depthWrite});
   }
  }
  function captureEntry(sourceGroup,entryCamera){
+  endingOrigin=null;orbitTime=0;lastEndingT=0;
   prepare();entrySources.clear();sourceGroup.updateMatrixWorld(true);entryCamera.updateMatrixWorld();entryView=entryCamera.clone();
   const entry={position:entryCamera.position.toArray(),target:entryCamera.position.clone().add(new T.Vector3(0,0,-1).applyQuaternion(entryCamera.quaternion)).toArray()};
   const frame=memoryEntryFrame(entry).invert(),records=[];
@@ -80,6 +85,24 @@ export function createMemoryScene({mobile=true}={}){
  }
 
  function setPreview(index){preview=Math.max(0,Math.min(2,Math.round(index)||0));}
+ function updatePetalLayer(pool,reading=pool.reading||false){
+  pool.reading=reading;
+  pool.material.map=particleLayer?pool.stableMap:pool.displayMap;
+  const transparent=particleLayer||reading||pool.nativeTransparent;
+  if(pool.material.transparent!==transparent){pool.material.transparent=transparent;pool.material.needsUpdate=true;}
+  pool.material.depthWrite=pool.nativeDepthWrite;
+  pool.mesh.renderOrder=particleLayer||reading?3:0;
+ }
+ function prepareParticleEnding(nextRenderer){
+  if(disposed||ending.fluidHits)return;
+  if(!nextRenderer?.extensions.has('EXT_color_buffer_float'))throw new Error('此设备不支持粒子结尾所需的浮点缓冲');
+  // Prepare before replacing the existing scene; a compile error leaves the
+  // history and its models intact and can be retried through the normal gate.
+  const next=createEndingParticles({renderer:nextRenderer});
+  group.remove(ending.points,ending.occluder);ending.dispose();ending=next;group.add(ending.points,ending.occluder);
+ }
+ function warmParticleEnding(aspect,reduced=false){ending.warm(aspect,reduced);}
+ function invalidateParticleEnding(){ending.invalidate();}
  function update(state,camera,dt=0){
   if(disposed)return;prepare();group.visible=!!layout?.anchors.length;time+=Math.min(.05,Math.max(0,dt));
   const index=Number.isInteger(state?.eventIndex)?Math.max(0,Math.min(2,state.eventIndex)):preview,shot=layout.shots[index];
@@ -88,37 +111,49 @@ export function createMemoryScene({mobile=true}={}){
   const eased=v=>{const u=Math.max(0,Math.min(1,v));return u*u*(3-2*u);};
   const elapsed=Math.min(.05,Math.max(0,dt));
   spin+=elapsed*.28*eased(phase)*(1-eased(phase-1))*(state?.reducedMotion?0:1);
-  dustMaterial.uniforms.time.value=time;
+  const particleEnding=state?.particleEnding??!!ending.fluidHits,inEnding=particleEnding&&Number.isFinite(state?.nextT);
+  particleLayer=inEnding;
+  if(inEnding&&!endingOrigin)endingOrigin={time:time-state.nextT*18,spin};
+  // Idle time in the ending must not advance the hidden story's breathing.
+  // Rewinding across the boundary resumes the phase actually being rendered.
+  if(!inEnding&&endingOrigin){time=endingOrigin.time+elapsed;endingOrigin=null;orbitTime=0;}
+  if(inEnding){
+   if(state.nextT<.1&&lastEndingT>.1)orbitTime=0;
+   if(!state?.reducedMotion)orbitTime+=elapsed*nextSmooth((state.nextT-PARTICLE_PETALS_ARRIVED)/(1-PARTICLE_PETALS_ARRIVED));
+   lastEndingT=state.nextT;
+  }
+  const motionTime=inEnding?endingOrigin.time+state.nextT*18:time,motionSpin=inEnding?endingOrigin.spin:spin;
+  dustMaterial.uniforms.time.value=motionTime;
   camera.position.fromArray(layout.shots[from].position).lerp(new T.Vector3().fromArray(layout.shots[from+1].position),blend);camera.up.set(0,1,0);
   const expandedPose={position:camera.position.toArray(),target:shot.target};
-  const nextPose=Number.isFinite(state?.nextT)?nextCamera(expandedPose,state.nextT):null;
-  const arcKey=nextPose?JSON.stringify([expandedPose,camera.aspect,camera.fov]):null;
-  if(nextPose&&(!arcCache||arcCache.layout!==layout||arcCache.key!==arcKey))arcCache={layout,key:arcKey,frame:nextArcFrame(expandedPose,{aspect:camera.aspect,fov:camera.fov,anchors:layout.anchors})};
-  const arcFrame=nextPose?arcCache.frame:null;
+  const nextPose=Number.isFinite(state?.nextT)?endingCamera(expandedPose,state.nextT,state?.reducedMotion):null;
+  if(nextPose&&(!endingCache||endingCache.layout!==layout||endingCache.aspect!==camera.aspect))endingCache={layout,aspect:camera.aspect,frame:endingPetalFrame(expandedPose,camera.aspect,layout.anchors)};
+  ending.update(state?.nextT,motionTime,camera,state?.reducedMotion,particleEnding);
+  dimensions.update(state?.nextT,camera.aspect,state?.reducedMotion,ending.fluidHits);
   const nextOpening=nextPose?sampleNext(state.nextT).opening:0;
   activeTarget=nextPose?.target||shot.target;if(nextPose)camera.position.fromArray(nextPose.position);camera.lookAt(...activeTarget);camera.updateMatrixWorld();
   const color=new T.Color(palette[from]).lerp(new T.Color(palette[from+1]),blend);
   dustMaterial.uniforms.color.value.copy(color);
   for(const child of group.children)if(child.material?.uniforms?.color)child.material.uniforms.color.value.copy(color);
-  lightBlend=state?.entryPose?eased(((state.entryBlend??0)-.9)/.1):1;
+  lightBlend=(state?.entryPose?eased(((state.entryBlend??0)-.9)/.1):1)*(nextPose?(.65+.35*endingFrame(state.nextT).light):1);
   ambient.intensity=1.15*lightBlend*(terrainVisible?0:1);key.intensity=2.8*lightBlend*(terrainVisible?0:1);fill.intensity=1.2*lightBlend*(terrainVisible?0:1);
   // Keep captured material fog stable: toggling it creates a color discontinuity.
   const locations=new Map(),expand=eased(phase-1);
   // Different periods and phases, centered so the shell itself never bobs.
-  const bob=a=>(1.8+1.4*a.u)*Math.sin(time*(.72+a.u*.36+a.branch*.07)+a.u*17+a.branch*2.3);
+  const bob=a=>(1.8+1.4*a.u)*Math.sin(motionTime*(.72+a.u*.36+a.branch*.07)+a.u*17+a.branch*2.3);
   const meanBob=layout.anchors.length?layout.anchors.reduce((sum,a)=>sum+bob(a),0)/layout.anchors.length:0;
-  for(const a of layout.anchors){point.fromArray(memoryPoint(a,phase,spin));
+  for(const a of layout.anchors){point.fromArray(memoryPoint(a,phase,motionSpin));
     // Chains adapt to wide viewports; the spherical shell retains real 3D depth.
     point.x*=1+(Math.max(.8,Math.min(2.8,camera.aspect/.6))-1)*(1-eased(phase));
     const chainWeight=1-eased(phase),motion=state?.reducedMotion?.2:1;
     // Coherent wave plus individual breathing is perceptible during idle reading.
-    point.y+=motion*chainWeight*(1.6*Math.sin(time*.65+a.u*4+a.branch*1.7)+.65*Math.sin(time*.9+a.u*9));
-    point.x+=motion*chainWeight*.5*Math.sin(time*.42+a.u*5+a.branch);
+    point.y+=motion*chainWeight*(1.6*Math.sin(motionTime*.65+a.u*4+a.branch*1.7)+.65*Math.sin(motionTime*.9+a.u*9));
+    point.x+=motion*chainWeight*.5*Math.sin(motionTime*.42+a.u*5+a.branch);
     // Shell motion follows its surface; text never pushes petals to screen edges.
     const radial=point.clone().sub(new T.Vector3(0,0,-14));
-    if(radial.lengthSq()>0)point.addScaledVector(radial.normalize(),motion*eased(phase)*(1-expand)*.35*Math.sin(time*(.78+a.u*.3)+a.u*6+a.branch*1.7));
+    if(radial.lengthSq()>0)point.addScaledVector(radial.normalize(),motion*eased(phase)*(1-expand)*.35*Math.sin(motionTime*(.78+a.u*.3)+a.u*6+a.branch*1.7));
     point.y+=motion*expand*(bob(a)-meanBob);
-    if(Number.isFinite(state?.nextT))point.fromArray(nextPoint(a,point.toArray(),state.nextT,arcFrame,{time,reducedMotion:state?.reducedMotion}));
+    if(Number.isFinite(state?.nextT))point.fromArray(endingPetalPoint(a,point.toArray(),state.nextT,particleEnding?orbitTime:motionTime, state?.reducedMotion,endingCache?.frame,particleEnding));
     locations.set(a.id,point.clone());
   }
   // Bounded, deterministic separation prevents petals crossing during the morph.
@@ -142,9 +177,12 @@ export function createMemoryScene({mobile=true}={}){
    if(head)packing.set(branch,{head:head.x/-head.z,span:last.x/-last.z-first.x/-first.z});
   }
   for(const pool of pools.values()){
+   updatePetalLayer(pool);
    let count=0;
    for(const [slot,a] of pool.anchors.entries()){point.copy(locations.get(a.id));
-    rotation.copy(camera.quaternion).multiply(new T.Quaternion().setFromEuler(new T.Euler(.22*Math.sin(a.u*9),a.twist+.2*Math.sin(a.u*7+phase),a.twist+(state?.reducedMotion?0:.035*(1-eased(phase))*Math.sin(time*.6+a.u*5))))).multiply(pool.face);
+    rotation.copy(camera.quaternion).multiply(new T.Quaternion().setFromEuler(new T.Euler(.22*Math.sin(a.u*9),a.twist+.2*Math.sin(a.u*7+phase),a.twist+(state?.reducedMotion?0:.035*(1-eased(phase))*Math.sin(motionTime*.6+a.u*5)))));
+    if(nextPose)rotation.multiply(new T.Quaternion().setFromEuler(new T.Euler(...endingPetalPose(a,state.nextT,state?.reducedMotion))));
+    rotation.multiply(pool.face);
     const depth=Math.max(1,-point.clone().applyMatrix4(camera.matrixWorldInverse).z);
     const reference=camera.position.distanceTo(new T.Vector3(0,0,-14));
     const balance=1+(Math.max(.65,Math.min(1.2,Math.pow(depth/reference,.4)))-1)*eased(phase-1);
@@ -167,7 +205,6 @@ export function createMemoryScene({mobile=true}={}){
       rotation.slerp(tracked,1-travel);scale.lerp(start.scale,1-travel);}
 
     }
-    if(nextOpening&&!state?.reducedMotion)rotation.multiply(new T.Quaternion().setFromEuler(new T.Euler(.12*Math.sin(time*.14+a.longitude)*nextOpening,.18*Math.sin(time*.17+a.u*11)*nextOpening,.09*Math.sin(time*.11+a.branch+a.u*7)*nextOpening)));
     matrix.compose(point,rotation,scale);matrix.multiply(new T.Matrix4().makeTranslation(-pool.center.x,-pool.center.y,-pool.center.z));pool.mesh.setMatrixAt(count++,matrix);
    }
    pool.mesh.count=count;pool.mesh.instanceMatrix.needsUpdate=true;
@@ -187,10 +224,9 @@ export function createMemoryScene({mobile=true}={}){
    const p=new T.Vector3(x,y,z),view=p.clone().applyMatrix4(camera.matrixWorldInverse),screen=p.project(camera);textDepth=Math.min(textDepth,-view.z);rect.left=Math.min(rect.left,screen.x);rect.right=Math.max(rect.right,screen.x);rect.bottom=Math.min(rect.bottom,screen.y);rect.top=Math.max(rect.top,screen.y);
   }
   for(const pool of pools.values()){
-   const enabled=weight>0,transparent=enabled||pool.nativeTransparent;if(pool.material.transparent!==transparent){pool.material.transparent=transparent;pool.material.needsUpdate=true;}
+   updatePetalLayer(pool,weight>0);
    // Per-instance text fading must retain self-occlusion of the solid GLB.
    // Disabling depth writes exposes hidden atlas faces even on alpha=1 petals.
-   pool.material.depthWrite=pool.nativeDepthWrite;pool.mesh.renderOrder=enabled?3:0;
    const alpha=pool.mesh.geometry.getAttribute('memoryAlpha'),sphere=pool.mesh.geometry.boundingSphere;
    for(let i=0;i<pool.mesh.count;i++){
     pool.mesh.getMatrixAt(i,matrix);matrix.premultiply(pool.mesh.matrixWorld);
@@ -202,5 +238,5 @@ export function createMemoryScene({mobile=true}={}){
    }alpha.needsUpdate=true;
   }
  }
- return {group,install,prepare,captureEntry,setPreview,update,updateTextOcclusion,setTerrainVisible(visible){terrainVisible=visible;ambient.intensity=1.15*lightBlend*(visible?0:1);key.intensity=2.8*lightBlend*(visible?0:1);fill.intensity=1.2*lightBlend*(visible?0:1);},get assetCount(){return sources.size;},get instanceCount(){return layout?.anchors.length||0;},dustCount,get shot(){const shot=layout?.shots[preview];return shot?{...shot,target:new T.Vector3(...(activeTarget||shot.target)).applyMatrix4(group.matrix).toArray()}:null;},dispose(){if(disposed)return;disposed=true;for(const pool of pools.values()){pool.mesh.dispose();pool.mesh.geometry.dispose();pool.material.dispose();}for(const item of owned)item.dispose();group.clear();sources.clear();pools.clear();}};
+ return {group,install,prepare,prepareParticleEnding,warmParticleEnding,invalidateParticleEnding,captureEntry,setPreview,update,updateTextOcclusion,setTerrainVisible(visible){terrainVisible=visible;ambient.intensity=1.15*lightBlend*(visible?0:1);key.intensity=2.8*lightBlend*(visible?0:1);fill.intensity=1.2*lightBlend*(visible?0:1);},get particleEndingReady(){return ending.fluidReady;},get assetCount(){return sources.size;},get instanceCount(){return layout?.anchors.length||0;},dustCount,get shot(){const shot=layout?.shots[preview];return shot?{...shot,target:new T.Vector3(...(activeTarget||shot.target)).applyMatrix4(group.matrix).toArray()}:null;},dispose(){if(disposed)return;disposed=true;for(const pool of pools.values()){pool.mesh.dispose();pool.mesh.geometry.dispose();pool.material.dispose();}for(const item of owned)item.dispose();ending.dispose();dimensions.dispose();group.clear();sources.clear();pools.clear();}};
 }
