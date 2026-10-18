@@ -6,9 +6,9 @@
 功能：
 1. 读取本地 HEAD，尝试直接 fetch 小增量；若超时/失败，自动触发 GitHub Actions 发送邮件。
 2. 从 IMAP 邮箱拉取全部分片，合并并校验 SHA256。
-3. 自动使用 bundle 更新本地仓库，并重置 remote 地址。
+3. 自动使用 bundle 更新本地仓库，并智能修复 remote 地址为 SSH 协议。
 4. 支持 --bundle 参数直接应用本地离线包。
-5. 支持 --check 参数跳过白名单，直接发送测试邮件验证链路。
+5. 支持 -c / --check 强制触发 GitHub Actions 工作流，不尝试直接 fetch。
 """
 
 import os
@@ -36,11 +36,12 @@ TMP_DIR = DEFAULT_REPO_DIR / ".sync_tmp"
 CONFIG_FILE = pathlib.Path.home() / ".2n_sync_config.json"
 
 GITHUB_RAW_WHITELIST = "https://raw.githubusercontent.com/pythonWsr/2n-welcome/main/config/mail-recipients.json"
+GITHUB_REPO = "pythonWsr/2n-welcome"
+
 IMAP_SERVER = "imap.qq.com"
 IMAP_PORT = 993
 SMTP_SERVER = "smtp.qq.com"
 SMTP_PORT = 465
-GITHUB_REPO = "pythonWsr/2n-welcome"
 
 # ================= 工具函数 =================
 def log(msg, level="INFO"):
@@ -72,8 +73,11 @@ def load_config():
     return {}
 
 def save_config(email_addr, authkey):
-    CONFIG_FILE.write_text(json.dumps({"email": email_addr, "authkey": authkey}), "utf-8")
-    log("凭据已保存到本地配置文件。")
+    try:
+        CONFIG_FILE.write_text(json.dumps({"email": email_addr, "authkey": authkey}), "utf-8")
+        log("凭据已保存到本地配置文件。")
+    except Exception as e:
+        log(f"保存凭据失败: {e}", "WARN")
 
 # ================= 核心类 =================
 
@@ -98,8 +102,8 @@ class UpdateManager:
                 log("邮箱白名单校验通过。")
                 return True
         except Exception as e:
-            log(f"读取白名单失败: {e}", "WARN")
-            return True # 网络差时宽容处理，不阻断后续流程
+            log(f"读取白名单失败: {e} (可能是网络问题，继续尝试)", "WARN")
+            return True
 
     def verify_imap_login(self):
         log("正在测试 IMAP 授权码...")
@@ -112,41 +116,24 @@ class UpdateManager:
         except imaplib.IMAP4.error:
             log("IMAP 授权码错误，请检查。", "ERROR")
             return False
-
-    def send_test_email(self):
-        """发送测试邮件到当前邮箱"""
-        log(f"准备向 {self.email} 发送测试邮件...")
-        subject = "[2n Sync] 链路测试 (Test Email)"
-        body = f"""
-这是一封 2n 仓库增量同步工具的测试邮件。
-如果你收到这封邮件，说明你的 SMTP 授权码和环境工作正常。
-
-当前本地 Git 仓库的最新 Commit SHA:
-{self.local_head}
-
-发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        msg = MIMEText(body, 'plain', 'utf-8')
-        msg['Subject'] = subject
-        msg['From'] = self.email
-        msg['To'] = self.email
-
-        try:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=15)
-            server.login(self.email, self.authkey)
-            server.send_message(msg)
-            server.quit()
-            log("✅ 测试邮件发送成功！请前往收件箱查收。", "INFO")
-            return True
-        except smtplib.SMTPAuthenticationError:
-            log("❌ SMTP 登录失败。请确认你使用的是 'SMTP 授权码' 而不是 QQ 登录密码。", "ERROR")
-            return False
         except Exception as e:
-            log(f"❌ 邮件发送失败: {e}", "ERROR")
+            log(f"IMAP 连接失败: {e}", "ERROR")
+            return False
+
+    def trigger_workflow(self):
+        log(f"正在触发 GitHub Actions (base_sha: {self.local_head[:7]})...")
+        cmd = ["gh", "workflow", "run", "bundle.yml", "-f", f"base_sha={self.local_head}", "-f", "part_size=256K"]
+        res = run_cmd(cmd, check=False)
+        if res and res.returncode == 0:
+            log("✅ Actions 触发成功，请等待邮件送达。")
+            return True
+        else:
+            log("❌ gh 触发失败。请确认已安装 GitHub CLI (gh auth login)，或去网页手动触发。", "ERROR")
+            if res and res.stderr:
+                log(f"错误信息: {res.stderr.strip()}", "ERROR")
             return False
 
     def try_direct_fetch(self):
-        """尝试直接拉取，超时或失败则说明包大/网络差，需要降级到邮件"""
         log("尝试直接 fetch (限时 10 秒)...")
         res = run_cmd(["git", "fetch", "origin", "main"], timeout=10, check=False)
         
@@ -162,17 +149,6 @@ class UpdateManager:
         log("直接 fetch 成功，正在应用更新...")
         self.apply_git_changes(target_head)
         return True
-
-    def trigger_workflow(self):
-        log(f"正在触发 GitHub Actions (base_sha: {self.local_head[:7]})...")
-        cmd = ["gh", "workflow", "run", "bundle.yml", "-f", f"base_sha={self.local_head}", "-f", "part_size=256K"]
-        res = run_cmd(cmd, check=False)
-        if res and res.returncode == 0:
-            log("Actions 触发成功，请等待邮件送达。")
-            return True
-        else:
-            log("gh 触发失败。请确认已安装 GitHub CLI (gh auth login)，或去网页手动触发。", "ERROR")
-            return False
 
     def poll_mail(self, timeout_mins=10):
         log("开始轮询邮箱接收分片...")
@@ -288,7 +264,16 @@ class UpdateManager:
                 log("请手动解决冲突，或执行 git rebase --abort 放弃更新。", "ERROR")
                 return False
 
-        run_cmd(["git", "remote", "set-url", "origin", f"https://github.com/{GITHUB_REPO}.git"], check=False)
+        # 4. 智能检查并修复 remote (改为 SSH 协议)
+        res_remote = run_cmd(["git", "remote", "get-url", "origin"], check=False)
+        if not res_remote or res_remote.returncode != 0 or "github.com" not in res_remote.stdout:
+            log("检测到 remote 缺失或非 GitHub 地址，正在修复为 SSH 协议...")
+            ssh_url = f"git@github.com:{GITHUB_REPO}.git"
+            run_cmd(["git", "remote", "set-url", "origin", ssh_url], check=False)
+            run_cmd(["git", "remote", "add", "origin", ssh_url], check=False)
+        else:
+            log("Remote 地址正常，保留现有配置。")
+
         if bundle_path:
             run_cmd(["git", "update-ref", "-d", "refs/remotes/bundle-temp/main"], check=False)
             shutil.rmtree(TMP_DIR, ignore_errors=True)
@@ -302,30 +287,42 @@ def main():
     parser.add_argument("--email-address", help="接收邮件的 QQ 邮箱地址")
     parser.add_argument("--email-authkey", help="QQ 邮箱 IMAP/SMTP 授权码")
     parser.add_argument("--bundle", help="直接应用指定的本地 bundle 文件")
-    parser.add_argument("-c", "--check", action="store_true", help="跳过白名单检查，直接发送一封测试邮件验证配置")
+    parser.add_argument("-c", "--check", action="store_true", help="强制触发 GitHub Actions 工作流，不尝试直接 fetch")
     args = parser.parse_args()
 
-    # 1. 加载凭据
+    # 1. 加载凭据 (优先命令行 > 配置文件 > 环境变量)
     config = load_config()
-    email_addr = args.email_address or config.get("email")
-    authkey = args.email_authkey or config.get("authkey")
+    email_addr = args.email_address or config.get("email") or os.environ.get("EMAIL_ADDRESS")
+    authkey = args.email_authkey or config.get("authkey") or os.environ.get("QQ_IMAP_AUTH_CODE")
 
-    if not args.bundle:
-        if not email_addr:
-            email_addr = input("请输入收件 QQ 邮箱: ").strip()
-        if not authkey:
-            authkey = getpass.getpass("请输入授权码 (IMAP/SMTP 通用，输入不可见): ").strip()
-        if not email_addr or not authkey:
-            log("必须提供邮箱和授权码。", "ERROR")
+    # 2. 强制触发工作流模式 (-c / --check)
+    if args.check:
+        log("=== 强制触发 GitHub Actions 工作流 ===")
+        mgr = UpdateManager(email_addr or "", authkey or "")
+        
+        # 检查 gh 环境
+        res_gh = run_cmd(["gh", "--version"], check=False)
+        if not res_gh or res_gh.returncode != 0:
+            log("❌ 未检测到 GitHub CLI (gh)，无法触发。请先安装 gh。", "ERROR")
             sys.exit(1)
             
-        save_config(email_addr, authkey)
-
-    # 2. 测试模式 (-c / --check)
-    if args.check:
-        mgr = UpdateManager(email_addr, authkey)
-        log("[-c] 跳过白名单校验，进入测试模式...")
-        mgr.send_test_email()
+        res_auth = run_cmd(["gh", "auth", "status"], check=False)
+        if not res_auth or res_auth.returncode != 0:
+            log("❌ gh 未登录，请先运行 gh auth login。", "ERROR")
+            sys.exit(1)
+            
+        log("✅ 环境检查通过，准备触发...")
+        
+        # 触发 Actions
+        if not mgr.trigger_workflow():
+            sys.exit(1)
+            
+        # 触发后，如果有配邮箱，顺便轮询接收
+        if email_addr and authkey:
+            log("已触发工作流，准备开始轮询邮件接收分片...")
+            mgr.poll_mail()
+        else:
+            log("ℹ️ 未配置邮箱凭据，工作流已触发。请前往网页 Actions 查看状态，或等待对方收到邮件。")
         return
 
     # 3. 直接应用本地 Bundle (离线模式)
@@ -335,7 +332,18 @@ def main():
         mgr.apply_bundle(pathlib.Path(args.bundle).absolute())
         return
 
-    # 4. 在线同步模式
+    # 4. 在线同步模式 (真正需要拉取更新时)
+    if not email_addr:
+        email_addr = input("请输入收件 QQ 邮箱: ").strip()
+    if not authkey:
+        authkey = getpass.getpass("请输入授权码 (IMAP 授权码，输入不可见): ").strip()
+        
+    if not email_addr or not authkey:
+        log("必须提供邮箱和授权码才能执行在线拉取。", "ERROR")
+        sys.exit(1)
+        
+    save_config(email_addr, authkey)
+
     mgr = UpdateManager(email_addr, authkey)
     
     if not mgr.verify_email_whitelist():
