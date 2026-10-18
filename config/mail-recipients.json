@@ -5,6 +5,11 @@
       "id": "20180333",
       "email": "244754233@qq.com",
       "default": true
+    },
+    {
+      "id": "pythonWsr",
+      "email": "wusiruibaidu04@qq.com",
+      "default": false
     }
   ]
 }

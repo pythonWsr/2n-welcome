@@ -1,0 +1,194 @@
+name: Incremental Bundle Mail
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: '对方本地 HEAD 的 40 位 SHA'
+        required: true
+        type: string
+      recipient_id:
+        description: '收件人 ID'
+        required: false
+        default: '20180333'
+        type: string
+      part_size:
+        description: '分片大小 (如 256K, 1M)'
+        required: false
+        default: '256K'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bundle-${{ inputs.base_sha }}
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    env:
+      # 统一配置脚本路径
+      SEND_SCRIPT: "tools/worker/2n-qq-smtp-worker/scripts/send_part.py"
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and prepare info
+        id: info
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "base_sha 格式错误，必须是 40 位小写 hex"
+            exit 1
+          fi
+          
+          git fetch origin main
+          TARGET_SHA=$(git rev-parse origin/main)
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          
+          if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "status=unknown-base" >> "$GITHUB_OUTPUT"
+            echo "message=base_sha 不在仓库历史中" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          if ! git merge-base --is-ancestor "$BASE_SHA" "$TARGET_SHA"; then
+            echo "status=not-ancestor" >> "$GITHUB_OUTPUT"
+            echo "message=base_sha 不是 origin/main 的祖先，可能存在本地未推送提交" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          COUNT=$(git rev-list --count "$BASE_SHA..$TARGET_SHA")
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          
+          if [ "$COUNT" -eq 0 ]; then
+            echo "status=up-to-date" >> "$GITHUB_OUTPUT"
+            echo "message=本地已是最新提交，无需增量" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          echo "status=has-bundle" >> "$GITHUB_OUTPUT"
+          echo "message=发现 $COUNT 个新提交" >> "$GITHUB_OUTPUT"
+
+      - name: Create incremental bundle
+        if: steps.info.outputs.status == 'has-bundle'
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          git branch -f snapshot-target origin/main
+          git bundle create update.bundle "$BASE_SHA..snapshot-target"
+          
+          JOB_ID="${{ github.run_id }}-${{ github.run_attempt }}-$(git rev-parse --short origin/main)"
+          BUNDLE_SHA256=$(sha256sum update.bundle | cut -d' ' -f1)
+          
+          echo "JOB_ID=$JOB_ID" >> $GITHUB_ENV
+          echo "BUNDLE_SHA256=$BUNDLE_SHA256" >> $GITHUB_ENV
+          echo "GENERATED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+          
+          split -b ${{ inputs.part_size }} -d -a 3 --numeric-suffixes=1 update.bundle bundle.part.
+          
+          PART_TOTAL=$(ls bundle.part.* | wc -l)
+          echo "PART_TOTAL=$PART_TOTAL" >> $GITHUB_ENV
+          
+          if [ "$PART_TOTAL" -gt 256 ]; then
+            echo "status=too-large" >> "$GITHUB_OUTPUT"
+            echo "message=增量超过 256 片（$PART_TOTAL 片），拒绝发送邮件" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          echo "status=ready" >> "$GITHUB_OUTPUT"
+
+      - name: Send via Worker
+        if: steps.info.outputs.status == 'has-bundle' && steps.info.outputs.status != 'too-large'
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          WORKER_TOKEN: ${{ secrets.WORKER_TOKEN }}
+          RECIPIENT_ID: ${{ inputs.recipient_id }}
+        run: |
+          set +e
+          FAILED=false
+          
+          for file in bundle.part.*; do
+            PART_INDEX=$((10#${file#bundle.part.})) 
+            echo "正在发送 $file ($PART_INDEX/$PART_TOTAL)..."
+            
+            python3 "$SEND_SCRIPT" send \
+              --job-id "$JOB_ID" \
+              --base "${{ inputs.base_sha }}" \
+              --target "${{ steps.info.outputs.target_sha }}" \
+              --generated-at "$GENERATED_AT" \
+              --recipient-id "$RECIPIENT_ID" \
+              --file "$file" \
+              --part-index "$PART_INDEX" \
+              --part-total "$PART_TOTAL" \
+              --bundle-sha256 "$BUNDLE_SHA256"
+              
+            if [ $? -ne 0 ]; then
+              echo "发送 $file 失败！"
+              FAILED=true
+              break
+            fi
+            
+            echo "等待 5 秒防止 QQ 限流..."
+            sleep 5
+          done
+
+          TARGET_SHA=$(git rev-parse origin/main)
+          if [ "$FAILED" = "true" ]; then
+            python3 "$SEND_SCRIPT" notify \
+              --job-id "$JOB_ID" --base "${{ inputs.base_sha }}" --target "$TARGET_SHA" \
+              --generated-at "$GENERATED_AT" --recipient-id "pythonWsr" \
+              --status "failed" \
+              --message "发送给 20180333 的 Bundle 失败。请检查 Actions 日志。"
+            exit 1
+          else
+            python3 "$SEND_SCRIPT" notify \
+              --job-id "$JOB_ID" --base "${{ inputs.base_sha }}" --target "$TARGET_SHA" \
+              --generated-at "$GENERATED_AT" --recipient-id "pythonWsr" \
+              --status "manual-action" \
+              --message "✅ 成功将增量 Bundle（共 $PART_TOTAL 个分片）发送给 20180333。"
+          fi
+
+      - name: Send Notify via Worker (if not ready)
+        if: steps.info.outputs.status != 'has-bundle' && steps.info.outputs.status != 'too-large'
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          WORKER_TOKEN: ${{ secrets.WORKER_TOKEN }}
+          RECIPIENT_ID: ${{ inputs.recipient_id }}
+        run: |
+          set -euo pipefail
+          STATUS="${{ steps.info.outputs.status }}"
+          MSG="${{ steps.info.outputs.message }}"
+          TARGET_SHA=$(git rev-parse origin/main)
+          JOB_ID="${{ github.run_id }}-${{ github.run_attempt }}-$(git rev-parse --short origin/main)"
+          GENERATED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          
+          # 通知对方
+          python3 "$SEND_SCRIPT" notify \
+            --job-id "$JOB_ID" --base "${{ inputs.base_sha }}" --target "$TARGET_SHA" \
+            --generated-at "$GENERATED_AT" --recipient-id "$RECIPIENT_ID" \
+            --status "$STATUS" --message "$MSG"
+
+          # 通知你
+          python3 "$SEND_SCRIPT" notify \
+            --job-id "$JOB_ID" --base "${{ inputs.base_sha }}" --target "$TARGET_SHA" \
+            --generated-at "$GENERATED_AT" --recipient-id "pythonWsr" \
+            --status "$STATUS" --message "流程跳过（或包过大），通知已发送给 20180333。原因：$MSG"
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "### Bundle 结果"
+            echo "- 状态: ${{ steps.info.outputs.status }}"
+            echo "- base_sha: ${{ inputs.base_sha }}"
+            echo "- target_sha: ${{ steps.info.outputs.target_sha }}"
+            echo "- 新提交数: ${{ steps.info.outputs.count }}"
+          } >> "$GITHUB_STEP_SUMMARY"
