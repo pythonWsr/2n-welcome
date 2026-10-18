@@ -8,7 +8,6 @@ on:
       - '.github/workflows/build-3d.yml'
   workflow_dispatch:
 
-# 增加了 pull-requests: write，允许机器人创建和合并 PR
 permissions:
   contents: write
   pull-requests: write
@@ -20,7 +19,8 @@ jobs:
       run:
         working-directory: data/3d/2n-spatial-world
     steps:
-      - uses: actions/checkout@v4 # 建议把 v6 改为稳定版 v4
+      - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -43,18 +43,18 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/3d/2n-spatial-world/dist
           
-          # 检查是否有实际变更，没有就直接退出
+          # 检查是否有实际变更
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
           
-          # 生成唯一的分支名
-          BRANCH_NAME="auto-build-3d-${GITHUB_RUN_ID}"
+          # 生成唯一的分支名 (带上 run_attempt，避免重跑时冲突)
+          BRANCH_NAME="auto-build-3d-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           
-          # 提交并推送到新分支
+          # 提交并推送到新分支，加上 --force 防止因为之前失败的残留导致冲突
           git commit -m "chore(3d): rebuild spatial world [skip ci]"
-          git push origin HEAD:$BRANCH_NAME
+          git push origin HEAD:$BRANCH_NAME --force
           
           # 创建 PR
           echo "Creating Pull Request..."
@@ -64,6 +64,6 @@ jobs:
             --base main \
             --head "$BRANCH_NAME"
             
-          # 立即开启 Auto-merge (Squash) 并设置合并后删除分支
+          # 开启 Auto-merge (Squash) 并自动删除分支
           echo "Enabling auto-merge..."
           gh pr merge "$BRANCH_NAME" --auto --squash --delete-branch
