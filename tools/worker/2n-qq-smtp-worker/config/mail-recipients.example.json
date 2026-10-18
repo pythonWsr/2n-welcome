@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "recipients": [
+    {
+      "id": "20180333",
+      "email": "receiver@example.com",
+      "default": true
+    }
+  ]
+}

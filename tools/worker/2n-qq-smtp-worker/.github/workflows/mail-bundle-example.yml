@@ -1,0 +1,84 @@
+# EXAMPLE ONLY. WSR should review permissions and flow before production use.
+name: 2n Bundle Mail (example)
+on:
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: 'Receiver existing HEAD (full SHA)'
+        required: true
+        type: string
+      recipient_id:
+        description: 'Recipient ID (empty selects config default)'
+        required: false
+        default: '20180333'
+        type: string
+      part_size_kib:
+        description: 'Bundle chunk size KiB (first tests 64 or 256)'
+        required: false
+        default: '256'
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: 2n-mail-bundle-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create and send incremental bundle
+        shell: bash
+        env:
+          BASE: ${{ inputs.base_sha }}
+          PART_KIB: ${{ inputs.part_size_kib }}
+          RECIPIENT: ${{ inputs.recipient_id }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          WORKER_TOKEN: ${{ secrets.WORKER_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$BASE" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid base SHA"; exit 1; }
+          [[ "$PART_KIB" =~ ^[0-9]+$ ]] || { echo "Invalid part_size_kib"; exit 1; }
+          PART_SIZE=$((10#$PART_KIB))
+          (( PART_SIZE >= 64 && PART_SIZE <= 4096 )) || { echo 'Unsupported chunk size'; exit 1; }
+          TARGET=$(git rev-parse HEAD)
+          JOB_ID="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${TARGET:0:7}"
+          GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          notify() {
+            python3 scripts/send_part.py notify \
+              --job-id "$JOB_ID" --base "$BASE" --target "$TARGET" \
+              --recipient-id "$RECIPIENT" --generated-at "$GENERATED_AT" \
+              --status "$1" --message "$2"
+          }
+          if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            notify unknown-base 'Base SHA is not reachable. Manual/full sync required.'
+            exit 0
+          fi
+          if [[ "$BASE" = "$TARGET" ]]; then
+            notify up-to-date 'No missing changes.'
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor "$BASE" HEAD; then
+            notify not-ancestor 'Base is not ancestor of target. Manual review required.'
+            exit 0
+          fi
+          git bundle create update.bundle HEAD "^${BASE}"
+          BUNDLE_SHA=$(sha256sum update.bundle | awk '{print $1}')
+          mkdir parts
+          split -b "$((PART_SIZE * 1024))" -d -a 3 --numeric-suffixes=1 update.bundle parts/bundle.part.
+          TOTAL=$(find parts -type f | wc -l)
+          if (( TOTAL > 256 )); then
+            notify too-large 'Incremental bundle exceeds the 256-part Worker protocol cap.'
+            exit 0
+          fi
+          for (( i=1; i<=TOTAL; i++ )); do
+            python3 scripts/send_part.py send \
+              --file "parts/bundle.part.$(printf '%03d' "$i")" \
+              --job-id "$JOB_ID" --base "$BASE" --target "$TARGET" \
+              --recipient-id "$RECIPIENT" --generated-at "$GENERATED_AT" \
+              --part-index "$i" --part-total "$TOTAL" \
+              --bundle-sha256 "$BUNDLE_SHA"
+            sleep 5
+          done
