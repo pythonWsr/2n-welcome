@@ -9,7 +9,7 @@ test('next view uses exact left aligned copy and fits phone and landscape',async
  view.update({nextOpacity:0,target:[0,0,-50]},cam,{width,height});assert.equal(view.group.visible,false);assert.equal(view.readingBounds.isEmpty(),true);
  view.update({nextOpacity:1,target:[0,0,-50]},cam,{width,height});assert.equal(view.group.visible,true);assert.equal(view.readingBounds.isEmpty(),false);
  const texts=view.group.children.filter(o=>o instanceof Text);assert.deepEqual(texts.map(o=>o.text),['下一程，仍然同行','五境里留下的足迹，还会继续延伸。','2n']);assert.ok(texts.every(o=>o.anchorX==='left'&&o.strokeWidth===0&&o.material.depthTest));
- const lefts=[];for(const text of texts){const b=text.userData.ink;lefts.push(new T.Vector3(b.minX,0,0).applyMatrix4(text.matrixWorld).project(cam).x);for(const x of [b.minX,b.maxX])for(const y of [b.minY,b.maxY]){const point=new T.Vector3(x,y,0).applyMatrix4(text.matrixWorld).project(cam);assert.ok(point.x>=-1+2*(safeLeft+30)/width&&point.x<=1-2*(safeRight+30)/width&&Math.abs(point.y)<.5);}}
+ const lefts=[];for(const text of texts){const b=text.userData.ink;lefts.push(new T.Vector3(b.minX,0,0).applyMatrix4(text.matrixWorld).project(cam).x);for(const x of [b.minX,b.maxX])for(const y of [b.minY,b.maxY]){const point=new T.Vector3(x,y,0).applyMatrix4(text.matrixWorld).project(cam);assert.ok(point.x>=-1+2*(safeLeft+30)/width&&point.x<=1-2*(safeRight+30)/width&&point.y>-.95&&point.y<.1);}}
  assert.ok(Math.max(...lefts)-Math.min(...lefts)<1e-6);
  }view.dispose();view.dispose();assert.equal(view.ready,false);
  }finally{Text.prototype.sync=original;view?.dispose();}

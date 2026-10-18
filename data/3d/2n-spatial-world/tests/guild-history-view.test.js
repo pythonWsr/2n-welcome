@@ -30,3 +30,23 @@ test('timed-out old font completion cannot publish a resized retry',async()=>{
  const events=Array.from({length:3},(_,i)=>({id:String(i),date:'2026-08-18',title:'标题',body:'正文'}));const view=api.createHistoryView(events);
  try{await assert.rejects(view.prepare(5));const old=jobs.splice(0);view.resize({width:896,height:414});const retry=view.prepare(1000);await new Promise(resolve=>setImmediate(resolve));old.forEach(fn=>fn());await new Promise(resolve=>setImmediate(resolve));assert.equal(view.ready,false,'old glyph result published retry');jobs.splice(0).forEach(fn=>fn());await retry;assert.equal(view.ready,true);}finally{Text.prototype.sync=original;view.dispose();}
 });
+
+test('fading ending text cannot write letter-shaped holes into foreground petals',async()=>{
+ const original=Text.prototype.sync;
+ Text.prototype.sync=function(callback){this._textRenderInfo={glyphBounds:new Float32Array([0,0,1,1])};callback?.();};
+ const events=Array.from({length:3},()=>({date:'2026-08-18',title:'花瓣',body:'一起同行'})),view=api.createHistoryView(events),camera=new T.PerspectiveCamera(48,414/896,.2,2400);
+ camera.position.set(0,0,100);camera.lookAt(0,0,0);
+ const update=state=>view.update({eventIndex:2,memoryPhase:2,target:[0,0,0],...state},camera,{width:414,height:896});
+ try{
+  await view.prepare();update({eventOpacity:1});
+  const letters=[];view.group.traverse(o=>{if(o instanceof Text&&o.parent.visible)letters.push(o);});
+  assert.ok(letters.every(o=>o.material.depthWrite),'the released story keeps its original depth policy');
+  update({eventOpacity:.2,historyOpacity:.2,particleEnding:true,nextT:.02});
+  assert.equal(view.group.visible,true);
+  assert.ok(letters.every(o=>!o.material.depthWrite),'faded letters must not cut text-shaped holes in later transparent petals');
+  update({eventOpacity:0,historyOpacity:0,particleEnding:true,nextT:.1});
+  assert.equal(view.group.visible,false);assert.equal(view.readingBounds.isEmpty(),true);
+  update({eventOpacity:.2,historyOpacity:.2,particleEnding:true,nextT:.02});
+  assert.ok(letters.every(o=>!o.material.depthWrite),'reverse seeking uses the same fade/depth state');
+ }finally{Text.prototype.sync=original;view.dispose();}
+});

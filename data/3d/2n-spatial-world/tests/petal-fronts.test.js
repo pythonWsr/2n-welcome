@@ -25,7 +25,7 @@ for(const [kind,name,front,up] of fronts)test(`${name} presents its reviewed fea
  const source=readPetalGeometry(new URL(`../public/assets/companion-display/${name}.glb`,import.meta.url));
  const scene=createMemoryScene();scene.install(source,kind,name);
  const camera=new T.PerspectiveCamera(48,.46,.2,2400),matrix=new T.Matrix4(),rotation=new T.Quaternion();
- try{for(const nextT of [0,.25,.65,1])for(let frame=0;frame<35;frame++){
+ try{for(const nextT of [0,.15,.25,.35,.45,.55,.65,.75,.85,1])for(let frame=0;frame<35;frame++){
   scene.update({eventIndex:2,memoryPhase:2,nextT},camera,.05);
   const mesh=scene.group.children.find(c=>c.isInstancedMesh);
   for(let i=0;i<mesh.count;i++){

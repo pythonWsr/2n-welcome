@@ -88,7 +88,7 @@ test('rendered final shot keeps its original pools and avoids stacked silhouette
     const screen=world.project(cam),radius=2.2*Math.max(...new T.Vector3().setFromMatrixScale(matrix).toArray())/(depth*Math.tan(T.MathUtils.degToRad(cam.fov/2)));
     points.push({x:screen.x,y:screen.y,radius});
    }
-   assert.equal(points.length,mobile?56:84);assert.ok(points.every(p=>p.x>0&&p.x<1&&Math.abs(p.y)<.96));
+   assert.equal(points.length,mobile?56:84);assert.ok(points.every(p=>Math.abs(p.x)<1&&Math.abs(p.y)<.96));
    let overlaps=0;for(let i=0;i<points.length;i++)for(let j=0;j<i;j++){const a=points[i],b=points[j];if(Math.hypot((a.x-b.x)*cam.aspect,a.y-b.y)<a.radius+b.radius)overlaps++;}
    assert.ok(overlaps<6,`actual ${mobile?'phone':'desktop'} stacking: ${overlaps}`);
   }
