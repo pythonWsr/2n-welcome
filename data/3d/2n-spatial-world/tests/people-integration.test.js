@@ -1,5 +1,5 @@
 import * as manualEntry from '../src/manual-history-entry.js';
-const {limitManualHistoryEntry,manualHistoryEntryEnd,limitManualParticleEnding}=manualEntry;
+const {limitManualHistoryEntry,manualHistoryEntryEnd,limitManualParticleEnding,limitManualHistoryReverse}=manualEntry;
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -98,7 +98,7 @@ test('semantic remap retains original member inside changed subwindow numbering'
 // The GPU/text boundary is replaced; the actual entry script and scheduler run.
 // This catches adding people to the original ready gate or seeking on retry.
 function entry({floatBuffers=true,constructionError=false,preparationError=false,reduced=false,late=false,galleryFactory,data=fixture,openingFailure=false,historyFailure=false,preview=false,cacheWarmFrames=0}={}){
- const events=new Map(),elements=new Map(),calls={distancePrepared:[],distanceCancelled:[],prepare:0,historyPrepare:0,next:[],captures:0,memory:[],people:[],companion:[],scroll:[],render:0,shots:[],routes:[]};
+ const events=new Map(),elements=new Map(),calls={distancePrepared:[],distanceCancelled:[],prepare:0,historyPrepare:0,history:[],next:[],captures:0,memory:[],people:[],companion:[],scroll:[],render:0,shots:[],routes:[]};
  const element=id=>{
   if(!elements.has(id))elements.set(id,{hidden:false,dataset:{},style:{},classList:{add(){},remove(){}},textContent:'',setAttribute(){},querySelector(){return element(id+'-span');},addEventListener(type,fn){events.set(id+':'+type,fn);}});
   return elements.get(id);
@@ -118,8 +118,8 @@ function entry({floatBuffers=true,constructionError=false,preparationError=false
  const world={loading:{failures:{},counts:{}},groundStatus:'ready',prepare:async()=>{},update(){}};
  const view={width:414,height:896,range:api.TOTAL_UNITS*896};
  class Renderer{extensions={has:()=>floatBuffers};setClearColor(){}setPixelRatio(v){this.ratio=v;}getPixelRatio(){return this.ratio;}setSize(){}initTexture(){}render(scene,cam){calls.render++;calls.shots.push(cam.position.toArray());calls.routes.push(gallery.route);}setAnimationLoop(fn){frame=fn;}}
- const context={particleEndingEnabled,limitManualHistoryEntry,manualHistoryEntryEnd,limitManualParticleEnding,renderMemoryPreview,createMemoryScene:()=>({group:new THREE.Group(),assetCount:14,get particleEndingReady(){return cacheTicks>=cacheWarmFrames;},warmParticleEnding(){cacheTicks++;},prepareParticleEnding(){},invalidateParticleEnding(){cacheTicks=0;calls.invalidated=(calls.invalidated||0)+1;},setPreview(){},update(state,camera){calls.memory.push(state);camera.position.set(0,0,100);},shot:{target:[0,0,0]},install(){}}),URLSearchParams,location:{search:preview?'?historyPreview=1':''},...api,THREE:{...THREE,WebGLRenderer:Renderer},oceanPose,createAutoplay,junglePose,hellPose,lookbackPose,RETURN_START:27.2/28,RETURN_UNITS:28,STORY_UNITS:55.2,pose,gardenPose,scrollProgress,
-  createNextView(){const view=resource();view.readingBounds=new THREE.Box3();view.update=state=>calls.next.push(state);return view;},createMonument,normalizeHistory,historyData,createHistoryView(){const h=resource();h.ready=false;h.readingBounds=new THREE.Box3();h.prepare=async()=>{calls.historyPrepare++;if(historyFailure&&calls.historyPrepare===1)throw new Error('font unavailable');h.ready=true;};return h;},createLighting(){},createRevealLight(){},atmosphere:()=>({update(){}}),createBiomes:()=>world,createCompanionship:()=>companion,createMapFlowers:resource,createRegionNames:resource,
+ const context={particleEndingEnabled,limitManualHistoryEntry,manualHistoryEntryEnd,limitManualParticleEnding,limitManualHistoryReverse,renderMemoryPreview,createMemoryScene:()=>({group:new THREE.Group(),assetCount:14,get particleEndingReady(){return cacheTicks>=cacheWarmFrames;},warmParticleEnding(){cacheTicks++;},prepareParticleEnding(){},invalidateParticleEnding(){cacheTicks=0;calls.invalidated=(calls.invalidated||0)+1;},setPreview(){},update(state,camera){calls.memory.push(state);camera.position.set(0,0,100);},shot:{target:[0,0,0]},install(){}}),URLSearchParams,location:{search:preview?'?historyPreview=1':''},...api,THREE:{...THREE,WebGLRenderer:Renderer},oceanPose,createAutoplay,junglePose,hellPose,lookbackPose,RETURN_START:27.2/28,RETURN_UNITS:28,STORY_UNITS:55.2,pose,gardenPose,scrollProgress,
+  createNextView(){const view=resource();view.readingBounds=new THREE.Box3();view.update=state=>calls.next.push(state);return view;},createMonument,normalizeHistory,historyData,createHistoryView(){const h=resource();h.ready=false;h.readingBounds=new THREE.Box3();h.update=state=>{if(Number.isFinite(state.historyT))calls.history.push(state);};h.prepare=async()=>{calls.historyPrepare++;if(historyFailure&&calls.historyPrepare===1)throw new Error('font unavailable');h.ready=true;};return h;},createLighting(){},createRevealLight(){},atmosphere:()=>({update(){}}),createBiomes:()=>world,createCompanionship:()=>companion,createMapFlowers:resource,createRegionNames:resource,
   cancelPendingModelLoads(){},createLoadingIntro:()=>({update:({allReady})=>({locked:!allReady,speed:1})}),attachIntroInput(){},allBiomesReady:()=>oldReady,warmBiomeResources:async()=>{},prepareBiomePetals:async()=>{},
   createPeopleRoute,resizeCourtyard,peopleData:data,createPeopleGallery(data,route){if(!galleryFactory)gallery.route=route||createPeopleRoute(data);if(constructionError)throw new Error('invalid record');return gallery;},
   preparePeopleDistance(route){calls.distancePrepared.push(route);return ()=>calls.distanceCancelled.push(route);},
@@ -416,7 +416,7 @@ test('particle ending limits manual flings, retains the page-end target and acce
  assert.ok(held-after>.15,'released input keeps its requested progress instead of discarding the ending');
  assert.equal(app.calls.scroll.length,writes,'settling never pulls the native page away from the requested endpoint');
  seek(0);app.tick();const reverse=app.calls.memory.at(-1).nextT;
- assert.ok(reverse<held&&held-reverse<=.02/18+1e-10,'a new reverse gesture must not wait behind old overshoot');
+ assert.ok(reverse<held&&held-reverse<=1.35*.02/18+1e-10,'a new reverse gesture must not wait behind old overshoot');
  assert.equal(app.elements.get('replay').hidden,true);
  for(let i=0;i<1000;i++){seek(1);app.tick();}
  assert.ok(app.calls.memory.at(-1).nextT>1-1e-7,'continued manual input still reaches the final frame');
@@ -509,7 +509,7 @@ test('semantic people resize clears a particle offset after a long reverse gestu
  app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});
  app.seek(api.storyToScroll((api.NEXT_START_UNITS+3.2*.2)/28,app.gallery.route));app.tick();app.setReduced(false);
  app.seek(1);app.tick();app.seek(.999);app.tick();app.seek(.8);app.tick();
- for(let i=0;i<400;i++)app.tick();
+ for(let i=0;i<2200;i++)app.tick();
  assert.equal(app.elements.get('world').dataset.biome,'people');
  app.resize();app.tick();const retained=app.elements.get('world').dataset.progress;
  for(let i=0;i<100;i++)app.tick();
@@ -521,7 +521,7 @@ test('the original history landing reconciles a carried particle input offset',a
  app.events.get('touchstart')({type:'touchstart',target:{closest:()=>false}});
  app.seek(api.storyToScroll((api.NEXT_START_UNITS+3.2*.2)/28,app.gallery.route));app.tick();app.setReduced(false);
  app.seek(1);app.tick();app.seek(.999);app.tick();app.seek(.8);app.tick();
- for(let i=0;i<400;i++)app.tick();
+ for(let i=0;i<2200;i++)app.tick();
  app.seek(.999);let landed=false;
  for(let i=0;i<500;i++){
   const writes=app.calls.scroll.length;app.tick();
@@ -593,3 +593,33 @@ test('particle manual protection leaves the legacy ending and autoplay clock unc
  assert.equal(app.elements.get('replay').hidden,false);
  assert.ok(app.calls.memory.some(state=>Number.isFinite(state.nextT)&&state.particleEnding===false));
  });
+
+test('one reverse fling plays through all story events after particles instead of skipping history',async()=>{
+ const app=entry({reduced:true});await app.settle();app.open();app.tick();
+ app.events.get('touchstart')({type:'touchstart'});
+ app.seek(api.storyToScroll((api.NEXT_START_UNITS+3.2*.3)/28,app.gallery.route));app.tick();app.setReduced(false);
+ app.seek(.8);app.tick();app.events.get('touchend')({touches:[]});
+ const writes=app.calls.scroll.length,visits=[0,0,0];let entered=false,prior=1;
+ for(let i=0;i<2200;i++){
+  app.tick();const state=app.calls.memory.at(-1);
+  if(app.elements.get('world').dataset.biome!=='history')continue;
+  const t=app.calls.history.at(-1).historyT;
+  if(!entered){assert.ok(t>.999,'reverse must first show the final story frame');entered=true;}
+  if(t>.23)assert.ok(prior-t<=1.35*.02/36+1e-9,`history jumped from ${prior} to ${t}`);
+  if(state.eventIndex>=0)visits[state.eventIndex]++;
+  prior=t;
+ }
+ assert.ok(entered);assert.ok(visits.every(n=>n>100),`each story event must be visible: ${visits}`);
+ assert.equal(app.calls.scroll.length,writes,'reverse playback must not fight native scrolling');
+});
+
+test('forward input during queued reverse history playback cancels the old backward target immediately',async()=>{
+ const app=entry({reduced:true});await app.settle();app.open();app.tick();
+ app.events.get('touchstart')({type:'touchstart'});
+ app.seek(api.storyToScroll((api.NEXT_START_UNITS+3.2*.02)/28,app.gallery.route));app.tick();app.setReduced(false);
+ app.seek(.8);for(let i=0;i<100;i++)app.tick();
+ assert.equal(app.elements.get('world').dataset.biome,'history');
+ const before=app.calls.history.at(-1).historyT;
+ app.seek(.801);app.tick();
+ assert.ok(app.calls.history.at(-1).historyT>before,'a downward gesture must not wait for queued story reversal');
+});
