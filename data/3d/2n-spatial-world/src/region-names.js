@@ -4,7 +4,7 @@ import {gardenPose} from './garden-path.js';
 import {oceanPose} from './ocean-production.js';
 import {junglePose} from './jungle-production.js';
 import {hellPose} from './hell-production.js';
-const places=[['Garden',133,-12,88,182],['Desert',352,-18,295,424],['Ocean',586,-12,475,707],['Jungle',975,-10,845,1092],['Hell',1400,-12,1245,1540]];
+const places=[['Garden',133,-12,88,182],['Desert',352,-18,295,424],['Ocean',586,-12,475,707],['Jungle',975,-10,845,1092],['Hel',1400,-12,1245,1540]];
 // Entry poses selected from the actual camera paths, not arbitrary map centres.
 const entryShots=[[gardenPose,.38,110],[gardenPose,.96,70],[oceanPose,.56,110],[junglePose,.13,70],[hellPose,.13,70]];
 function textTexture(name){
