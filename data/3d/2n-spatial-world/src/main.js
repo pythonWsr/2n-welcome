@@ -1,5 +1,5 @@
 import './loading-log.js';
-import {limitManualHistoryEntry,manualHistoryEntryEnd,limitManualParticleEnding} from './manual-history-entry.js';
+import {limitManualHistoryEntry,manualHistoryEntryEnd,limitManualParticleEnding,limitManualHistoryReverse} from './manual-history-entry.js';
 import {cancelPendingModelLoads} from './petal-loader.js';
 import {preparePeopleDistance} from './people-distance.js';
 import {createPeopleRoute} from './people-courtyard.js';
@@ -264,9 +264,9 @@ if (renderer) {
         const current=storyToScroll(progress,peopleRoute);
         const candidate=scrollToStory(current+(requested-current)*(1-Math.exp(-dt*5)),peopleRoute);
         const before=progress;
-        const historyCandidate=initialEnding?candidate:limitManualHistoryEntry(progress,candidate,dt);
+        const historyCandidate=initialEnding?candidate:particleEnding&&candidate<progress?limitManualHistoryReverse(progress,candidate,dt):limitManualHistoryEntry(progress,candidate,dt);
         progress=!initialEnding&&particleEnding?limitManualParticleEnding(progress,historyCandidate,dt):historyCandidate;
-        if(progress!==historyCandidate)particleRebasePending=true;
+        if(progress!==candidate)particleRebasePending=true;
         if(!initialEnding&&before<manualHistoryEntryEnd&&progress>=manualHistoryEntryEnd&&target>manualHistoryEntryEnd){
           // Discard the fling overshoot at the first readable story event.
           scrollTo({top:storyToScroll(progress,peopleRoute)*view.range,behavior:'instant'});
@@ -278,7 +278,7 @@ if (renderer) {
     if(people?.ready&&(!metricsAdopted||measuredRoutePending))adoptReadyMetrics();
     const chapter=chapterAt(progress),heroProgress=chapter.heroT,worldProgress=chapter.worldT;
     if(particleScrollOffset!==0)particleRebasePending=true;
-    if(wasPlaying||reduced.matches||initialEnding||memoryPreview||!particleEnding||(chapter.chapter!=='next'&&particleScrollOffset===0))particleRebasePending=false;
+    if(wasPlaying||reduced.matches||initialEnding||memoryPreview||!particleEnding||(!['next','history'].includes(chapter.chapter)&&particleScrollOffset===0))particleRebasePending=false;
     // Keep the requested native target after release, including the physical
     // bottom. The speed-limited picture catches up; never discard the ending
     // or pull the page back. Reversals above cancel lag without a scroll write.
