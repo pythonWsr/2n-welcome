@@ -1,8 +1,9 @@
 // ==UserScript==
-// @name         Florr.io 移动端 Alt 按钮 (模拟真实按键)
+// @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
 // @namespace    http://tampermonkey.net/
-// @version      2.1
-// @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键按下/松开（修复 keyup 的 altKey 状态）
+// @version      2.2
+// @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键
+// @author       pythonWsr
 // @match        https://florr.io/*
 // @grant        none
 // @run-at       document-end
@@ -10,6 +11,23 @@
 
 (function () {
     'use strict';
+
+    // ========== 按键定义 ==========
+    const ALT_KEY = { key: 'Alt', code: 'AltLeft', keyCode: 18, location: 1 };
+    const K_KEY   = { key: 'k',   code: 'KeyK',    keyCode: 75, location: 0 };
+
+    // ========== 通用按钮样式 ==========
+    function styleBtn(btn, pressed) {
+        if (pressed) {
+            btn.style.background = '#3a6ea5';
+            btn.style.color = '#fff';
+            btn.style.borderColor = '#5a8ec5';
+        } else {
+            btn.style.background = '#2a2a3a';
+            btn.style.color = '#aaa';
+            btn.style.borderColor = '#555';
+        }
+    }
 
     // ========== 1. 创建悬浮窗 ==========
     const panel = document.createElement('div');
@@ -23,7 +41,7 @@
         color: #e0e0e0;
         border: 1px solid #444;
         border-radius: 10px;
-        padding: 10px 12px;
+        padding: 8px 10px;
         font-family: system-ui, sans-serif;
         font-size: 13px;
         cursor: move;
@@ -31,31 +49,39 @@
         box-shadow: 0 4px 16px rgba(0,0,0,0.5);
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         backdrop-filter: blur(6px);
     `;
 
     const handle = document.createElement('span');
-    handle.textContent = '⇅ Alt';
-    handle.style.cssText = `cursor: move; font-weight: bold; opacity: 0.7;`;
+    handle.textContent = '⇅';
+    handle.style.cssText = `cursor: move; font-weight: bold; opacity: 0.7; padding: 0 2px;`;
 
-    const btn = document.createElement('button');
-    btn.textContent = 'Alt: 松开';
-    btn.style.cssText = `
-        background: #2a2a3a;
-        color: #aaa;
+    const btnBaseCss = `
         border: 1px solid #555;
         border-radius: 6px;
-        padding: 6px 14px;
+        padding: 6px 10px;
         font-size: 13px;
         cursor: pointer;
         transition: all 0.15s;
         outline: none;
-        min-width: 90px;
+        min-width: 44px;
+        font-weight: bold;
     `;
 
+    const altBtn = document.createElement('button');
+    altBtn.textContent = 'Alt';
+    altBtn.style.cssText = btnBaseCss;
+    styleBtn(altBtn, false);
+
+    const kBtn = document.createElement('button');
+    kBtn.textContent = 'K';
+    kBtn.style.cssText = btnBaseCss;
+    styleBtn(kBtn, false);
+
     panel.appendChild(handle);
-    panel.appendChild(btn);
+    panel.appendChild(altBtn);
+    panel.appendChild(kBtn);
     document.body.appendChild(panel);
 
     // ========== 2. 拖拽逻辑 ==========
@@ -99,31 +125,17 @@
     }, { passive: false });
     document.addEventListener('touchend', () => { dragging = false; });
 
-    // ========== 3. 模拟真实 Alt 键（修复核心） ==========
-    let altPressed = false;
+    // ========== 3. 模拟真实键盘事件 ==========
     let synthesizing = false;
+    let altPressed = false;
+    let kPressed = false;
 
-    function updateButton() {
-        if (altPressed) {
-            btn.textContent = 'Alt: 按住';
-            btn.style.background = '#3a6ea5';
-            btn.style.color = '#fff';
-            btn.style.borderColor = '#5a8ec5';
-        } else {
-            btn.textContent = 'Alt: 松开';
-            btn.style.background = '#2a2a3a';
-            btn.style.color = '#aaa';
-            btn.style.borderColor = '#555';
-        }
-    }
-
-    function makeAltKeyboardEvent(type) {
-        const isDown = type === 'keydown';
+    function makeKeyEvent(type, keyInfo, altActive) {
         const ev = new KeyboardEvent(type, {
-            key: 'Alt',
-            code: 'AltLeft',
-            location: 1,               // 左 Alt
-            altKey: isDown,            // ★ 修复：keydown 为 true，keyup 为 false
+            key: keyInfo.key,
+            code: keyInfo.code,
+            location: keyInfo.location,
+            altKey: altActive,
             ctrlKey: false,
             shiftKey: false,
             metaKey: false,
@@ -132,48 +144,101 @@
             cancelable: true,
             composed: true,
         });
-
-        // 构造器会忽略 keyCode/which（非标准字段），手动覆盖以兼容旧逻辑
         try {
-            Object.defineProperty(ev, 'keyCode', { get: () => 18, configurable: true });
-            Object.defineProperty(ev, 'which',   { get: () => 18, configurable: true });
+            Object.defineProperty(ev, 'keyCode', { get: () => keyInfo.keyCode, configurable: true });
+            Object.defineProperty(ev, 'which',   { get: () => keyInfo.keyCode, configurable: true });
         } catch (_) { /* 忽略 */ }
-
         return ev;
     }
 
-    function dispatchAltEvent(type) {
+    function dispatchKey(type, keyInfo) {
         synthesizing = true;
         try {
-            document.dispatchEvent(makeAltKeyboardEvent(type));
-            if (window !== document) {
-                window.dispatchEvent(makeAltKeyboardEvent(type));
+            // Alt 自身 keyup 时 altKey 必须为 false；其他键跟随当前 Alt 状态
+            const altActive = (keyInfo.key === 'Alt') ? (type === 'keydown') : altPressed;
+
+            const targets = [document, window];
+            const canvas = document.querySelector('canvas');
+            if (canvas && !targets.includes(canvas)) targets.push(canvas);
+
+            for (const t of targets) {
+                t.dispatchEvent(makeKeyEvent(type, keyInfo, altActive));
             }
         } finally {
             synthesizing = false;
         }
     }
 
+    // ========== 4. Alt 状态 ==========
     function setAltState(pressed, fromRealKey = false) {
         if (altPressed === pressed) return;
         altPressed = pressed;
-        updateButton();
-        window.__florrAltPressed = altPressed;
-
-        // 真实键盘已由浏览器派发，不需要再合成一次，避免重复触发
+        styleBtn(altBtn, pressed);
+        window.__florrAltPressed = pressed;
         if (!fromRealKey) {
-            dispatchAltEvent(altPressed ? 'keydown' : 'keyup');
+            dispatchKey(pressed ? 'keydown' : 'keyup', ALT_KEY);
         }
     }
 
-    btn.addEventListener('click', (e) => {
+    altBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         setAltState(!altPressed);
     });
 
-    // ========== 4. 真实键盘联动（外接键盘） ==========
+    // ========== 5. K 状态（点击后按下，点击任意位置松开） ==========
+    let kCancelListener = null;
+    let kCancelEvents = null;
+
+    function cancelK() {
+        if (!kPressed) return;
+        kPressed = false;
+        styleBtn(kBtn, false);
+        window.__florrKPressed = false;
+        dispatchKey('keyup', K_KEY);
+
+        if (kCancelEvents) {
+            for (const evName of kCancelEvents) {
+                document.removeEventListener(evName, kCancelListener, true);
+            }
+            kCancelEvents = null;
+            kCancelListener = null;
+        }
+    }
+
+    function setKPressed() {
+        if (kPressed) return;
+        kPressed = true;
+        styleBtn(kBtn, true);
+        window.__florrKPressed = true;
+        dispatchKey('keydown', K_KEY);
+
+        // 延迟注册，避免激活 K 的这一次点击立即把自己取消
+        setTimeout(() => {
+            if (!kPressed) return;
+            kCancelListener = function (e) {
+                // 点击 K 按钮自身交给 click 的 toggle 处理，避免捕获阶段与 click 冲突
+                if (kBtn.contains(e.target)) return;
+                cancelK();
+            };
+            kCancelEvents = window.PointerEvent ? ['pointerdown'] : ['mousedown', 'touchstart'];
+            for (const evName of kCancelEvents) {
+                document.addEventListener(evName, kCancelListener, true);
+            }
+        }, 0);
+    }
+
+    kBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (kPressed) {
+            cancelK();
+        } else {
+            setKPressed();
+        }
+    });
+
+    // ========== 6. 真实键盘 Alt 联动 UI（外接键盘时） ==========
     document.addEventListener('keydown', (e) => {
-        if (synthesizing) return;                 // 忽略自己派发的合成事件
+        if (synthesizing) return;
         if (e.key === 'Alt' && !altPressed) setAltState(true, true);
     });
     document.addEventListener('keyup', (e) => {
@@ -181,7 +246,7 @@
         if (e.key === 'Alt' && altPressed) setAltState(false, true);
     });
 
-    // 初始化
-    updateButton();
+    // ========== 初始化 ==========
     window.__florrAltPressed = false;
+    window.__florrKPressed = false;
 })();
