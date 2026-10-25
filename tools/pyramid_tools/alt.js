@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
 // @namespace    http://tampermonkey.net/
-// @version      2.2
-// @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键
+// @version      2.3
+// @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键（K 松开延时 0.5s）
 // @author       pythonWsr
 // @match        https://florr.io/*
 // @grant        none
@@ -15,6 +15,7 @@
     // ========== 按键定义 ==========
     const ALT_KEY = { key: 'Alt', code: 'AltLeft', keyCode: 18, location: 1 };
     const K_KEY   = { key: 'k',   code: 'KeyK',    keyCode: 75, location: 0 };
+    const K_RELEASE_DELAY = 500; // 松开 K 键的延时（毫秒）
 
     // ========== 通用按钮样式 ==========
     function styleBtn(btn, pressed) {
@@ -128,7 +129,6 @@
     // ========== 3. 模拟真实键盘事件 ==========
     let synthesizing = false;
     let altPressed = false;
-    let kPressed = false;
 
     function makeKeyEvent(type, keyInfo, altActive) {
         const ev = new KeyboardEvent(type, {
@@ -154,7 +154,6 @@
     function dispatchKey(type, keyInfo) {
         synthesizing = true;
         try {
-            // Alt 自身 keyup 时 altKey 必须为 false；其他键跟随当前 Alt 状态
             const altActive = (keyInfo.key === 'Alt') ? (type === 'keydown') : altPressed;
 
             const targets = [document, window];
@@ -185,12 +184,20 @@
         setAltState(!altPressed);
     });
 
-    // ========== 5. K 状态（点击后按下，点击任意位置松开） ==========
+    // ========== 5. K 状态（按下后点击任意位置延时 0.5s 松开） ==========
+    let kPressed = false;
+    let kReleaseTimer = null;
     let kCancelListener = null;
     let kCancelEvents = null;
 
-    function cancelK() {
+    // 真正执行松开
+    function doReleaseK() {
+        if (kReleaseTimer) {
+            clearTimeout(kReleaseTimer);
+            kReleaseTimer = null;
+        }
         if (!kPressed) return;
+
         kPressed = false;
         styleBtn(kBtn, false);
         window.__florrKPressed = false;
@@ -205,20 +212,34 @@
         }
     }
 
+    // 启动/刷新 0.5s 延时松开
+    function scheduleKRelease() {
+        if (!kPressed) return;
+        if (kReleaseTimer) clearTimeout(kReleaseTimer);
+        kReleaseTimer = setTimeout(() => {
+            kReleaseTimer = null;
+            doReleaseK();
+        }, K_RELEASE_DELAY);
+    }
+
+    // 立即按下 K（仅在松开状态可用）
     function setKPressed() {
         if (kPressed) return;
+        if (kReleaseTimer) {
+            clearTimeout(kReleaseTimer);
+            kReleaseTimer = null;
+        }
+
         kPressed = true;
         styleBtn(kBtn, true);
         window.__florrKPressed = true;
         dispatchKey('keydown', K_KEY);
 
-        // 延迟注册，避免激活 K 的这一次点击立即把自己取消
+        // 延迟注册捕获监听，避免激活 K 的那一次点击立刻触发取消
         setTimeout(() => {
             if (!kPressed) return;
-            kCancelListener = function (e) {
-                // 点击 K 按钮自身交给 click 的 toggle 处理，避免捕获阶段与 click 冲突
-                if (kBtn.contains(e.target)) return;
-                cancelK();
+            kCancelListener = function () {
+                scheduleKRelease();
             };
             kCancelEvents = window.PointerEvent ? ['pointerdown'] : ['mousedown', 'touchstart'];
             for (const evName of kCancelEvents) {
@@ -230,13 +251,14 @@
     kBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (kPressed) {
-            cancelK();
+            // 点击 K 按钮也视为“点击任意位置”，启动/刷新延时松开
+            scheduleKRelease();
         } else {
             setKPressed();
         }
     });
 
-    // ========== 6. 真实键盘 Alt 联动 UI（外接键盘时） ==========
+    // ========== 6. 真实键盘 Alt 联动 UI ==========
     document.addEventListener('keydown', (e) => {
         if (synthesizing) return;
         if (e.key === 'Alt' && !altPressed) setAltState(true, true);
