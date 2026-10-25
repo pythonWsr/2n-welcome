@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
-// @namespace    http://tampermonkey.net/
-// @version      2.3
+// @namespace    https://pythonwsr.github.io/2n-welcome/
+// @version      2.4
 // @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键（K 松开延时 0.5s）
 // @author       pythonWsr
-// @match        https://florr.io/*
+// @match        *://florr.io/*
 // @grant        none
 // @run-at       document-end
+// @downloadURL  https://pythonwsr.github.io/2n-welcome/tools/pyramid_tools/alt.js
+// @updateURL    https://pythonwsr.github.io/2n-welcome/tools/pyramid_tools/alt.js
 // ==/UserScript==
 
 (function () {
@@ -154,6 +156,7 @@
     function dispatchKey(type, keyInfo) {
         synthesizing = true;
         try {
+            // Alt 自身 keyup 时 altKey 必须为 false；其他键跟随当前 Alt 状态
             const altActive = (keyInfo.key === 'Alt') ? (type === 'keydown') : altPressed;
 
             const targets = [document, window];
