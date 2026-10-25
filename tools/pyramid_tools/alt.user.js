@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
 // @namespace    https://pythonwsr.github.io/2n-welcome/
-// @version      3.0.2
+// @version      3.0.3
 // @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键
 // @author       pythonWsr
 // @supportURL   https://github.com/pythonWsr/2n-welcome/issues
@@ -426,7 +426,7 @@
 
                 const numInput = document.createElement('input');
                 numInput.type = 'number';
-                numInput.min = '10'; numInput.max = '1000'; numInput.step = '10';
+                numInput.min = '10'; numInput.max = '1000'; numInput.step = '1';
                 numInput.value = String(kReleaseDelay);
                 numInput.className = 'florr-input-num';
                 numInput.disabled = !kAutoRelease;
@@ -462,15 +462,39 @@
                     numInput.value = slider.value;
                     saveSettings();
                 });
-                numInput.addEventListener('change', () => {
-                    let v = Number(numInput.value);
-                    if (isNaN(v)) v = kReleaseDelay;
+
+                // 输入过程中实时同步：仅当值在合法范围内时更新，允许中间态（如先输入 5 再补 0 变成 50）
+                numInput.addEventListener('input', () => {
+                    const raw = numInput.value.trim();
+                    if (raw === '') return;
+                    const v = Number(raw);
+                    if (!isFinite(v)) return;
+                    if (v >= 10 && v <= 1000) {
+                        kReleaseDelay = Math.round(v);
+                        slider.value = String(kReleaseDelay);
+                        saveSettings();
+                    }
+                });
+
+                // 失去焦点或回车时做范围钳制与无效值还原
+                function commitNumInput() {
+                    const raw = numInput.value.trim();
+                    let v = raw === '' ? NaN : Number(raw);
+                    if (!isFinite(v)) v = kReleaseDelay;
                     v = Math.max(10, Math.min(1000, Math.round(v)));
                     kReleaseDelay = v;
-                    slider.value = String(v);
                     numInput.value = String(v);
+                    slider.value = String(v);
                     saveSettings();
+                }
+                numInput.addEventListener('blur', commitNumInput);
+                numInput.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        numInput.blur();
+                    }
                 });
+
                 autoCheck.addEventListener('change', () => {
                     kAutoRelease = !autoCheck.checked;
                     slider.disabled = !kAutoRelease;
@@ -540,7 +564,7 @@
                 box.innerHTML = `
                     <p><strong>脚本名称：</strong>Florr.io 移动端 Alt/K 按钮</p>
                     <p><strong>作者：</strong>pythonWsr</p>
-                    <p><strong>版本：</strong>3.0.2</p>
+                    <p><strong>版本：</strong>3.0.3</p>
                     <p><strong>开源协议：</strong>Mozilla Public License 2.0 (MPL-2.0)</p>
                     <p><strong>版权年份：</strong>2026</p>
                     <p><strong>协议链接：</strong><a class="florr-link" href="https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt" target="_blank" rel="noopener">https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt</a></p>
