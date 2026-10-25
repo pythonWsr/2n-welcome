@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
 // @namespace    https://pythonwsr.github.io/2n-welcome/
-// @version      3.0.3
+// @version      3.0.4
 // @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键
 // @author       pythonWsr
 // @supportURL   https://github.com/pythonWsr/2n-welcome/issues
@@ -419,14 +419,16 @@
 
                 const slider = document.createElement('input');
                 slider.type = 'range';
-                slider.min = '10'; slider.max = '1000'; slider.step = '10';
+                slider.min = '10'; slider.max = '1000'; slider.step = '1';
                 slider.value = String(kReleaseDelay);
                 slider.style.cssText = `flex: 1; min-width: 100px; cursor: pointer;`;
                 slider.disabled = !kAutoRelease;
 
+                // 输入框改为 text + inputMode，避免浏览器原生 number 校验干扰删除操作
                 const numInput = document.createElement('input');
-                numInput.type = 'number';
-                numInput.min = '10'; numInput.max = '1000'; numInput.step = '1';
+                numInput.type = 'text';
+                numInput.inputMode = 'numeric';
+                numInput.autocomplete = 'off';
                 numInput.value = String(kReleaseDelay);
                 numInput.className = 'florr-input-num';
                 numInput.disabled = !kAutoRelease;
@@ -463,7 +465,7 @@
                     saveSettings();
                 });
 
-                // 输入过程中实时同步：仅当值在合法范围内时更新，允许中间态（如先输入 5 再补 0 变成 50）
+                // 输入过程中不做任何回写，只更新有效值
                 numInput.addEventListener('input', () => {
                     const raw = numInput.value.trim();
                     if (raw === '') return;
@@ -476,7 +478,7 @@
                     }
                 });
 
-                // 失去焦点或回车时做范围钳制与无效值还原
+                // 失焦或回车时做范围钳制与无效值还原
                 function commitNumInput() {
                     const raw = numInput.value.trim();
                     let v = raw === '' ? NaN : Number(raw);
@@ -564,7 +566,7 @@
                 box.innerHTML = `
                     <p><strong>脚本名称：</strong>Florr.io 移动端 Alt/K 按钮</p>
                     <p><strong>作者：</strong>pythonWsr</p>
-                    <p><strong>版本：</strong>3.0.3</p>
+                    <p><strong>版本：</strong>3.0.4</p>
                     <p><strong>开源协议：</strong>Mozilla Public License 2.0 (MPL-2.0)</p>
                     <p><strong>版权年份：</strong>2026</p>
                     <p><strong>协议链接：</strong><a class="florr-link" href="https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt" target="_blank" rel="noopener">https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt</a></p>
