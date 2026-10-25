@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
 // @namespace    https://pythonwsr.github.io/2n-welcome/
-// @version      2.4
+// @version      2.5
 // @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键（K 松开延时 0.5s）
 // @author       pythonWsr
 // @match        *://florr.io/*
 // @grant        none
 // @run-at       document-end
-// @downloadURL  https://pythonwsr.github.io/2n-welcome/tools/pyramid_tools/alt.js
-// @updateURL    https://pythonwsr.github.io/2n-welcome/tools/pyramid_tools/alt.js
+// @downloadURL  https://pythonwsr.github.io/2n-welcome/tools/pyramid_tools/alt.user.js
+// @updateURL    https://pythonwsr.github.io/2n-welcome/tools/pyramid_tools/alt.user.js
 // ==/UserScript==
 
 (function () {
