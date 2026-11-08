@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Florr.io 移动端 Alt/K 按钮 (模拟真实按键)
 // @namespace    https://pythonwsr.github.io/2n-welcome/
-// @version      3.0.4
+// @version      3.1.0
 // @description  在 florr.io 显示可拖拽悬浮窗，按钮模拟真实 Alt 键与 K 键
 // @author       pythonWsr
 // @supportURL   https://github.com/pythonWsr/2n-welcome/issues
@@ -78,7 +78,18 @@
         .florr-btn.danger { background: #14141e; color: #e05a5a; border-color: #555; }
         .florr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .florr-link { color: #5a9bd5; word-break: break-all; }
-        .florr-input-num { width: 70px; background: #2a2a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; padding: 4px 6px; font-size: 13px; }
+        .florr-input-num {
+            width: 70px; background: #2a2a3a; color: #e0e0e0; border: 1px solid #555;
+            border-radius: 4px; padding: 4px 6px; font-size: 13px;
+            -webkit-user-select: text; user-select: text;
+        }
+        .florr-backspace {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: #2a2a3a; color: #ccc; border: 1px solid #555;
+            border-radius: 4px; padding: 4px 8px; font-size: 13px;
+            cursor: pointer; min-width: 32px; user-select: none;
+        }
+        .florr-backspace:hover { background: #333344; }
     `;
     document.head.appendChild(styleEl);
 
@@ -220,7 +231,10 @@
     function scheduleKRelease() {
         if (!kPressed || !kAutoRelease) return;
         if (kReleaseTimer) clearTimeout(kReleaseTimer);
-        kReleaseTimer = setTimeout(() => { kReleaseTimer = null; doReleaseK(); }, kReleaseDelay);
+        // 在基础延时上增加 ±5ms 随机抖动，避免按键间隔过于规律
+        const jitter = Math.random() * 10 - 5;          // [-5, +5)
+        const actualDelay = Math.max(10, Math.round(kReleaseDelay + jitter));
+        kReleaseTimer = setTimeout(() => { kReleaseTimer = null; doReleaseK(); }, actualDelay);
     }
 
     function setKPressed() {
@@ -422,16 +436,22 @@
                 slider.min = '10'; slider.max = '1000'; slider.step = '1';
                 slider.value = String(kReleaseDelay);
                 slider.style.cssText = `flex: 1; min-width: 100px; cursor: pointer;`;
-                slider.disabled = !kAutoRelease;
 
-                // 输入框改为 text + inputMode，避免浏览器原生 number 校验干扰删除操作
                 const numInput = document.createElement('input');
                 numInput.type = 'text';
-                numInput.inputMode = 'numeric';
-                numInput.autocomplete = 'off';
+                numInput.setAttribute('inputmode', 'numeric');
+                numInput.setAttribute('autocomplete', 'off');
+                numInput.setAttribute('autocorrect', 'off');
+                numInput.setAttribute('autocapitalize', 'off');
+                numInput.setAttribute('spellcheck', 'false');
                 numInput.value = String(kReleaseDelay);
                 numInput.className = 'florr-input-num';
-                numInput.disabled = !kAutoRelease;
+
+                const backspaceBtn = document.createElement('span');
+                backspaceBtn.className = 'florr-backspace';
+                backspaceBtn.textContent = '⌫';
+                backspaceBtn.setAttribute('role', 'button');
+                backspaceBtn.setAttribute('aria-label', '退格');
 
                 const unit = document.createElement('span');
                 unit.textContent = 'ms';
@@ -450,23 +470,24 @@
 
                 controls.appendChild(slider);
                 controls.appendChild(numInput);
+                controls.appendChild(backspaceBtn);
                 controls.appendChild(unit);
                 controls.appendChild(autoLabel);
                 row.appendChild(controls);
 
                 const hint = document.createElement('div');
                 hint.className = 'florr-hint';
-                hint.textContent = '若设备延时较高，应相应调高该值，以保证按键状态与游戏响应同步。';
+                hint.textContent = kAutoRelease
+                    ? '若设备延时较高，应相应调高该值，以保证按键状态与游戏响应同步。实际松开时会随机浮动 ±5 毫秒。'
+                    : '当前未启用自动松开，该延时设置不会生效。';
                 row.appendChild(hint);
 
-                slider.addEventListener('input', () => {
-                    kReleaseDelay = Number(slider.value);
-                    numInput.value = slider.value;
-                    saveSettings();
-                });
+                if (!kAutoRelease) {
+                    slider.style.opacity = '0.5';
+                    numInput.style.opacity = '0.5';
+                }
 
-                // 输入过程中不做任何回写，只更新有效值
-                numInput.addEventListener('input', () => {
+                function syncFromInput() {
                     const raw = numInput.value.trim();
                     if (raw === '') return;
                     const v = Number(raw);
@@ -476,31 +497,86 @@
                         slider.value = String(kReleaseDelay);
                         saveSettings();
                     }
+                }
+
+                slider.addEventListener('input', () => {
+                    kReleaseDelay = Number(slider.value);
+                    numInput.value = slider.value;
+                    saveSettings();
                 });
 
-                // 失焦或回车时做范围钳制与无效值还原
-                function commitNumInput() {
+                numInput.addEventListener('input', syncFromInput);
+
+                // 拦截退格键，避免游戏在 document/window 上 preventDefault 导致无法删除
+                numInput.addEventListener('keydown', e => {
+                    if (e.key === 'Backspace' || e.key === 'Delete' || e.keyCode === 8 || e.keyCode === 46) {
+                        e.stopPropagation();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        numInput.blur();
+                    }
+                });
+                numInput.addEventListener('keyup', e => {
+                    if (e.key === 'Backspace' || e.key === 'Delete' || e.keyCode === 8 || e.keyCode === 46) {
+                        e.stopPropagation();
+                    }
+                });
+                numInput.addEventListener('beforeinput', e => {
+                    if (e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward') {
+                        e.stopPropagation();
+                    }
+                });
+
+                numInput.addEventListener('blur', () => {
                     const raw = numInput.value.trim();
-                    let v = raw === '' ? NaN : Number(raw);
-                    if (!isFinite(v)) v = kReleaseDelay;
+                    if (raw === '') return;
+                    let v = Number(raw);
+                    if (!isFinite(v)) {
+                        numInput.value = String(kReleaseDelay);
+                        return;
+                    }
                     v = Math.max(10, Math.min(1000, Math.round(v)));
                     kReleaseDelay = v;
                     numInput.value = String(v);
                     slider.value = String(v);
                     saveSettings();
-                }
-                numInput.addEventListener('blur', commitNumInput);
-                numInput.addEventListener('keydown', e => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        numInput.blur();
+                });
+
+                // 外挂退格按钮：退格后做范围检测
+                // 输入框保留用户输入的文本，允许继续编辑；但 kReleaseDelay 与滑块始终被约束在 10–1000
+                backspaceBtn.addEventListener('click', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (numInput.value.length === 0) return;
+                    numInput.value = numInput.value.slice(0, -1);
+
+                    const raw = numInput.value.trim();
+                    if (raw === '') return; // 空值：保持空，不更新配置
+
+                    const v = Number(raw);
+                    if (!isFinite(v)) return; // 非数字：不更新配置
+
+                    if (v >= 10 && v <= 1000) {
+                        kReleaseDelay = Math.round(v);
+                        slider.value = String(kReleaseDelay);
+                    } else if (v < 10) {
+                        kReleaseDelay = 10;
+                        slider.value = '10';
+                    } else {
+                        kReleaseDelay = 1000;
+                        slider.value = '1000';
                     }
+                    saveSettings();
                 });
 
                 autoCheck.addEventListener('change', () => {
                     kAutoRelease = !autoCheck.checked;
-                    slider.disabled = !kAutoRelease;
-                    numInput.disabled = !kAutoRelease;
+                    const dimmed = !kAutoRelease;
+                    slider.style.opacity = dimmed ? '0.5' : '1';
+                    numInput.style.opacity = dimmed ? '0.5' : '1';
+                    hint.textContent = kAutoRelease
+                        ? '若设备延时较高，应相应调高该值，以保证按键状态与游戏响应同步。实际松开时会随机浮动 ±5 毫秒。'
+                        : '当前未启用自动松开，该延时设置不会生效。';
                     saveSettings();
                 });
 
@@ -566,7 +642,7 @@
                 box.innerHTML = `
                     <p><strong>脚本名称：</strong>Florr.io 移动端 Alt/K 按钮</p>
                     <p><strong>作者：</strong>pythonWsr</p>
-                    <p><strong>版本：</strong>3.0.4</p>
+                    <p><strong>版本：</strong>3.1.0</p>
                     <p><strong>开源协议：</strong>Mozilla Public License 2.0 (MPL-2.0)</p>
                     <p><strong>版权年份：</strong>2026</p>
                     <p><strong>协议链接：</strong><a class="florr-link" href="https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt" target="_blank" rel="noopener">https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt</a></p>
@@ -634,7 +710,7 @@
     let disclaimerOverlay = null;
 
     const DISCLAIMER_PARAGRAPHS = [
-        { warn: true, text: '警告：在 florr.io 中使用任何脚本（包括本脚本）均存在账号被处罚的风险，且可能违反游戏服务条款。使用本脚本即视为您已知悉并自愿承担该风险。' },
+        { warn: true, text: '警告：在 florr.io 中使用任何脚本（包括本脚本）均存在账号被处罚的风险，且可能违反游戏服务条款。使用本脚本即视为您已知悉并自愿承担该风险。如果您曾经由于使用该脚本或其他脚本被临时封禁或已被临时封禁，请立即停用此脚本。' },
         { text: '本脚本作者仅作为脚本的提供方，不对用户使用本脚本所引发的任何直接或间接后果承担任何责任，包括但不限于账号封禁、永久封停、数据丢失或游戏体验受损。' },
         { text: '您可在同意本声明后，随时通过「设置 → 关于 → 撤回同意」路径撤回您的同意。撤回同意后，本脚本将停止向您提供相关服务。' },
         { text: '打开设置的方式：在悬浮窗内连续点击 Alt 按钮 4 次，相邻两次点击间隔不超过 800 毫秒，即可打开设置界面。' },
@@ -643,7 +719,7 @@
         { text: '脚本的实现逻辑是：通过悬浮窗按钮维护 Alt 与 K 两个按键的按下状态，并将该状态转换为符合浏览器规范的键盘事件（KeyboardEvent），其中包含正确的按键标识、修饰键状态与键码，随后将事件派发至 document、window 及页面中的 canvas 元素，以模拟真实键盘输入。脚本不会修改游戏代码，也不会拦截或阻止游戏原有的键盘行为。' },
         { text: '可能存在的缺陷有：合成键盘事件的 isTrusted 属性为 false，若游戏校验该属性，脚本可能无法生效；游戏更新后若改变输入监听方式，脚本可能失效；不同移动端浏览器对合成事件的派发与处理存在差异，可能导致行为不一致；脚本仅在 document、window 与 canvas 上派发事件，若游戏将监听器绑定于其他元素或 iframe 内，事件可能无法送达；悬浮窗可能遮挡部分游戏界面。' },
         { text: '使用方法：首次使用时阅读并同意免责声明后，悬浮窗将显示于页面右上角，可按住左侧手柄拖动位置。点击 Alt 按钮可在按下与松开之间切换，按钮颜色表示当前状态。点击 K 按钮使其进入按下状态，随后点击页面任意位置，将在设定的延时后自动松开；再次点击 K 按钮可立即松开。在悬浮窗内连续点击 Alt 按钮 4 次可打开设置界面。' },
-        { text: '设置界面分为「通用」与「关于」两个页面。「通用」页提供以下设置：是否启用 Alt 键；是否启用 K 键；点击 K 键后的延时，若设备延时较高，应相应调高该值，以保证按键状态与游戏响应同步；以及分号键（;）的触发入口，用于显示或关闭游戏调试信息。「关于」页提供以下入口：查看免责声明、查看版权信息、进行意见反馈、撤回同意。' },
+        { text: '设置界面分为「通用」与「关于」两个页面。「通用」页提供以下设置：是否启用 Alt 键；是否启用 K 键；点击 K 键后的延时，若设备延时较高，应相应调高该值，以保证按键状态与游戏响应同步；实际松开时会在设定值基础上随机浮动 ±5 毫秒，以降低按键间隔的规律性；以及分号键（;）的触发入口，用于显示或关闭游戏调试信息。「关于」页提供以下入口：查看免责声明、查看版权信息、进行意见反馈、撤回同意。' },
         { text: '遵循的开源协议是 Mozilla Public License 2.0（MPL-2.0），完整协议文本可在以下地址下载：https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt' },
         { text: '意见反馈途径：GitHub Issues：https://github.com/pythonWsr/2n-welcome/issues ；florr.io 中文维基讨论页：https://florrio.wiki.gg/zh/wiki/User_talk:Pythonwsr/alt_user_js%E6%84%8F%E8%A7%81%E5%8F%8D%E9%A6%88' },
     ];
